@@ -15,7 +15,7 @@ glow-job/
 ├── backend/
 ├── ai/
 ├── rag/
-├── data/
+├── data-engineering/
 ├── shared/
 ├── infra/
 ├── tests/
@@ -39,7 +39,7 @@ glow-job/
 Primary ownership:
 
 ```text
-data/
+data-engineering/
 rag/
 shared/contracts/market/
 shared/contracts/rag/
@@ -265,7 +265,7 @@ glow-job/
 │   │
 │   └── tests/
 │
-├── data/
+├── data-engineering/
 │   ├── ingestion/
 │   │   ├── jsearch/
 │   │   ├── extract_jobs.py
@@ -653,7 +653,7 @@ Agent
 
 ---
 
-# 8. Data Folder
+# 8. Data Engineering Folder
 
 Primary owner:
 
@@ -791,7 +791,7 @@ Store versioned schema changes for `core`, `market`, `knowledge`, and `app` in `
 Keep unit tests near each feature:
 
 ```text
-data/tests/
+data-engineering/tests/
 rag/tests/
 ai/tests/
 backend/tests/
@@ -940,7 +940,7 @@ feature/integration-tests
 | `backend/` | Backend |
 | `ai/` | AI Engineer |
 | `rag/` | Data & RAG |
-| `data/` | Data & RAG |
+| `data-engineering/` | Data & RAG |
 | `infra/` | Cloud / Integration |
 | `tests/integration/` | Cloud / QA and all teams |
 | `shared/contracts/` | Shared / review together |
@@ -979,7 +979,7 @@ Prefer separate modules:
 backend/app/services/roadmap_service.py
 ai/roadmap/generator.py
 rag/retrieval/retriever.py
-data/skill_extraction/extractor.py
+data-engineering/skill_extraction/extractor.py
 ```
 
 Each module has its own responsibility.
@@ -1063,8 +1063,8 @@ frontend
 backend
 = APIs and application data
 
-data
-= Job market data
+data-engineering
+= Job market ETL and market data
 
 rag
 = Knowledge Retrieval

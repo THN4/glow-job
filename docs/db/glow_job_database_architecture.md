@@ -741,7 +741,7 @@ app.interview_feedback
 
 - Keep versioned migrations in the repository root at `migrations/`. They cover `core`, `market`, `knowledge`, `app`, and `system` in one ordered history for the MVP database.
 - Create `core` first, then `system.ingestion_runs`, `market`, `knowledge`, and `app`. Create `system.ai_runs` after `app.users` because it references a user. Check that the selected RDS PostgreSQL version supports pgvector, then enable the `vector` extension before adding vector columns or indexes ([AWS extension versions](https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-extensions.html)).
-- Keep database access code in `backend/app/db/` and `data/db/`. Deployment configuration belongs in `infra/`; migration runner scripts belong in `scripts/migrate/`.
+- Keep database access code in `backend/app/db/` and `data-engineering/db/`. Deployment configuration belongs in `infra/`; migration runner scripts belong in `scripts/migrate/`.
 - Coordinate migration changes across Backend and Data / RAG owners because one migration history affects all five schemas.
 
 ## Decisions required before writing migrations
