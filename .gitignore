@@ -1,0 +1,10 @@
+node_modules/
+.env
+.env.local
+*.log
+__pycache__/
+.venv/
+.pytest_cache/
+backend-py/.data/
+backend-py/tests/generated/
+backend-py/tests/eval/out/

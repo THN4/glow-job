@@ -1,0 +1,197 @@
+"""CV extraction API. Same endpoints and JSON as docs/cv-extraction/04-api-spec.md.
+
+Mount into any FastAPI app (no lifespan or exception-handler wiring needed):
+
+    from app.cv_extraction import router as cv_router
+    app.include_router(cv_router, prefix="/api")
+"""
+
+from __future__ import annotations
+
+import logging
+import uuid
+from typing import Any, Awaitable, Callable
+
+from fastapi import APIRouter, Depends, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
+from pydantic import Field, ValidationError
+
+from .errors import AppError
+from .postprocess import confirm_profile
+from .preprocess import ALLOWED_MIME, detect_mime
+from .schemas import Camel, CvProfile, empty_profile
+from .services import Services, get_services
+from .storage import Job, StoredProfile, now_iso
+
+log = logging.getLogger("cv_extraction")
+
+
+class EnvelopeRoute(APIRoute):
+    """Turns every failure into the documented ``{"error": {code, message, retryable}}`` body."""
+
+    def get_route_handler(self) -> Callable[[Request], Awaitable[Response]]:
+        original = super().get_route_handler()
+
+        async def handler(request: Request) -> Response:
+            try:
+                return await original(request)
+            except AppError as err:
+                return _error_response(err)
+            except RequestValidationError as err:
+                details = [{"path": ".".join(str(p) for p in e["loc"][1:]), "message": e["msg"]} for e in err.errors()]
+                return _error_response(AppError("INVALID_REQUEST", details=details))
+            except Exception:  # noqa: BLE001
+                log.exception("unexpected error")
+                return _error_response(AppError("INTERNAL_ERROR"))
+
+        return handler
+
+
+def _error_response(err: AppError) -> JSONResponse:
+    return JSONResponse({"error": err.to_body()}, status_code=err.status)
+
+
+router = APIRouter(route_class=EnvelopeRoute, tags=["cv-extraction"])
+
+
+# --------------------------------------------------------------------------- request bodies
+
+
+class CreateUploadBody(Camel):
+    file_name: str = Field(min_length=1, max_length=255)
+    content_type: str
+    size: int = Field(gt=0)
+
+
+class StartExtractionBody(Camel):
+    upload_id: str = Field(min_length=1, max_length=100)
+
+
+class SaveProfileBody(Camel):
+    session_id: str = Field(min_length=1, max_length=100)
+    profile_id: str | None = Field(default=None, max_length=100)
+    profile: Any
+
+
+# --------------------------------------------------------------------------- uploads
+
+
+@router.post("/cv/uploads", status_code=201)
+async def create_upload(body: CreateUploadBody, svc: Services = Depends(get_services)) -> dict[str, Any]:
+    if body.content_type not in ALLOWED_MIME:
+        raise AppError("UNSUPPORTED_FILE_TYPE")
+    max_bytes = svc.settings.max_file_bytes
+    if body.size > max_bytes:
+        raise AppError("FILE_TOO_LARGE", f"The file is larger than {svc.settings.MAX_FILE_MB:g} MB.")
+    meta, target = svc.uploads.create(body.file_name, body.content_type, body.size)
+    return {"uploadId": meta.upload_id, "upload": target, "expiresInSeconds": 300}
+
+
+@router.put("/cv/uploads/{upload_id}/file", status_code=204)
+async def put_upload_file(upload_id: str, request: Request, svc: Services = Depends(get_services)) -> Response:
+    """Local-mode upload target: the API itself receives the file body (raw bytes)."""
+    meta = svc.uploads.get_meta(upload_id)
+    if meta is None:
+        raise AppError("UPLOAD_NOT_FOUND")
+    max_bytes = svc.settings.max_file_bytes
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > max_bytes:
+        raise AppError("FILE_TOO_LARGE")
+    content_type = (request.headers.get("content-type") or "").split(";")[0].strip()
+    if content_type != meta.content_type:
+        raise AppError("UNSUPPORTED_FILE_TYPE", "Content-Type does not match the declared file type.")
+
+    chunks: list[bytes] = []
+    total = 0
+    async for chunk in request.stream():  # enforce the limit while streaming
+        total += len(chunk)
+        if total > max_bytes:
+            raise AppError("FILE_TOO_LARGE")
+        chunks.append(chunk)
+    data = b"".join(chunks)
+    if not data:
+        raise AppError("INVALID_REQUEST", "The file is empty.")
+    detect_mime(data)  # reject non-PDF/image content early
+    svc.uploads.write(upload_id, data)
+    return Response(status_code=204)
+
+
+# --------------------------------------------------------------------------- extractions
+
+
+@router.post("/cv/extractions", status_code=202)
+async def start_extraction(body: StartExtractionBody, svc: Services = Depends(get_services)) -> dict[str, Any]:
+    if svc.uploads.get_meta(body.upload_id) is None or not svc.uploads.has_file(body.upload_id):
+        raise AppError("UPLOAD_NOT_FOUND")
+    limit = svc.settings.DAILY_EXTRACTION_LIMIT
+    if limit > 0 and svc.usage.get_today() >= limit:
+        raise AppError("DAILY_LIMIT_REACHED")
+    job = Job(job_id=f"job_{uuid.uuid4()}", upload_id=body.upload_id)
+    svc.jobs.create(job)
+    await svc.queue.enqueue(job.job_id)
+    return {"jobId": job.job_id, "status": "queued"}
+
+
+@router.get("/cv/extractions/{job_id}")
+async def get_extraction(job_id: str, svc: Services = Depends(get_services)) -> dict[str, Any]:
+    job = svc.jobs.get(job_id)
+    if job is None:
+        raise AppError("JOB_NOT_FOUND")
+    out: dict[str, Any] = {"jobId": job.job_id, "status": job.status, "stage": job.stage}
+    if job.result is not None:
+        out["result"] = job.result.model_dump(mode="json", by_alias=True)
+    if job.error is not None:
+        out["error"] = job.error
+    return out
+
+
+# --------------------------------------------------------------------------- profiles
+
+
+@router.get("/profiles/empty")
+async def get_empty_profile() -> dict[str, Any]:
+    return {"profile": empty_profile().model_dump(mode="json", by_alias=True)}
+
+
+@router.put("/profiles")
+async def save_profile(request: Request, svc: Services = Depends(get_services)) -> dict[str, Any]:
+    raw = await request.body()
+    if len(raw) > 512 * 1024:
+        raise AppError("INVALID_REQUEST", "Profile is too large.")
+    try:
+        body = SaveProfileBody.model_validate_json(raw)
+    except ValidationError as err:
+        raise AppError("INVALID_REQUEST", details=_issues(err)) from err
+    try:
+        profile = CvProfile.model_validate(body.profile)
+    except ValidationError as err:
+        raise AppError("INVALID_PROFILE", details=_issues(err)) from err
+
+    now = now_iso()
+    created_at = now
+    profile_id = body.profile_id
+    if profile_id:
+        existing = await svc.profiles.get(profile_id)
+        if existing is None:
+            raise AppError("PROFILE_NOT_FOUND")
+        created_at = existing.created_at
+    else:
+        profile_id = f"prf_{uuid.uuid4()}"
+    confirmed = confirm_profile(profile).model_dump(mode="json", by_alias=True)
+    await svc.profiles.put(StoredProfile(profile_id, body.session_id, confirmed, created_at, now))
+    return {"profileId": profile_id, "updatedAt": now}
+
+
+@router.get("/profiles/{profile_id}")
+async def get_profile(profile_id: str, svc: Services = Depends(get_services)) -> dict[str, Any]:
+    stored = await svc.profiles.get(profile_id)
+    if stored is None:
+        raise AppError("PROFILE_NOT_FOUND")
+    return {"profileId": stored.profile_id, "updatedAt": stored.updated_at, "profile": stored.profile}
+
+
+def _issues(err: ValidationError) -> list[dict[str, str]]:
+    return [{"path": ".".join(str(p) for p in e["loc"]), "message": e["msg"]} for e in err.errors()]
+
