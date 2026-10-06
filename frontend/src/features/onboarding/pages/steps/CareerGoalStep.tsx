@@ -6,17 +6,19 @@ import { RoleRecommendations } from '../../components/goal/RoleRecommendations'
 import { RoleSearchBox } from '../../components/goal/RoleSearchBox'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { SectionCard } from '../../components/SectionCard'
-import { SelectGroup } from '../../components/SelectGroup'
+import { DeadlineSelector } from '../../components/goal/DeadlineSelector'
 import type { Deadline } from '../../types'
 
 type CareerGoalStepProps = {
   targetRole: string
   deadline: Deadline
+  customDeadlineDate: string
   onRoleChange: (role: string) => void
   onDeadlineChange: (deadline: Deadline) => void
+  onCustomDeadlineDateChange: (date: string) => void
 }
 
-export function CareerGoalStep({ targetRole, deadline, onRoleChange, onDeadlineChange }: CareerGoalStepProps) {
+export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange }: CareerGoalStepProps) {
   return (
     <div>
       <PageHeader {...onboardingCopy.headers[3]} className="mb-3.5 sm:mb-3.5" />
@@ -31,9 +33,9 @@ export function CareerGoalStep({ targetRole, deadline, onRoleChange, onDeadlineC
           {({ titleId }) => <RoleRecommendations selectedRole={targetRole} onSelect={onRoleChange} labelledBy={titleId} />}
         </SectionCard>
         <SectionCard icon={Clock3} layout="stacked" title={goalCopy.deadline.title} description={goalCopy.deadline.description}>
-          {({ titleId, descriptionId }) => <SelectGroup<Deadline> value={deadline} onChange={onDeadlineChange}
-            options={goalCopy.deadline.options} labelledBy={titleId} describedBy={descriptionId} cardVariant="inline-radio"
-            className="grid-cols-1 min-[480px]:grid-cols-2 2xl:grid-cols-4" />}
+          {({ titleId, descriptionId }) => <DeadlineSelector value={deadline} customDate={customDeadlineDate}
+            onChange={onDeadlineChange} onCustomDateChange={onCustomDeadlineDateChange}
+            labelledBy={titleId} describedBy={descriptionId} />}
         </SectionCard>
       </div>
     </div>

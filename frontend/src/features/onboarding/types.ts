@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { NOTES_MAX_LENGTH, preferencesCopy } from '../../lib/preferencesConstants'
 import { goalCopy, ROLE_MAX_LENGTH } from '../../lib/goalConstants'
 import { reviewCopy, SKILL_MAX_LENGTH } from '../../lib/profileConstants'
+import { getMinimumDeadlineDate } from '../../lib/deadline'
 
 export const skillSchema = z.string().trim().min(1, reviewCopy.required).max(SKILL_MAX_LENGTH, reviewCopy.skillLimit)
 export const skillsSchema = z.array(skillSchema).refine(
@@ -24,7 +25,7 @@ export type ProfileSection = 'education' | 'skills' | 'projects' | 'experience' 
 
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5
 
-export type Deadline = '3_months' | '6_months' | '1_year' | 'no_deadline'
+export type Deadline = '3_months' | '6_months' | '1_year' | 'custom'
 
 export type RoleSearchResult = { id: string; title: string }
 
@@ -35,15 +36,26 @@ export type RoleRecommendation = RoleSearchResult & {
   demand: 'high' | 'growing' | 'steady'
 }
 
+export const customDeadlineDateSchema = z.iso.date({ error: goalCopy.deadline.dateRequired })
+  .refine((date) => date >= getMinimumDeadlineDate(), goalCopy.deadline.datePast)
+
 export const careerGoalSchema = z.object({
   targetRole: z.string().trim().min(1, goalCopy.roleRequired).max(ROLE_MAX_LENGTH, goalCopy.roleTooLong),
-  deadline: z.enum(['3_months', '6_months', '1_year', 'no_deadline']),
+  deadline: z.enum(['3_months', '6_months', '1_year', 'custom']),
+  customDeadlineDate: z.string(),
+}).superRefine((values, context) => {
+  if (values.deadline !== 'custom') return
+  const result = customDeadlineDateSchema.safeParse(values.customDeadlineDate)
+  if (!result.success) {
+    context.addIssue({ code: 'custom', path: ['customDeadlineDate'], message: result.error.issues[0].message })
+  }
 })
 
 export type OnboardingData = {
   cvFile: File | null
   targetRole: string
   deadline: Deadline
+  customDeadlineDate: string
   preferences: Preferences
   profile: Profile
   profileSource: 'cv' | 'manual'

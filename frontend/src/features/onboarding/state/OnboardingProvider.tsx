@@ -3,11 +3,14 @@ import type { OnboardingData, OnboardingStep, Preferences, Profile } from '../ty
 import { DEFAULT_PREFERENCES } from '../../../lib/preferencesConstants'
 import { OnboardingContext } from './OnboardingContext'
 import { createEmptyProfile } from '../../../lib/api'
+import { careerGoalSchema } from '../types'
+import { onboardingCopy } from '../../../lib/constants'
 
 const initialData: OnboardingData = {
   cvFile: null,
   targetRole: '',
   deadline: '3_months',
+  customDeadlineDate: '',
   preferences: { ...DEFAULT_PREFERENCES },
   profile: createEmptyProfile(),
   profileSource: 'manual',
@@ -18,15 +21,32 @@ type OnboardingProviderProps = {
 }
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>(1)
+  const [navigation, setNavigation] = useState<{ currentStep: OnboardingStep; lastCompletedStep: OnboardingStep | 0 }>({ currentStep: 1, lastCompletedStep: 0 })
   const [data, setData] = useState<OnboardingData>(initialData)
+  const { currentStep, lastCompletedStep } = navigation
+  const availableSteps = onboardingCopy.steps.map(({ id }) => id).filter((step) =>
+    step <= lastCompletedStep && (step <= 2 || data.profile.user_confirmed) &&
+    (step <= 3 || careerGoalSchema.safeParse(data).success),
+  )
 
   function nextStep() {
-    setCurrentStep((step) => (step < 5 ? ((step + 1) as OnboardingStep) : step))
+    setNavigation((current) => {
+      if (current.currentStep === 5) return current
+      return {
+        currentStep: (current.currentStep + 1) as OnboardingStep,
+        lastCompletedStep: Math.max(current.lastCompletedStep, current.currentStep) as OnboardingStep,
+      }
+    })
   }
 
   function previousStep() {
-    setCurrentStep((step) => (step > 1 ? ((step - 1) as OnboardingStep) : step))
+    setNavigation((current) => ({ ...current,
+      currentStep: current.currentStep > 1 ? (current.currentStep - 1) as OnboardingStep : current.currentStep,
+    }))
+  }
+
+  function goToStep(step: OnboardingStep) {
+    if (availableSteps.includes(step)) setNavigation((current) => ({ ...current, currentStep: step }))
   }
 
   function updateData(updates: Partial<OnboardingData>) {
@@ -34,7 +54,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   }
 
   function resetOnboarding() {
-    setCurrentStep(1)
+    setNavigation({ currentStep: 1, lastCompletedStep: 0 })
     setData(initialData)
   }
 
@@ -55,10 +75,11 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     <OnboardingContext.Provider
       value={{
         currentStep,
+        availableSteps,
         data,
         nextStep,
         previousStep,
-        goToStep: setCurrentStep,
+        goToStep,
         updateData,
         updatePreferences,
         updateProfile,
