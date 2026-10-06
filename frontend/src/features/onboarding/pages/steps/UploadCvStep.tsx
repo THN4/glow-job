@@ -1,157 +1,62 @@
-import { useState } from 'react'
-import {
-  Award,
-  BriefcaseBusiness,
-  Code2,
-  FileText,
-  FolderKanban,
-  GraduationCap,
-  ShieldCheck,
-  Upload,
-  Wrench,
-} from 'lucide-react'
+﻿import { useRef, useState } from 'react'
+import { LoaderCircle, ShieldCheck, Upload, X } from 'lucide-react'
+import { Button } from '../../../../components/ui/button'
+import { onboardingCopy } from '../../../../lib/constants'
+import { validateCvFile } from '../../../../lib/cv'
+import { uploadCopy } from '../../../../lib/uploadConstants'
+import { reviewCopy } from '../../../../lib/profileConstants'
+import { PageHeader } from '../../components/layout/PageHeader'
+import { FileDropzone } from '../../components/upload/FileDropzone'
+import { WhatWeFindPanel } from '../../components/upload/WhatWeFindPanel'
 
 type UploadCvStepProps = {
-  fileName: string | null
-  onFileSelected: (fileName: string) => void
+  file: File | null
+  onFileSelected: (file: File | null) => void
+  onUpload: () => void
   onContinueWithoutCv: () => void
+  isUploading?: boolean
+  uploadError?: string | null
 }
 
-const informationTypes = [
-  { icon: GraduationCap, title: 'Education', description: 'Degrees, schools, and fields of study' },
-  { icon: Code2, title: 'Technical skills', description: 'Programming languages and frameworks' },
-  { icon: BriefcaseBusiness, title: 'Work experience', description: 'Roles, companies, and achievements' },
-  { icon: FolderKanban, title: 'Projects', description: 'Personal, academic, and professional projects' },
-  { icon: Award, title: 'Certifications', description: 'Professional certifications and licenses' },
-  { icon: Wrench, title: 'Tools & technologies', description: 'Software, platforms, and tools you use' },
-]
-
-export function UploadCvStep({
-  fileName,
-  onFileSelected,
-  onContinueWithoutCv,
-}: UploadCvStepProps) {
+export function UploadCvStep({ file, onFileSelected, onUpload, onContinueWithoutCv, isUploading = false, uploadError }: UploadCvStepProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
-  const fileInputId = 'cv-upload-input'
 
-  function handleFile(file?: File) {
-    if (!file) return
-
-    const hasAllowedExtension = /\.(pdf|doc|docx)$/i.test(file.name)
-
-    if (!hasAllowedExtension) {
-      setError('Please choose a PDF, DOC, or DOCX file.')
-      return
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      setError('The file must be 10 MB or smaller.')
-      return
-    }
-
-    setError(null)
-    onFileSelected(file.name)
+  function handleFiles(files: File[]) {
+    if (!files.length) return
+    const nextError = files.length > 1 ? uploadCopy.errors.multiple : validateCvFile(files[0])
+    setError(nextError)
+    onFileSelected(nextError ? null : files[0])
   }
 
   return (
-    <section>
-      <header>
-        <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
-          Let’s start with your CV
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-          Upload your CV and we’ll identify your skills, education, projects,
-          and experience.
+    <div aria-busy={isUploading} className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.58fr)_minmax(0,1fr)] xl:gap-11">
+      <div className="min-w-0">
+        <PageHeader {...onboardingCopy.headers[1]} className="mb-6 sm:mb-6" />
+        <FileDropzone file={file} error={error} inputRef={inputRef} onFilesSelected={handleFiles} disabled={isUploading} />
+        {file && <div className="mt-2 flex justify-center">
+          <Button type="button" variant="ghost" disabled={isUploading} onClick={() => { onFileSelected(null); setError(null) }}
+            className="h-10 gap-2 text-sm text-muted-foreground">
+            <X className="size-4" aria-hidden="true" />{uploadCopy.remove}
+          </Button>
+        </div>}
+        <Button type="button" disabled={isUploading} onClick={() => file ? onUpload() : inputRef.current?.click()}
+          className="mx-auto mt-4 flex h-13 w-full max-w-90 gap-3 text-lg font-semibold shadow-sm">
+          {isUploading ? <LoaderCircle className="size-6 animate-spin motion-reduce:animate-none" aria-hidden="true" /> :
+            <Upload className="size-6" strokeWidth={1.8} aria-hidden="true" />}
+          {isUploading ? reviewCopy.preparing : uploadCopy.upload}
+        </Button>
+        {uploadError && <p role="alert" className="mt-3 text-center text-sm text-destructive">{uploadError}</p>}
+        <Button type="button" variant="link" disabled={isUploading} onClick={onContinueWithoutCv}
+          className="mx-auto mt-2 flex h-10 text-lg font-normal underline underline-offset-4">
+          {uploadCopy.skip}
+        </Button>
+        <p className="mx-auto mt-2 flex max-w-lg items-start justify-center gap-3 text-base leading-6 text-muted-foreground">
+          <ShieldCheck className="size-6 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+          <span>{uploadCopy.privacy}</span>
         </p>
-      </header>
-
-      <div className="mt-6 grid gap-6 md:grid-cols-[minmax(0,1fr)_260px]">
-        <div>
-          <label
-            htmlFor={fileInputId}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault()
-              handleFile(event.dataTransfer.files[0])
-            }}
-            className="flex min-h-48 cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-blue-300 bg-blue-50/60 px-5 py-6 text-center transition hover:bg-blue-50"
-          >
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-              <FileText size={26} aria-hidden="true" />
-            </span>
-
-            <span className="mt-3 font-semibold text-slate-900">
-              {fileName ?? 'Drop your CV here'}
-            </span>
-            <span className="mt-1 text-sm text-blue-600">
-              or click to browse
-            </span>
-            <span className="mt-3 text-xs text-slate-500">
-              PDF, DOC, DOCX · Max 10 MB
-            </span>
-          </label>
-
-          <input
-            id={fileInputId}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            className="sr-only"
-            onChange={(event) => handleFile(event.currentTarget.files?.[0])}
-          />
-
-          <label
-            htmlFor={fileInputId}
-            className="mx-auto mt-3 flex min-h-11 w-full max-w-60 cursor-pointer items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            <Upload size={16} aria-hidden="true" />
-            Upload CV
-          </label>
-
-          {error && (
-            <p className="mt-2 text-center text-sm text-red-600" role="alert">
-              {error}
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={onContinueWithoutCv}
-            className="mx-auto mt-3 block min-h-10 px-3 text-sm text-blue-600 underline underline-offset-2 hover:text-blue-800"
-          >
-            Continue without CV
-          </button>
-
-          <p className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-500">
-            <ShieldCheck size={16} aria-hidden="true" />
-            Your CV is only used to build your career profile.
-          </p>
-        </div>
-
-        <aside className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
-          <h2 className="font-semibold text-slate-900">What we’ll find</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-600">
-            Our AI can organize information from your CV, including:
-          </p>
-
-          <ul className="mt-4 space-y-3">
-            {informationTypes.map(({ icon: Icon, title, description }) => (
-              <li key={title} className="flex gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600">
-                  <Icon size={16} aria-hidden="true" />
-                </span>
-                <span>
-                  <span className="block text-xs font-semibold text-slate-900">
-                    {title}
-                  </span>
-                  <span className="mt-0.5 block text-xs leading-4 text-slate-600">
-                    {description}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </aside>
       </div>
-    </section>
+      <WhatWeFindPanel />
+    </div>
   )
 }
