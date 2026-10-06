@@ -15,12 +15,12 @@ export function RoleRecommendationCard({ role, selected, onSelect }: {
 }) {
   return (
     <Button type="button" variant="outline" aria-pressed={selected} onClick={onSelect}
-      className={cn('h-auto min-h-47 min-w-0 flex-col items-stretch justify-between gap-2 whitespace-normal rounded-2xl border-border bg-card px-4 py-3 text-left text-base font-normal shadow-none hover:border-primary/50 hover:bg-accent',
+      className={cn('h-auto min-h-47 min-w-0 flex-col items-stretch justify-between gap-2 whitespace-normal rounded-2xl border-border bg-card px-4 py-3 text-left text-sm font-normal shadow-none hover:border-primary/50 hover:bg-accent',
         selected && 'border-primary bg-accent ring-1 ring-primary')}>
       <span className="grid grid-cols-[44px_minmax(0,1fr)_auto] items-start gap-x-2.5 gap-y-1">
         <IconBox icon={icons[role.category]} color={role.category === 'full_stack' ? 'blue' : 'purple'} className="row-span-2" />
         <span className="min-w-0 font-semibold leading-5 text-foreground">{role.title}</span>
-        <Badge variant="secondary" className="h-8 bg-icon-green px-3 text-lg font-semibold text-success">
+        <Badge variant="secondary" className="h-8 bg-icon-green px-3 text-base font-semibold text-success">
           {goalCopy.recommendations.matchPercent(role.matchPercent)}
         </Badge>
         <span className="col-span-2 col-start-2 text-right text-sm leading-5 text-muted-foreground">{goalCopy.recommendations.profileMatch}</span>

@@ -47,18 +47,18 @@ export function FileDropzone({ file, error, inputRef, onFilesSelected, disabled 
           setDragging(false)
           onFilesSelected(Array.from(event.dataTransfer.files))
         }}
-        className={cn('flex h-auto min-h-70 w-full flex-col gap-0 whitespace-normal rounded-xl border-dashed border-input bg-panel px-5 py-8 text-center text-base font-normal shadow-none hover:border-primary hover:bg-accent',
+        className={cn('flex h-auto min-h-56 w-full flex-col gap-0 whitespace-normal rounded-xl border-dashed border-input bg-panel px-4 py-6 text-center text-sm font-normal shadow-none hover:border-primary hover:bg-accent sm:min-h-60 sm:px-5',
           dragging && 'border-primary bg-accent ring-2 ring-primary/20', error && 'border-destructive')}>
-        <span className="flex size-26 items-center justify-center rounded-full bg-accent text-primary">
-          <FileText className="size-12" strokeWidth={1.5} aria-hidden="true" />
+        <span className="flex size-18 items-center justify-center rounded-full bg-accent text-primary sm:size-22">
+          <FileText className="size-8 sm:size-10" strokeWidth={1.5} aria-hidden="true" />
         </span>
-        <span id={titleId} className="mt-3 max-w-full break-all text-xl font-semibold leading-8 text-foreground sm:text-2xl">
+        <span id={titleId} className="mt-3 max-w-full break-all text-base font-semibold leading-6 text-foreground sm:text-xl">
           {dragging ? uploadCopy.dropNow : file?.name ?? uploadCopy.dropTitle}
         </span>
-        <span className="mt-1 text-lg leading-6 text-muted-foreground">
+        <span className="mt-1 text-sm leading-6 text-muted-foreground sm:text-base">
           {uploadCopy.browsePrefix} <span className="text-primary">{file ? uploadCopy.replace : uploadCopy.browse}</span>
         </span>
-        <span id={hintId} className="mt-4 text-base leading-6 text-muted-foreground">
+        <span id={hintId} className="mt-3 text-xs leading-5 text-muted-foreground sm:text-sm">
           {file ? uploadCopy.fileSize(file.size) : uploadCopy.fileHint}
         </span>
       </Button>

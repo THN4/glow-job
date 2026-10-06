@@ -38,9 +38,9 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
         onEdit={(event) => openEditor('education', event)}>
         <div className="space-y-1 px-1">
           {profile.education ? <>
-            <h3 className="break-words text-xl font-semibold leading-6">{profile.education.degree}</h3>
-            <p className="break-words text-base leading-5 text-muted-foreground">{profile.education.school}</p>
-            {profile.education.period && <p className="text-base leading-5 text-muted-foreground">{profile.education.period}</p>}
+            <h3 className="break-words text-base font-semibold leading-6">{profile.education.degree}</h3>
+            <p className="break-words text-sm leading-5 text-muted-foreground">{profile.education.school}</p>
+            {profile.education.period && <p className="text-sm leading-5 text-muted-foreground">{profile.education.period}</p>}
             <StatusTag variant={profile.education.confirmed ? 'success' : 'warning'} icon={profile.education.confirmed ? CircleCheck : CircleAlert}>
               {profile.education.confirmed ? reviewCopy.confirmedEducation : reviewCopy.confirmEducation}
             </StatusTag>
@@ -58,8 +58,8 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
         onEdit={(event) => openEditor('projects', event)}>
         <div className="space-y-4 px-1">
           {profile.projects.length ? profile.projects.map((project, index) => <article key={index} className="space-y-2">
-            <h3 className="break-words text-xl font-semibold leading-6">{project.name}</h3>
-            {project.description && <p className="break-words text-base leading-5 text-muted-foreground">{project.description}</p>}
+            <h3 className="break-words text-base font-semibold leading-6">{project.name}</h3>
+            {project.description && <p className="break-words text-sm leading-5 text-muted-foreground">{project.description}</p>}
             <SkillChips skills={project.skills} />
           </article>) : <p className="py-3 text-muted-foreground">{reviewCopy.empty.projects}</p>}
         </div>
@@ -69,11 +69,11 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
         <div className="space-y-4 px-1">
           {profile.experience.length ? profile.experience.map((experience, index) => <article key={index} className="space-y-1">
             <div className="flex flex-wrap items-start justify-between gap-2">
-              <h3 className="break-words text-lg font-semibold leading-6">{experience.role}</h3>
+              <h3 className="break-words text-base font-semibold leading-6">{experience.role}</h3>
               {experience.period && <span className="text-sm leading-6 text-muted-foreground">{experience.period}</span>}
             </div>
-            <p className="break-words text-base leading-5 text-muted-foreground">{experience.company}</p>
-            {experience.description && <p className="break-words text-base leading-5 text-muted-foreground">{experience.description}</p>}
+            <p className="break-words text-sm leading-5 text-muted-foreground">{experience.company}</p>
+            {experience.description && <p className="break-words text-sm leading-5 text-muted-foreground">{experience.description}</p>}
             <div className="pt-1"><SkillChips skills={experience.skills} /></div>
           </article>) : <p className="py-3 text-muted-foreground">{reviewCopy.empty.experience}</p>}
         </div>
@@ -94,10 +94,10 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
       <Button type="button" variant="ghost" onClick={onBack} className="h-13 gap-2 text-primary sm:mr-auto">
         <ArrowLeft className="size-4" aria-hidden="true" />{onboardingCopy.back}
       </Button>
-      <Button type="button" variant="outline" onClick={(event) => openEditor('all', event)} className="h-13 flex-1 border-input bg-card px-6 text-lg text-primary sm:flex-none sm:min-w-54">
+      <Button type="button" variant="outline" onClick={(event) => openEditor('all', event)} className="h-13 flex-1 border-input bg-card px-6 text-base text-primary sm:flex-none sm:min-w-54">
         {reviewCopy.editProfile}
       </Button>
-      <Button type="button" onClick={onContinue} className="h-13 w-full gap-3 px-6 text-lg font-semibold sm:w-auto sm:min-w-75 sm:mr-auto">
+      <Button type="button" onClick={onContinue} className="h-13 w-full gap-3 px-6 text-base font-semibold sm:w-auto sm:min-w-75 sm:mr-auto">
         {reviewCopy.continue}<ArrowRight className="size-5" aria-hidden="true" />
       </Button>
     </div>

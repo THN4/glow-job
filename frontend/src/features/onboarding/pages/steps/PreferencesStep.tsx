@@ -47,7 +47,7 @@ export function PreferencesStep({ preferences, onChange, onAnalyze }: Preference
             labelledBy={titleId} describedBy={descriptionId} placeholder={preferencesCopy.notes.placeholder} />}
         </SectionCard>
       </div>
-      <Button type="button" onClick={onAnalyze} className="mt-4 h-13 w-full gap-3 text-base font-semibold shadow-sm xl:text-lg">
+      <Button type="button" onClick={onAnalyze} className="mt-4 h-13 w-full gap-3 text-sm font-semibold shadow-sm sm:text-base">
         <Sparkles className="size-6" aria-hidden="true" />{preferencesCopy.analyze}
       </Button>
     </div>

@@ -41,18 +41,18 @@ export function UploadCvStep({ file, onFileSelected, onUpload, onContinueWithout
           </Button>
         </div>}
         <Button type="button" disabled={isUploading} onClick={() => file ? onUpload() : inputRef.current?.click()}
-          className="mx-auto mt-4 flex h-13 w-full max-w-90 gap-3 text-lg font-semibold shadow-sm">
-          {isUploading ? <LoaderCircle className="size-6 animate-spin motion-reduce:animate-none" aria-hidden="true" /> :
-            <Upload className="size-6" strokeWidth={1.8} aria-hidden="true" />}
+          className="mx-auto mt-4 flex h-11 w-full max-w-90 gap-2 text-sm font-semibold shadow-sm sm:h-12 sm:text-base">
+          {isUploading ? <LoaderCircle className="size-5 animate-spin motion-reduce:animate-none" aria-hidden="true" /> :
+            <Upload className="size-5" strokeWidth={1.8} aria-hidden="true" />}
           {isUploading ? reviewCopy.preparing : uploadCopy.upload}
         </Button>
         {uploadError && <p role="alert" className="mt-3 text-center text-sm text-destructive">{uploadError}</p>}
         <Button type="button" variant="link" disabled={isUploading} onClick={onContinueWithoutCv}
-          className="mx-auto mt-2 flex h-10 text-lg font-normal underline underline-offset-4">
+          className="mx-auto mt-2 flex h-10 text-sm font-normal underline underline-offset-4 sm:text-base">
           {uploadCopy.skip}
         </Button>
-        <p className="mx-auto mt-2 flex max-w-lg items-start justify-center gap-3 text-base leading-6 text-muted-foreground">
-          <ShieldCheck className="size-6 shrink-0" strokeWidth={1.6} aria-hidden="true" />
+        <p className="mx-auto mt-2 flex max-w-lg items-start justify-center gap-2 text-xs leading-5 text-muted-foreground sm:text-sm">
+          <ShieldCheck className="size-5 shrink-0" strokeWidth={1.6} aria-hidden="true" />
           <span>{uploadCopy.privacy}</span>
         </p>
       </div>
