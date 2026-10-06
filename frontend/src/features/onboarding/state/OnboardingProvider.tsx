@@ -1,30 +1,17 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  type ReactNode,
-} from 'react'
-import type { CurrentStatus, OnboardingData, OnboardingStep, Timeline } from '../types'
-
-type OnboardingContextValue = {
-  currentStep: OnboardingStep
-  data: OnboardingData
-  nextStep: () => void
-  previousStep: () => void
-  goToStep: (step: OnboardingStep) => void
-  updateData: (updates: Partial<OnboardingData>) => void
-  resetOnboarding: () => void
-}
+import { useState, type ReactNode } from 'react'
+import type { OnboardingData, OnboardingStep, Preferences, Profile } from '../types'
+import { DEFAULT_PREFERENCES } from '../../../lib/preferencesConstants'
+import { OnboardingContext } from './OnboardingContext'
+import { createEmptyProfile } from '../../../lib/api'
 
 const initialData: OnboardingData = {
-  cvFileName: null,
+  cvFile: null,
   targetRole: '',
-  timeline: null as Timeline | null,
-  currentStatus: null as CurrentStatus | null,
-  hoursPerWeek: null,
+  deadline: '3_months',
+  preferences: { ...DEFAULT_PREFERENCES },
+  profile: createEmptyProfile(),
+  profileSource: 'manual',
 }
-
-const OnboardingContext = createContext<OnboardingContextValue | null>(null)
 
 type OnboardingProviderProps = {
   children: ReactNode
@@ -51,6 +38,19 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     setData(initialData)
   }
 
+  function updatePreferences(updates: Partial<Preferences>) {
+    setData((currentData) => ({
+      ...currentData,
+      preferences: { ...currentData.preferences, ...updates },
+    }))
+  }
+
+  function updateProfile(updates: Partial<Profile>) {
+    setData((currentData) => ({ ...currentData,
+      profile: { ...currentData.profile, ...updates, user_confirmed: false },
+    }))
+  }
+
   return (
     <OnboardingContext.Provider
       value={{
@@ -60,20 +60,12 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
         previousStep,
         goToStep: setCurrentStep,
         updateData,
+        updatePreferences,
+        updateProfile,
         resetOnboarding,
       }}
     >
       {children}
     </OnboardingContext.Provider>
   )
-}
-
-export function useOnboarding() {
-  const context = useContext(OnboardingContext)
-
-  if (!context) {
-    throw new Error('useOnboarding must be used within OnboardingProvider')
-  }
-
-  return context
 }
