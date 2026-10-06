@@ -6,6 +6,18 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-panel: var(--panel);
+  --color-icon-blue: var(--icon-blue);
+  --color-icon-green: var(--icon-green);
+  --color-icon-purple: var(--icon-purple);
+  --color-icon-pink: var(--icon-pink);
+  --color-icon-amber: var(--icon-amber);
+  --color-icon-teal: var(--icon-teal);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-pink: var(--pink);
+  --color-teal: var(--teal);
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', 'Noto Sans Thai', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -49,24 +61,36 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #f2f9ff;
+  --foreground: #0d1246;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: #0B5FFF;
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: #e4efff;
+  --secondary-foreground: var(--primary);
+  --muted: #eaf2fc;
+  --muted-foreground: #637fbd;
+  --accent: #e9f5ff;
+  --accent-foreground: var(--primary);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #d7e6ff;
+  --input: #c7dbff;
+  --ring: var(--primary);
+  --panel: #f4f9ff;
+  --icon-blue: #e4efff;
+  --icon-green: #e1f7f0;
+  --icon-purple: #efe6ff;
+  --icon-pink: #fde5f0;
+  --icon-amber: #fff4d9;
+  --icon-teal: #e0f7fa;
+  --success: #00b879;
+  --warning: #e28a00;
+  --info: #7638ff;
+  --pink: #ff278b;
+  --teal: #00b3c5;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
