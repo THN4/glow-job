@@ -1,5 +1,7 @@
 export const sharedCopy = {
   brand: 'GlowJob',
+  brandGlow: 'Glow',
+  brandJob: 'Job',
   tagline: 'Your AI career co-pilot',
   help: 'Need help?',
   account: 'Account menu',

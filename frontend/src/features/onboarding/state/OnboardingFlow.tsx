@@ -14,6 +14,8 @@ import { ReviewProfileStep } from '../pages/steps/ReviewProfileStep'
 export function OnboardingFlow() {
   const {
     currentStep,
+    availableSteps,
+    goToStep,
     data,
     nextStep,
     previousStep,
@@ -61,6 +63,8 @@ export function OnboardingFlow() {
   return (
     <OnboardingLayout
       currentStep={currentStep}
+      availableSteps={availableSteps}
+      onStepChange={isUploading ? undefined : goToStep}
       onBack={currentStep > 1 ? previousStep : undefined}
       onContinue={currentStep === 1 || currentStep === 2 || currentStep === 4 ? undefined : handleContinue}
       canContinue={canContinue}
@@ -82,8 +86,10 @@ export function OnboardingFlow() {
           onContinue={handleContinue} onBack={previousStep} />
       ) : currentStep === 3 ? (
         <CareerGoalStep targetRole={data.targetRole} deadline={data.deadline}
+          customDeadlineDate={data.customDeadlineDate}
           onRoleChange={(targetRole) => updateData({ targetRole })}
-          onDeadlineChange={(deadline) => updateData({ deadline })} />
+          onDeadlineChange={(deadline) => updateData({ deadline })}
+          onCustomDeadlineDateChange={(customDeadlineDate) => updateData({ customDeadlineDate })} />
       ) : currentStep === 4 ? (
         <PreferencesStep preferences={data.preferences} onChange={updatePreferences} onAnalyze={nextStep} />
       ) : (

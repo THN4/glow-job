@@ -4,6 +4,17 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant roomy-header {
+  @media (min-width: 40rem) and (min-height: 30rem) {
+    @slot;
+  }
+}
+/* Keep phones compact, including landscape; expand for landscape tablets and desktops. */
+@custom-variant sidebar-expanded {
+  @media (min-width: 80rem), (min-width: 48rem) and (min-height: 30rem) and (orientation: landscape) {
+    @slot;
+  }
+}
 
 @theme inline {
   --color-panel: var(--panel);
