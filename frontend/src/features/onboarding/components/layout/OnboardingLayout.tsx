@@ -1,19 +1,25 @@
 import type { ReactNode } from 'react'
-import { CircleHelp } from 'lucide-react'
+import { TopBar } from '../../../../components/shared/TopBar'
 import { OnboardingSidebar } from './OnboardingSidebar'
 import { OnboardingStepper } from './OnboardingStepper'
 import { StepNavigation } from './StepNavigation'
 import type { OnboardingStep } from '../../types'
+import { onboardingCopy } from '../../../../lib/constants'
+import type { SidebarContent } from './sidebarContent'
 
 type OnboardingLayoutProps = {
   currentStep: OnboardingStep
   children: ReactNode
-  onContinue: () => void
+  onContinue?: () => void
   onBack?: () => void
   onHelp?: () => void
   canContinue?: boolean
   isLoading?: boolean
   continueLabel?: string
+  sidebarContent?: SidebarContent
+  progressLabel?: string
+  analyzing?: boolean
+  footer?: ReactNode
 }
 
 export function OnboardingLayout({
@@ -24,42 +30,38 @@ export function OnboardingLayout({
   onHelp,
   canContinue = true,
   isLoading = false,
-  continueLabel = 'Continue',
+  continueLabel = onboardingCopy.continue,
+  sidebarContent,
+  progressLabel,
+  analyzing = false,
+  footer,
 }: OnboardingLayoutProps) {
   return (
-    <main className="min-h-screen bg-[#f2f8ff] lg:flex">
-      <OnboardingSidebar currentStep={currentStep} />
+    <main className="min-h-screen bg-background lg:flex">
+      <OnboardingSidebar currentStep={currentStep} content={sidebarContent} progressLabel={progressLabel} analyzing={analyzing} />
 
-      <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-5 lg:p-4">
-        <header className="mb-2 flex h-10 shrink-0 items-center justify-end">
-          <button
-            type="button"
-            onClick={onHelp}
-            className="inline-flex min-h-10 items-center gap-2 px-2 text-sm text-blue-600 hover:text-blue-800"
-          >
-            <CircleHelp size={17} aria-hidden="true" />
-            Need help?
-          </button>
-        </header>
+      <div className="flex min-w-0 flex-1 flex-col px-3 pb-4 sm:px-6 sm:pb-6 lg:pl-8 lg:pr-6 xl:pl-10 xl:pr-7 xl:pb-8">
+        <TopBar onHelp={onHelp} />
 
-        <section className="mx-auto flex min-h-[calc(100vh-4.5rem)] w-full max-w-5xl flex-1 flex-col rounded-2xl border border-blue-100 bg-white px-5 py-6 shadow-sm sm:px-8 sm:py-7">
-          <div className="mx-auto w-full max-w-3xl">
-            <OnboardingStepper currentStep={currentStep} />
+        <section className="mx-auto mt-4 flex w-full flex-1 flex-col rounded-2xl border border-border bg-card px-4 py-6 sm:px-7 sm:py-8 xl:rounded-3xl xl:px-11 xl:pb-7 xl:pt-11">
+          <div className="w-full">
+            <OnboardingStepper currentStep={currentStep} analyzing={analyzing} />
           </div>
 
-          <div className="mx-auto mt-7 flex w-full max-w-5xl flex-1 flex-col">
+          <div className="mt-7 flex w-full flex-1 flex-col">
             {children}
           </div>
 
-          <div className="mx-auto mt-8 w-full max-w-3xl">
+          {(footer !== undefined || onContinue) && <div className="mt-5 w-full">
+            {footer ?? (onContinue &&
             <StepNavigation
               onBack={onBack}
               onContinue={onContinue}
               canContinue={canContinue}
               isLoading={isLoading}
               continueLabel={continueLabel}
-            />
-          </div>
+            />)}
+          </div>}
         </section>
       </div>
     </main>

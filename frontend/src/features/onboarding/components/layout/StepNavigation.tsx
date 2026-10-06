@@ -1,4 +1,6 @@
 import { ArrowLeft, ArrowRight, LoaderCircle } from 'lucide-react'
+import { Button } from '../../../../components/ui/button'
+import { onboardingCopy } from '../../../../lib/constants'
 
 type StepNavigationProps = {
   onBack?: () => void
@@ -14,30 +16,31 @@ export function StepNavigation({
   onContinue,
   canContinue = true,
   isLoading = false,
-  continueLabel = 'Continue',
-  backLabel = 'Back',
+  continueLabel = onboardingCopy.continue,
+  backLabel = onboardingCopy.back,
 }: StepNavigationProps) {
   return (
     <footer className="flex w-full items-center justify-between gap-3">
       {onBack ? (
-        <button
+        <Button
+          variant="outline"
           type="button"
           onClick={onBack}
           disabled={isLoading}
-          className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-12 gap-2 border-input bg-card px-5 text-base text-primary"
         >
           <ArrowLeft size={16} aria-hidden="true" />
           {backLabel}
-        </button>
+        </Button>
       ) : (
         <span />
       )}
 
-      <button
+      <Button
         type="button"
         onClick={onContinue}
         disabled={!canContinue || isLoading}
-        className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 sm:flex-none sm:min-w-48"
+        className="h-12 flex-1 gap-3 px-6 text-base font-semibold sm:flex-none sm:min-w-60"
       >
         {isLoading && (
           <LoaderCircle
@@ -48,7 +51,7 @@ export function StepNavigation({
         )}
         {continueLabel}
         {!isLoading && <ArrowRight size={16} aria-hidden="true" />}
-      </button>
+      </Button>
     </footer>
   )
 }

@@ -1,115 +1,68 @@
-import {
-  ChartNoAxesColumnIncreasing,
-  Compass,
-  FileText,
-} from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
-import type { OnboardingStep } from '../../types'
-import backgroundImage from '../../../../assets/images/glowjob-background.png'
-import logoImage from '../../../../assets/images/GlowJob.png'
+﻿import backgroundImage from "../../../../assets/images/glowjob-background.png";
+import { Logo } from "../../../../components/shared/Logo";
+import type { OnboardingStep } from "../../types";
+import { SideFeatureItem } from "./SideFeatureItem";
+import { SideProgress } from "./SideProgress";
+import { getSidebarContent, type SidebarContent } from "./sidebarContent";
 
 type OnboardingSidebarProps = {
-  currentStep: OnboardingStep
-}
-
-const benefits: {
-  icon: LucideIcon
-  title: string
-  description: string
-}[] = [
-  {
-    icon: FileText,
-    title: 'AI-powered insights',
-    description: 'We analyze your CV to uncover your unique strengths.',
-  },
-  {
-    icon: ChartNoAxesColumnIncreasing,
-    title: 'Personalized guidance',
-    description: 'Get tailored career advice and next steps.',
-  },
-  {
-    icon: Compass,
-    title: 'A clearer path forward',
-    description: 'Set goals and discover new opportunities.',
-  },
-]
+  currentStep: OnboardingStep;
+  content?: SidebarContent;
+  progressLabel?: string;
+  analyzing?: boolean;
+};
 
 export function OnboardingSidebar({
   currentStep,
+  content,
+  progressLabel,
+  analyzing = false,
 }: OnboardingSidebarProps) {
+  const { headline, description, features } =
+    content ?? getSidebarContent(currentStep, analyzing);
   return (
-    <aside className="relative hidden min-h-screen w-[266px] shrink-0 flex-col overflow-hidden bg-[#edf6ff] px-6 py-5 lg:flex">
+    <aside className="relative isolate shrink-0 overflow-hidden border-b border-border bg-accent px-5 py-4 sm:px-8 lg:min-h-screen lg:w-[24%] lg:max-w-[401px] lg:border-b-0 lg:px-7 lg:py-5 xl:px-10">
       <img
         src={backgroundImage}
         alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-0 w-full object-contain object-bottom"
+        className="pointer-events-none absolute inset-x-0 bottom-0 -z-20 hidden h-[480px] w-full object-fill lg:block"
       />
-
-      <div className="relative z-10">
-        <div className="flex items-center gap-3">
-          <img
-            src={logoImage}
-            alt="Glow-Job"
-            className="h-12 w-[68px] object-contain"
-          />
-          <span className="text-[11px] text-blue-700">
-            Your AI career co-pilot
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 hidden bg-linear-to-b from-accent via-accent/90 to-transparent lg:block"
+        aria-hidden="true"
+      />
+      <div className="flex items-center justify-between gap-5 lg:block">
+        <div className="flex items-center gap-0">
+          <Logo className="w-20 lg:w-24 shrink-0" />
+          <span
+            aria-hidden="true"
+            className="text-2xl font-bold leading-tight tracking-tight"
+          >
+            Glow<span className="text-primary">Job</span>
           </span>
         </div>
-
-        <p className="mt-2 text-xs font-medium text-slate-800">
-          Step {currentStep} of 5
-        </p>
-
-        <div
-          className="mt-2 flex gap-1.5"
-          role="progressbar"
-          aria-label="Onboarding progress"
-          aria-valuemin={1}
-          aria-valuemax={5}
-          aria-valuenow={currentStep}
-        >
-          {Array.from({ length: 5 }, (_, index) => (
-            <span
-              key={index}
-              className={`h-1.5 flex-1 rounded-full ${
-                index < currentStep ? 'bg-blue-600' : 'bg-blue-200'
-              }`}
-            />
-          ))}
-        </div>
-
-        <h1 className="mt-8 text-[28px] font-bold leading-[1.1] text-slate-900">
-          Your brighter
-          <br />
-          career journey
-          <br />
-          starts here
-        </h1>
-
-        <p className="mt-3 text-sm leading-5 text-blue-800">
-          Upload your CV so our AI can understand your background and give you
-          personalized guidance for what’s next.
-        </p>
-
-        <div className="mt-5 space-y-4">
-          {benefits.map(({ icon: Icon, title, description }) => (
-            <div key={title} className="flex gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <Icon size={18} aria-hidden="true" />
-              </div>
-
-              <div>
-                <h2 className="text-xs font-bold text-slate-900">{title}</h2>
-                <p className="mt-0.5 text-[11px] leading-4 text-blue-800">
-                  {description}
-                </p>
-              </div>
-            </div>
-          ))}
+        <div className="w-36 shrink-0 sm:w-52 lg:mt-3 lg:w-full">
+          <SideProgress
+            currentStep={currentStep}
+            label={progressLabel}
+            analyzing={analyzing}
+          />
         </div>
       </div>
+      <div className="hidden lg:block">
+        <h2 className="mt-11 text-3xl font-bold leading-[1.15] tracking-tight text-foreground xl:text-[40px]">
+          {headline}
+        </h2>
+        <p className="mt-4 text-lg leading-[1.35] text-muted-foreground xl:text-xl">
+          {description}
+        </p>
+        <ul className="mt-6 space-y-7 pb-40">
+          {features.map((feature) => (
+            <SideFeatureItem key={feature.title} {...feature} />
+          ))}
+        </ul>
+      </div>
     </aside>
-  )
+  );
 }
