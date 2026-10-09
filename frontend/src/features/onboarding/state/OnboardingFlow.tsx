@@ -10,10 +10,13 @@ import { careerGoalSchema } from '../types'
 import { analyzeCv, createEmptyProfile } from '../../../lib/api'
 import { reviewCopy } from '../../../lib/profileConstants'
 import { ReviewProfileStep } from '../pages/steps/ReviewProfileStep'
+import { Sparkles } from 'lucide-react'
+import { preferencesCopy } from '../../../lib/preferencesConstants'
 
 export function OnboardingFlow() {
   const {
     currentStep,
+    completedSteps,
     availableSteps,
     goToStep,
     data,
@@ -63,12 +66,14 @@ export function OnboardingFlow() {
   return (
     <OnboardingLayout
       currentStep={currentStep}
+      completedSteps={completedSteps}
       availableSteps={availableSteps}
       onStepChange={isUploading ? undefined : goToStep}
       onBack={currentStep > 1 ? previousStep : undefined}
-      onContinue={currentStep === 1 || currentStep === 2 || currentStep === 4 ? undefined : handleContinue}
+      onContinue={currentStep === 1 || currentStep === 2 ? undefined : handleContinue}
       canContinue={canContinue}
-      continueLabel={currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
+      continueLabel={currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
+      continueIcon={currentStep === 4 ? Sparkles : undefined}
     >
       {currentStep === 1 ? (
         <UploadCvStep
@@ -91,7 +96,7 @@ export function OnboardingFlow() {
           onDeadlineChange={(deadline) => updateData({ deadline })}
           onCustomDeadlineDateChange={(customDeadlineDate) => updateData({ customDeadlineDate })} />
       ) : currentStep === 4 ? (
-        <PreferencesStep preferences={data.preferences} onChange={updatePreferences} onAnalyze={nextStep} />
+        <PreferencesStep preferences={data.preferences} onChange={updatePreferences} />
       ) : (
         <section>
           <PageHeader {...onboardingCopy.headers[currentStep]} />

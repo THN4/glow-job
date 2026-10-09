@@ -3,6 +3,7 @@ import type { OnboardingData, OnboardingStep, Preferences, Profile } from '../ty
 
 type OnboardingContextValue = {
   currentStep: OnboardingStep
+  completedSteps: readonly OnboardingStep[]
   availableSteps: readonly OnboardingStep[]
   data: OnboardingData
   nextStep: () => void

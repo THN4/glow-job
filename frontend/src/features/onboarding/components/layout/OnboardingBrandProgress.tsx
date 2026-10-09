@@ -6,12 +6,13 @@ import { SideProgress } from './SideProgress'
 
 type OnboardingBrandProgressProps = {
   currentStep: OnboardingStep
+  completedSteps?: readonly OnboardingStep[]
   progressLabel?: string
   analyzing?: boolean
   compact?: boolean
 }
 
-export function OnboardingBrandProgress({ currentStep, progressLabel, analyzing = false, compact = false }: OnboardingBrandProgressProps) {
+export function OnboardingBrandProgress({ currentStep, completedSteps, progressLabel, analyzing = false, compact = false }: OnboardingBrandProgressProps) {
   return <div className={cn('min-w-0', compact && 'w-28 sm:w-40')}>
     <div className="flex items-center">
       <Logo className={compact ? 'w-7 [&>img]:size-7 sm:w-8 sm:[&>img]:size-8' : 'w-24'} />
@@ -20,7 +21,7 @@ export function OnboardingBrandProgress({ currentStep, progressLabel, analyzing 
       </span>
     </div>
     <div className={compact ? 'mt-1' : 'mt-3'}>
-      <SideProgress currentStep={currentStep} label={progressLabel} analyzing={analyzing} compact={compact} />
+      <SideProgress currentStep={currentStep} completedSteps={completedSteps} label={progressLabel} analyzing={analyzing} compact={compact} />
     </div>
   </div>
 }

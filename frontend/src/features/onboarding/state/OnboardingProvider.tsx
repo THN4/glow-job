@@ -24,8 +24,9 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const [navigation, setNavigation] = useState<{ currentStep: OnboardingStep; lastCompletedStep: OnboardingStep | 0 }>({ currentStep: 1, lastCompletedStep: 0 })
   const [data, setData] = useState<OnboardingData>(initialData)
   const { currentStep, lastCompletedStep } = navigation
-  const availableSteps = onboardingCopy.steps.map(({ id }) => id).filter((step) =>
-    step <= lastCompletedStep && (step <= 2 || data.profile.user_confirmed) &&
+  const completedSteps = onboardingCopy.steps.map(({ id }) => id).filter((step) => step <= lastCompletedStep)
+  const availableSteps = completedSteps.filter((step) =>
+    (step <= 2 || data.profile.user_confirmed) &&
     (step <= 3 || careerGoalSchema.safeParse(data).success),
   )
 
@@ -75,6 +76,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     <OnboardingContext.Provider
       value={{
         currentStep,
+        completedSteps,
         availableSteps,
         data,
         nextStep,
