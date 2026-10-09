@@ -21,7 +21,7 @@ type CareerGoalStepProps = {
 export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange }: CareerGoalStepProps) {
   return (
     <div>
-      <PageHeader {...onboardingCopy.headers[3]} className="mb-3.5 sm:mb-3.5" />
+      <PageHeader {...onboardingCopy.headers[3]} />
       <div className="space-y-4">
         <SectionCard icon={Search} layout="stacked" title={goalCopy.search.title} description={goalCopy.search.description}>
           <div className="space-y-2">

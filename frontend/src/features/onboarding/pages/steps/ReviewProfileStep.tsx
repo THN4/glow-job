@@ -1,9 +1,10 @@
 import { useRef, useState, type MouseEvent } from 'react'
-import { ArrowLeft, ArrowRight, Award, BriefcaseBusiness, CircleAlert, CircleCheck, Code2, GraduationCap, NotebookText, Sparkles } from 'lucide-react'
+import { Award, BriefcaseBusiness, CircleAlert, CircleCheck, Code2, GraduationCap, NotebookText, Sparkles } from 'lucide-react'
 import { Button } from '../../../../components/ui/button'
 import { SkillChip } from '../../../../components/shared/SkillChip'
 import { StatusTag } from '../../../../components/shared/StatusTag'
 import { onboardingCopy } from '../../../../lib/constants'
+import { StepNavigation } from '../../components/layout/StepNavigation'
 import { reviewCopy } from '../../../../lib/profileConstants'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { EditSectionDialog } from '../../components/review/EditSectionDialog'
@@ -30,8 +31,8 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
     returnFocus.current = event.currentTarget
     setEditing(section)
   }
-  return <div>
-    <PageHeader {...(source === 'cv' ? onboardingCopy.headers[2] : reviewCopy.manualHeader)} className="mb-3.5 sm:mb-3.5"
+  return <div className="flex flex-1 flex-col">
+    <PageHeader {...(source === 'cv' ? onboardingCopy.headers[2] : reviewCopy.manualHeader)}
       badge={source === 'cv' ? <StatusTag icon={Sparkles} variant="info">{reviewCopy.autofilled}</StatusTag> : undefined} />
     <div className="grid gap-4 xl:grid-cols-2">
       <InfoCard title={reviewCopy.titles.education} icon={GraduationCap} color="green" className="xl:min-h-44"
@@ -90,16 +91,10 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
         </div> : <p className="px-1 py-3 text-muted-foreground">{reviewCopy.empty.certifications}</p>}
       </InfoCard>
     </div>
-    <div className="mt-3 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-      <Button type="button" variant="ghost" onClick={onBack} className="h-13 gap-2 text-primary sm:mr-auto">
-        <ArrowLeft className="size-4" aria-hidden="true" />{onboardingCopy.back}
-      </Button>
-      <Button type="button" variant="outline" onClick={(event) => openEditor('all', event)} className="h-13 flex-1 border-input bg-card px-6 text-base text-primary sm:flex-none sm:min-w-54">
-        {reviewCopy.editProfile}
-      </Button>
-      <Button type="button" onClick={onContinue} className="h-13 w-full gap-3 px-6 text-base font-semibold sm:w-auto sm:min-w-75 sm:mr-auto">
-        {reviewCopy.continue}<ArrowRight className="size-5" aria-hidden="true" />
-      </Button>
+    <div className="@container mt-auto pt-6">
+      <StepNavigation onBack={onBack} onContinue={onContinue} continueLabel={reviewCopy.continue}
+        extraActions={<Button type="button" variant="outline" onClick={(event) => openEditor('all', event)}
+          className="h-12 border-input bg-card px-5 text-base text-primary">{reviewCopy.editProfile}</Button>} />
     </div>
     {editing && <EditSectionDialog key={editing} section={editing} profile={profile} onSave={onChange}
       onClose={() => setEditing(null)} onRestoreFocus={() => returnFocus.current?.focus()} />}
