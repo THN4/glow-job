@@ -9,7 +9,7 @@ export const sharedCopy = {
 } as const
 
 export const onboardingCopy = {
-  headline: 'Your brighter career journey starts here',
+  headline: 'Your brighter career\njourney starts here',
   progressLabel: 'Onboarding progress',
   stepLabel: (step: number) => `Step ${step} of 5`,
   stepAnnouncement: (step: number, label: string) => `Step ${step}: ${label}`,
