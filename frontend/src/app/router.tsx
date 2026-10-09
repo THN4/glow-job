@@ -6,6 +6,7 @@ import {
   workspaceUser,
 } from '../features/workspace/data/workspaceMockData'
 import { WorkspacePlaceholderPage } from '../features/workspace/pages/WorkspacePlaceholderPage'
+import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
 
 const router = createBrowserRouter([
   {
@@ -25,6 +26,10 @@ const router = createBrowserRouter([
       />
     ),
     children: [
+      {
+        path: 'roadmap',
+        element: <RoadmapPage />,
+      },
       {
         path: '*',
         element: <WorkspacePlaceholderPage />,
