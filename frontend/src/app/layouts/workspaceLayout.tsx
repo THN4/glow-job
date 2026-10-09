@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
 import type {
   CurrentGoalSummary,
@@ -23,6 +23,9 @@ export function WorkspaceLayout({
   onHelpClick,
   onProfileClick,
 }: WorkspaceLayoutProps) {
+  const { pathname } = useLocation()
+  const isRoadmapPage = pathname.startsWith('/app/roadmap')
+
   return (
     <div className="flex h-dvh overflow-hidden bg-sky-50">
       <WorkspaceSidebar
@@ -34,8 +37,16 @@ export function WorkspaceLayout({
         onProfileClick={onProfileClick}
       />
 
-      <main className="min-h-0 min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto min-h-screen w-full max-w-[1500px] p-4 sm:p-6">
+      <main
+        className={`min-h-0 min-w-0 flex-1 ${
+          isRoadmapPage ? 'overflow-hidden' : 'overflow-y-auto'
+        }`}
+      >
+        <div
+          className={`mx-auto w-full max-w-[1500px] p-4 sm:p-6 ${
+            isRoadmapPage ? 'flex h-full min-h-0 flex-col' : 'min-h-screen'
+          }`}
+        >
           <Outlet />
         </div>
       </main>
