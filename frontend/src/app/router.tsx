@@ -8,6 +8,7 @@ import {
 import { WorkspacePlaceholderPage } from '../features/workspace/pages/WorkspacePlaceholderPage'
 import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
 import { SkillProfilePage } from '../features/skill-profile/pages/SkillProfilePage'
+import { ApplicationsPage } from '../features/applications/pages/ApplicationsPage'
 
 const router = createBrowserRouter([
   {
@@ -34,6 +35,10 @@ const router = createBrowserRouter([
       {
         path: 'skill-profile',
         element: <SkillProfilePage />,
+      },
+      {
+        path: 'applications',
+        element: <ApplicationsPage />,
       },
       {
         path: '*',
