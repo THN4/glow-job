@@ -7,6 +7,7 @@ import {
 } from '../features/workspace/data/workspaceMockData'
 import { WorkspacePlaceholderPage } from '../features/workspace/pages/WorkspacePlaceholderPage'
 import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
+import { SkillProfilePage } from '../features/skill-profile/pages/SkillProfilePage'
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,10 @@ const router = createBrowserRouter([
       {
         path: 'roadmap',
         element: <RoadmapPage />,
+      },
+      {
+        path: 'skill-profile',
+        element: <SkillProfilePage />,
       },
       {
         path: '*',
