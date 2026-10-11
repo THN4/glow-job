@@ -11,11 +11,11 @@ import logging
 import time
 from dataclasses import dataclass
 
-from .errors import AppError, to_app_error
-from .extractors import Extractor
-from .postprocess import BuildContext, build_result
-from .preprocess import Limits, prepare_cv, sha256
-from .storage import CacheRepo, JobsRepo, LocalUploadStore, UsageCounter
+from app.features.resume.errors import AppError, to_app_error
+from app.features.resume.storage import CacheRepo, JobsRepo, LocalUploadStore, UsageCounter
+from src.resume.extraction.contracts import Extractor
+from src.resume.normalization.postprocess import BuildContext, build_result
+from src.resume.parsing.preprocess import Limits, prepare_cv, sha256
 
 log = logging.getLogger("cv_extraction")
 

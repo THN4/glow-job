@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.resume.errors import ResumeProcessingError
+
 # code -> (http status, retryable, default message)
 _CATALOG: dict[str, tuple[int, bool, str]] = {
     "INVALID_REQUEST": (400, False, "The request is missing or has invalid fields."),
@@ -43,4 +45,8 @@ class AppError(Exception):
 
 
 def to_app_error(err: BaseException) -> AppError:
-    return err if isinstance(err, AppError) else AppError("INTERNAL_ERROR")
+    if isinstance(err, AppError):
+        return err
+    if isinstance(err, ResumeProcessingError):
+        return AppError(err.code, err.message)
+    return AppError("INTERNAL_ERROR")

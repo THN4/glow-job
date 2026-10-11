@@ -15,7 +15,7 @@ A **vision-language model (Qwen-VL)** reads both text and page images, and **JSO
 All model access goes through one interface, so moving from the notebook server to AWS is a config change:
 
 ```python
-# backend-py/app/cv_extraction/extractors/base.py
+# data-pipeline/src/resume/extraction/contracts.py
 @dataclass
 class PreparedCv:
     kind: Literal["text", "images"]      # text PDF / DOCX  |  scan / photo
@@ -55,7 +55,7 @@ class Extractor(Protocol):
 ## 5.4 Step 3: the Qwen call (OpenAI-compatible)
 
 ```python
-# backend-py/app/cv_extraction/extractors/openai_compatible.py (simplified)
+# data-pipeline/src/resume/extraction/providers/openai_compatible.py (simplified; provider)
 client = AsyncOpenAI(
     base_url=settings.LLM_BASE_URL,            # e.g. http://notebook-server:11434/v1 (Ollama)
     api_key=settings.LLM_API_KEY,              # Ollama ignores it; vLLM can require one

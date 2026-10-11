@@ -1,6 +1,6 @@
 # 3. Data Schema — the `CvProfile` contract
 
-This is the **most important document for the future frontend**. Every card on the Review Profile screen maps 1:1 to a section below. The schema lives in `backend-py/app/cv_extraction/schemas.py` (Pydantic; fields are snake_case in Python and **camelCase on the wire**) and is used for:
+This is the **most important document for the future frontend**. Every card on the Review Profile screen maps 1:1 to a section below. The schema lives in `data-pipeline/src/resume/schemas/cv_extraction.py` (Pydantic; fields are snake_case in Python and **camelCase on the wire**) and is used for:
 
 1. the AI output format (structured outputs),
 2. validating `PUT /api/profiles` bodies,

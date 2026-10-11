@@ -1,6 +1,6 @@
 # 9. What the database needs from a CV (gap analysis)
 
-> **Status (2026-10-05): P1, P2 (derived facts) and the P3 evidence/description items are implemented** in `app/cv_extraction/derive.py`, `schemas.py` and `postprocess.py` (see the table in 9.6). Still open: the skill-ID lookup against `core.skills` (needs the database), the `experience_type` mapping and the date/confidence conversions (they belong to the row mapper, task 7c).
+> **Schema update (2026-10-11):** the app DBML now matches the onboarding UI and can retain unmatched user skill labels without inserting them into `core.skills`. This is a design update only; it does not mean the database migrations or profile persistence have been implemented. Extraction-to-row mapping and catalog matching are still separate implementation work.
 
 Method: read every table in the canonical design ([docs/schemas/glow-job.dbml](../schemas/glow-job.dbml)), keep the ones a CV can fill, and compare their columns with what extraction produces today ([03-data-schema.md](03-data-schema.md)). The table-by-table mapping is in [08-database-mapping.md](08-database-mapping.md); this page is about **which fields are missing or should change**.
 
@@ -30,14 +30,14 @@ The skill level is the most important thing: the gap analysis cannot work withou
 | `years_experience` `numeric(5,2)` | yes | ❌ | 🧮 sum of work/internship durations (merge overlaps; ongoing = until today). Needs real dates (see 9.3) |
 | `education_level` | yes | ❌ | 🧮 from the highest `degree` (B.Sc./B.Eng. → bachelor, M.Sc. → master, Ph.D. → doctorate, Diploma/ปวส. → diploma). Mapping table in code, `unknown` otherwise |
 | `field_of_study` | yes | ⚠ | 🧮 `fieldOfStudy` of the highest degree |
-| `current_status` (student / employed / career_switcher) | yes | ❌ | 👤 onboarding step 4 ("Current situation"). The CV can only **suggest** it: ongoing education → student; ongoing job → employed. Prefill, never decide |
+| `current_status` (student / employed full-time / employed part-time / between opportunities / other) | yes | ❌ | 👤 onboarding step 4 ("Current situation"). The CV can only **suggest** it; the user chooses the saved value |
 
 ### `app.user_educations`
 
 | Column | Need | Status | Notes |
 |---|---|---|---|
 | `institution_name`, `degree`, `field_of_study` | yes | ✅ | |
-| `start_date`, `end_date` (`date`) | yes | ⚠ | We have `"YYYY"` / `"YYYY-MM"` strings. Convert to the first day of the period. Ongoing → `end_date = NULL` |
+| `start_date`, `end_date` plus precision | yes | ⚠ | Convert `"YYYY"` / `"YYYY-MM"` to the first day of the period and store `date_precision` so year/month precision is not lost. Ongoing → `end_date = NULL` |
 | `description` | optional | ⚠ | Only `gpa`. Honors, thesis topic and relevant courses are lost. Add a short `description` (optional field) |
 | `extraction_confidence` `numeric(4,3)` | yes | ⚠ | We have `high/medium/low`; map to 0.9 / 0.6 / 0.3 |
 | `source`, `source_resume_id`, `user_confirmed` | yes | n/a | Set by the backend |
@@ -46,18 +46,19 @@ The skill level is the most important thing: the gap analysis cannot work withou
 
 | Column | Need | Status | Notes |
 |---|---|---|---|
-| `experience_type` **NOT NULL** (`work / internship / project / competition / course / other`) | yes | ⚠ | We know it from the section (`experience` → work/internship, `projects` → project, certification kinds → competition/course/other). A volunteer role, a freelance gig and a thesis are easy to misfile: see 9.3 |
+| `experience_type` **NOT NULL** (`work / internship / project / competition / course / other`) | yes | ⚠ | We know it from the section (`experience` → work/internship, `projects` → project). A volunteer role, a freelance gig and a thesis still need a mapping policy: see 9.3 |
 | `title` **NOT NULL** | yes | ⚠ | `title` / project `name` / certification `name`. Can be `null` today, so the review step must require it |
-| `organization` | yes | ✅ | experience `organization`, certification `issuer`. A project has none |
-| `description` | yes | ✅ | `description` + `highlights` (+ certification `detail`) |
-| `start_date`, `end_date` | yes | ⚠ | Same conversion as above |
+| `organization`, `role`, `location`, `url` | yes | ⚠ | Stored where provided; project role and URL can remain null |
+| `description`, `highlights`, `is_current` | yes | ⚠ | Description and ordered highlights are stored separately; current roles use `is_current=true` and no end date |
+| `start_date`, `end_date` plus precision | yes | ⚠ | Same conversion as education, with source precision retained |
 | `extraction_confidence` | yes | ⚠ | Same mapping |
 
-### `app.user_skills` (PK `user_id, skill_id`)
+### `app.user_skills`
 
 | Column | Need | Status | Notes |
 |---|---|---|---|
-| `skill_id` → `core.skills` | **yes** | ⚠ | We extract a **name**. It must be matched to `core.skills` through `core.skill_aliases` (alias is unique). Our `skill_aliases.py` is only a stand-in. Skills with no match need a policy (decision D2 in doc 08) |
+| `raw_skill_name`, `match_status` | **yes** | ✅ | Preserve the exact observed label even if it is not yet in the canonical catalog |
+| `skill_id` → `core.skills` | needed for market comparison | ⚠ | Match through `core.skills` and `core.skill_aliases` when possible. Leave null and mark unmatched/needs-review otherwise; never create catalog skills as an ingestion side effect |
 | `proficiency_level` (5 values) | **yes, key field** | ❌ | See 9.3 (P1) |
 | `source` (`resume`), `confidence` | yes | ⚠ | `source='resume'`; confidence mapping as above |
 | `verification_type` | optional | ❌ | e.g. `certification` when a certificate covers the skill; otherwise empty (a CV claim is unverified) |
@@ -67,7 +68,7 @@ The skill level is the most important thing: the gap analysis cannot work withou
 
 | Column | Need | Status | Notes |
 |---|---|---|---|
-| `skill_id`, `resume_id`, `experience_id` | yes | ⚠ | We know which experience/project lists a technology (`technologies`), so the link exists |
+| `user_skill_id`, `resume_id`, `experience_id` | yes | ⚠ | Evidence points to the user's skill row, which can be matched or still unresolved |
 | `evidence_type` | yes | ⚠ | `experience` when found under a job/project, `resume_text` when only in a skills list |
 | `evidence_text` | yes | ❌ | A short quote from the CV showing the skill used. 🧮 Find the sentence containing the skill (any alias) in the extracted text. No model needed. For scans/photos there is no text, so use the item's description |
 | `confidence` | yes | ⚠ | Higher when the skill appears in an experience/project than in a bare list |
@@ -81,9 +82,9 @@ The skill level is the most important thing: the gap analysis cannot work withou
 | Pri | Gap | Proposal | Where |
 |---|---|---|---|
 | **P1** | **Skill proficiency level is not extracted** | Add an optional `proficiency` to each `technicalSkill`: one of the DB enum values **only when the CV says it** ("Python (advanced)", "basic SQL", "expert in Docker", "familiar with", "fluent"), otherwise `unknown`. Then 🧮 **infer** the rest in code when it is `unknown`: months of use = sum of the experiences/projects listing the skill (≥ 5 y → advanced, 2-5 y → intermediate, < 2 y → beginner; a certification can raise one step). Store the basis (`explicit` / `inferred` / `unknown`) in the result, and flag inferred levels `needsReview` so the user adjusts them in the review screen. This keeps the small model's job simple (copy the words) and the policy testable | `schemas.py` (`TechnicalSkillAi.proficiency`), `prompt.py`, new `postprocess` step |
-| **P1** | **Skill names are not canonical IDs** | A lookup function `resolve_skill(name) -> skill_id \| None` against `core.skills` + `core.skill_aliases`. In local mode it keeps using `skill_aliases.py`; the backend swaps in the DB. Report unmatched names | `skill_aliases.py` (the function boundary already exists: `normalize_skill_name`) |
+| **P1** | **Some user skills are not yet canonical IDs** | Look up names against `core.skills` + `core.skill_aliases`. Save the raw label regardless; if no match exists, keep `skill_id=NULL` and mark it unmatched/needs-review. Do not add a catalog skill automatically | Profile persistence / skill resolution adapter |
 | P2 | `years_experience`, `current_job_title`, `education_level`, `field_of_study` are not produced | 🧮 Add a `derived` block to the result (`yearsExperience`, `currentJobTitle`, `educationLevel`, `fieldOfStudy`, `suggestedStatus`) computed from the extracted data. It also speeds up the review screen | new `derive.py` + tests |
-| P2 | Dates are strings with year or month precision | Keep the strings in `extracted_json`; convert to `date` only when writing rows (`YYYY` → `YYYY-01-01`). `years_experience` should use months where known | mapper (task 7c) |
+| P2 | Dates are strings with year or month precision | Keep the strings in `extracted_json`; convert to `date` only when writing rows and set `date_precision` (`year` or `month`). `years_experience` should use months where known | mapper (task 7c) |
 | P2 | `experience_type` must be set for every item | Ask the model for it **only where the section is ambiguous**: add `experienceType` to `experience` items (`work / internship / volunteer / freelance`...→ DB `work / internship / other`), and map project/competition/course from their sections. Alternatively keep the current sections and map in code (no model change) | `schemas.py` or mapper |
 | P3 | `evidence_text` per skill | 🧮 From the extracted text (sentence containing the skill) | postprocess |
 | P3 | Education `description` (honors, thesis) | Add optional `description` to `education` | `schemas.py` |
@@ -91,11 +92,11 @@ The skill level is the most important thing: the gap analysis cannot work withou
 
 Cost of the model-side changes (P1 `proficiency`, P2 `experienceType`, P3 education `description`): about 3 extra short fields per item, roughly +5-10 % output tokens, so +5-10 s on the current setup. Everything marked 🧮 adds no model cost.
 
-## 9.4 Extracted today but not stored in the canonical tables
+## 9.4 Extracted today but not stored in dedicated canonical tables
 
-Kept only in `resume_extractions.extracted_json` (still useful for the review screen and for later features): `personal.email` (belongs to `app.users`), `phone`, `links`, `headline`, `softSkills`, `languages`, certification `issuer` / `date` / `detail` (partly folded into `user_experiences`), experience `location`, `employmentType`, `highlights` (folded into the description), and `warnings`.
+Kept only in `resume_extractions.extracted_json` (still useful for the review screen and for later features): `personal.email` (belongs to `app.users`), `phone`, `links`, `headline`, `softSkills`, `languages`, and `warnings`. Certifications, issuer/date/details, experience location/highlights, and project URLs now have first-class fields in the DBML design.
 
-If the roadmap agent needs languages or certifications as first-class data, that is a schema change request to the team (decision D3 in doc 08). The CV side already extracts them.
+If the roadmap agent needs languages or soft skills as first-class data, that is a separate schema decision. The current UI/schema design gives certifications and activities first-class storage.
 
 ## 9.5 Suggested order
 
@@ -117,7 +118,7 @@ All steps are backward compatible: new fields are optional or derived, so the AP
 | Skill `evidence` | `derive.skill_usage`, `snippet_with_skill` | Linked jobs/projects (with their `id`) and, if none, the CV sentence mentioning the skill. At most 3 |
 | `derived` block | `derive.derive_profile` | `yearsExperience` (merged overlaps, volunteering excluded), `currentJobTitle`, `educationLevel` (English + Thai degree names), `fieldOfStudy`, `suggestedStatus` (an internship alone doesn't make someone "employed"). Recomputed in `PUT /profiles` from the user's edits |
 | Education `description` | `schemas.py`, `prompt.py` | |
-| Tests | `tests/test_derive.py` (20), plus API and schema tests | |
+| Tests | `data-pipeline/tests/resume/test_derive.py`, plus backend API integration tests | |
 
 Not done (needs the database or a decision): `resolve_skill()` against `core.skills`, `experience_type` mapping, date → `date` and confidence → numeric conversions, and the PostgreSQL row writer.
 

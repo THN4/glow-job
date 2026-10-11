@@ -2,7 +2,7 @@
 
 Mount into any FastAPI app (no lifespan or exception-handler wiring needed):
 
-    from app.cv_extraction import router as cv_router
+    from app.features.resume.router import router as cv_router
     app.include_router(cv_router, prefix="/api")
 """
 
@@ -18,12 +18,13 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import Field, ValidationError
 
-from .errors import AppError
-from .postprocess import confirm_profile
-from .preprocess import ALLOWED_MIME, detect_mime
-from .schemas import Camel, CvProfile, empty_profile
-from .services import Services, get_services
-from .storage import Job, StoredProfile, now_iso
+from app.features.resume.errors import AppError
+from app.features.resume.services import Services, get_services
+from app.features.resume.storage import Job, StoredProfile, now_iso
+from src.resume.normalization.postprocess import confirm_profile
+from src.resume.parsing.preprocess import ALLOWED_MIME, detect_mime
+from src.resume.schemas.cv_extraction import Camel, CvProfile, empty_profile
+from src.resume.errors import ResumeProcessingError
 
 log = logging.getLogger("cv_extraction")
 
@@ -39,6 +40,8 @@ class EnvelopeRoute(APIRoute):
                 return await original(request)
             except AppError as err:
                 return _error_response(err)
+            except ResumeProcessingError as err:
+                return _error_response(AppError(err.code, err.message))
             except RequestValidationError as err:
                 details = [{"path": ".".join(str(p) for p in e["loc"][1:]), "message": e["msg"]} for e in err.errors()]
                 return _error_response(AppError("INVALID_REQUEST", details=details))

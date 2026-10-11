@@ -18,10 +18,10 @@ Switching modes is configuration only (`EXTRACTOR`, `STORAGE`, `LLM_*`). Routes 
 | Layer | Choice | Why |
 |---|---|---|
 | Dev environment | **Kiro** (spec-driven: requirements → design → tasks) | Team standard. Specs in `.kiro/specs/`, context in `.kiro/steering/` |
-| Language / framework | **Python 3.12 + FastAPI** | The team's backend is FastAPI. The CV feature is one self-contained package (`app/cv_extraction/`) mounted with `app.include_router(...)` |
+| Language / framework | **Python 3.12 + FastAPI** | The backend composes routes through `app/api/`; Resume API and job orchestration live in `app/features/resume/`, while reusable processing lives in `data-pipeline/src/resume/` |
 | AI model | **Qwen VL** (default `qwen3-vl:8b`) served by Ollama or vLLM | Free to run locally, reads text and images, OpenAI-compatible, JSON-schema output |
 | AI client | `openai` Python package (async) with `base_url` = the Qwen server | Works with Ollama, vLLM and LM Studio, and with vLLM on AWS later |
-| Validation / schema | **Pydantic v2** (`schemas.py`); `model_json_schema()` feeds the model's `response_format` | One schema for model output, API validation and OpenAPI. The frontend can generate TypeScript types from `/openapi.json` |
+| Validation / schema | **Pydantic v2** (`data-pipeline/src/resume/schemas/cv_extraction.py`); `model_json_schema()` feeds the model's `response_format` | One schema for model output, API validation and OpenAPI. The frontend can generate TypeScript types from `/openapi.json` |
 | Document processing | **PyMuPDF** (PDF text + render scans to images), Pillow (images), `filetype` (magic bytes) | Qwen can't read PDFs, so we turn them into text or images ourselves. PyMuPDF is AGPL-licensed (check before a closed-source release) |
 | AWS (deploy) | API Gateway, Lambda, S3, DynamoDB, CDK v2, CloudWatch, Budgets | Serverless, ~$0 when idle |
 | Testing | pytest + pytest-asyncio + httpx | Model server faked with `httpx.MockTransport` |
@@ -61,15 +61,14 @@ Why presigned upload + async worker (AWS mode): a synchronous Lambda request is 
 
 | Component | Responsibility |
 |---|---|
-| `app/main.py` | Standalone dev entry: FastAPI + CORS + health + the CV router. In the team's app, only `include_router` is needed |
-| `cv_extraction/router.py` | All endpoints (`/cv/uploads`, `PUT /cv/uploads/{id}/file` (local mode), `/cv/extractions`, `/profiles`). `EnvelopeRoute` produces the `{error:{code,message,retryable}}` body, so no app-level exception handler is needed |
-| `cv_extraction/pipeline.py` | Orchestrates one job: cache → limit → preprocess → extract → post-process, updating stages. Never raises (failures go on the job); always deletes the upload |
-| `cv_extraction/preprocess.py` | Type detection, PDF text extraction, scan/photo → JPEG pages |
-| `cv_extraction/extractors/` | `Extractor` interface + `mock.py`, `openai_compatible.py` (Qwen), later `bedrock.py` |
-| `cv_extraction/postprocess.py` | Grounding check, normalize, dedupe, IDs, `needsReview`, meta |
-| `cv_extraction/storage.py` | Local implementations: uploads (temp folder), jobs/cache (TTL maps), profiles (JSON file), asyncio job queue (concurrency 1, starts lazily). AWS versions are added in the deploy phase behind the same method names |
-| `cv_extraction/services.py` | `get_services()` FastAPI dependency (override it in tests) |
-| `cv_extraction/schemas.py` | Pydantic models, the single source of truth |
+| `app/main.py` / `app/api/` | Standalone dev host and composition of feature routers |
+| `app/features/resume/router.py` | CV upload, extraction-job, and profile endpoints; returns the documented error envelope |
+| `app/features/resume/pipeline.py` | Orchestrates one API job: cache → limit → preprocess → extract → post-process, updating stages and deleting the upload |
+| `data-pipeline/src/resume/parsing/` | Type detection, PDF text extraction, and scan/photo preparation as JPEG pages |
+| `data-pipeline/src/resume/extraction/` | Extraction prompt, model input/output contract, and provider implementations |
+| `data-pipeline/src/resume/normalization/` | Grounding, skill-name normalization, deduplication, evidence, and derived facts |
+| `data-pipeline/src/resume/schemas/` | Pydantic extraction and profile contracts, the single source of truth |
+| `app/features/resume/storage.py` / `services.py` | Local uploads, jobs/cache, profile JSON persistence, queue, and FastAPI dependency wiring |
 | `infra/` | Infrastructure code (AWS mode only, written by DevOps) |
 
 ## 2.5 Request flow (same in both modes)

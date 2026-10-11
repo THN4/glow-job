@@ -38,22 +38,22 @@ Not yet run on the real model: 01, 02, 05, 07.
 
 ## Try them
 
-From `backend-py/` with the venv active. Single file, no server needed:
+From `data-pipeline/` with the environment active. Single file, no server needed:
 
 ```powershell
-python -m app.scripts.extract test_cvs\01-fullstack-developer-en.pdf
+python -m scripts.resume.extract ..\backend\test_resume\01-fullstack-developer-en.pdf
 ```
 
 Through the API (start the server first with `uvicorn app.main:app --port 8787`, in another terminal):
 
 ```powershell
-python -m app.scripts.try_api test_cvs\04-thai-developer-th.pdf
+python -m scripts.resume.try_api ..\backend\test_resume\04-thai-developer-th.pdf
 ```
 
 All 10 files in a row, printing the final status of each (a real model takes 1-2 minutes per file; use `EXTRACTOR=mock` in `.env` for an instant dry run):
 
 ```powershell
-Get-ChildItem test_cvs\*.pdf, test_cvs\*.jpg | ForEach-Object { "== $($_.Name)"; python -m app.scripts.try_api $_.FullName | Select-String '"status"|"code"' }
+Get-ChildItem ..\backend\test_resume\*.pdf, ..\backend\test_resume\*.jpg | ForEach-Object { "== $($_.Name)"; python -m scripts.resume.try_api $_.FullName | Select-String '"status"|"code"' }
 ```
 
 ## Where to look in the output

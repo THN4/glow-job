@@ -6,11 +6,12 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from app.cv_extraction import router as cv_router
-from app.cv_extraction.config import CvSettings
-from app.cv_extraction.extractors.mock import MockExtractor, mock_extraction
-from app.cv_extraction.schemas import CvExtractionResult
-from app.cv_extraction.services import Services, build_services, get_services
+from app.features.resume.config import CvSettings
+from app.features.resume.router import router as cv_router
+from app.features.resume.services import Services, build_services, get_services
+from src.resume.extraction.contracts import ExtractorOutput
+from src.resume.extraction.providers.mock import MockExtractor, mock_extraction
+from src.resume.schemas.cv_extraction import CvExtractionResult
 
 from .fixtures import make_cv_image, make_text_pdf
 
@@ -160,8 +161,6 @@ class NotACvExtractor:
     name, groundable = "fake", True
 
     async def extract(self, prepared):
-        from app.cv_extraction.extractors.base import ExtractorOutput
-
         ex = mock_extraction()
         ex.is_document_a_cv = False
         return ExtractorOutput(extraction=ex)

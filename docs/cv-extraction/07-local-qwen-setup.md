@@ -79,8 +79,8 @@ curl http://<host>:11434/v1/chat/completions -H "Content-Type: application/json"
 # Expect the reply content to be ONLY JSON matching the schema.
 
 # 3. From the repo, run a real CV through the whole pipeline
-# from backend-py/ (venv active); create the sample files first with: python -m tests.fixtures
-python -m app.scripts.extract tests/generated/sample-cv.pdf
+# From data-pipeline/ (environment active); create sample files first from backend/ with: python -m tests.fixtures
+From `data-pipeline/`: `python -m scripts.resume.extract ../backend/tests/generated/sample-cv.pdf`
 ```
 
 ## 7.6 Expected performance (rough, measure in the eval)

@@ -1,15 +1,15 @@
 # 8. Database mapping (CV extraction ↔ the team's PostgreSQL design)
 
-Source of truth for the database: [docs/db/glow_job_database_architecture.md](../db/glow_job_database_architecture.md) and [docs/schemas/app-schema.dbml](../schemas/app-schema.dbml) (from the `develop` branch). This page maps what CV extraction produces onto those `app.*` tables and lists the decisions that need the backend engineer.
+Source of truth for the database design: [the consolidated DBML](../schemas/glow-job.dbml) and its [application-domain view](../schemas/app-schema.dbml). This page maps what CV extraction produces onto those `app.*` tables and lists implementation decisions for the backend engineer.
 
-Project structure (from `develop`, [docs/glow_job_project_structure.md](../glow_job_project_structure.md)): the FastAPI app lives in `backend/app/` (`api/`, `models/`, `schemas/`, `services/`, `repositories/`, `db/`, `integrations/`) and belongs to the **backend engineer**. "Resume upload, resume extraction integration, profile ingestion" are listed under backend. Our `app/cv_extraction/` package is the extraction engine that backend code calls.
+The FastAPI app lives in `backend/app/`. Its API composition and Resume routes/job orchestration live in `app/api/` and `app/features/resume/`; reusable Resume parsing, extraction contracts, schemas, and post-processing live in `data-pipeline/src/resume/`. The backend owns upload handling and profile persistence.
 
 ## 8.1 The flow in the DB design
 
 ```text
 CV Upload → S3 → app.resumes → LLM extraction → app.resume_extractions.extracted_json
    → Auto-fill UI → user edits / confirms → canonical user data
-        (app.user_profiles, user_educations, user_experiences, user_skills, user_skill_evidence)
+        (app.user_profiles, user_educations, user_experiences, user_skills, user_skill_evidence, user_certifications)
 ```
 
 Our pipeline is exactly the "LLM extraction → extracted_json" step, and our `PUT /profiles` is the "user confirms → canonical data" step.
@@ -26,21 +26,22 @@ Our pipeline is exactly the "LLM extraction → extracted_json" step, and our `P
 | User saves without / with changes / discards | `review_status` = `confirmed` / `edited` / `rejected` (`pending` until then) | Compare the saved profile with `extracted_json` to choose confirmed vs edited |
 | Each extraction run (model, status, times, error; no CV content) | `system.ai_runs` (`operation_type='resume_extraction'`) | Fits our metadata-only logging rule |
 | `personal.fullName`, `summary`, `location` | `app.user_profiles` (`display_name`, `background_summary`, `location`) | |
-| Derived: current job, years of experience, education level, field of study | `user_profiles.current_job_title`, `years_experience`, `education_level`, `field_of_study` | Computed in a small step from the confirmed profile (current job = experience with `isCurrent`; years = summed work durations; level = highest degree). `current_status` (student / employed / career_switcher) comes from onboarding step 4 ("Current situation"), not from the CV |
-| `education[]` | `app.user_educations` | `institution`→`institution_name`, `degree`, `fieldOfStudy`→`field_of_study`, dates (see 8.3), `gpa`→`description`, `source='resume'`, `source_resume_id`, `extraction_confidence` (8.3), `user_confirmed=true` after the user confirms |
-| `experience[]` | `app.user_experiences` | `experience_type` = `internship` if `employmentType == "internship"`, else `work`. `title`, `organization`, `description` (+ `highlights` appended), dates. `location` and `employmentType` are not stored (kept in `extracted_json`) |
-| `projects[]` | `app.user_experiences` with `experience_type='project'` | `title` ← project `name`, `description`, dates |
-| `certifications[]` (competitions, workshops, awards, activities) | `app.user_experiences` | `competition`→`competition`, `workshop`→`course`, `certification`→`course`, `award` / `activity`→`other`. `title` ← `name`, `organization` ← `issuer`, `detail` ("Finalist") appended to `description`. **There is no certification table: see decision D3** |
-| `technicalSkills[]` + `tools[]` (+ `technologies` of each experience/project) | `app.user_skills` | Needs `skill_id` (see D2). `source='resume'`, `confidence`, `proficiency_level='unknown'` (we don't extract levels), `user_confirmed` |
-| Where a skill was found (an experience's / project's `technologies`) | `app.user_skill_evidence` | `evidence_type='experience'`, `experience_id`, `resume_id`, `evidence_text` (the item's title/description), `confidence` |
+| Derived: current job, years of experience, education level, field of study | `user_profiles.current_job_title`, `years_experience`, `education_level`, `field_of_study` | Computed in a small step from the confirmed profile (current job = current experience; years = summed work durations; level = highest degree). `current_status` comes from onboarding step 4 and uses the UI choices: student / employed full-time / employed part-time / between opportunities / other |
+| `education[]` | `app.user_educations` | `institution`→`institution_name`, `degree`, `fieldOfStudy`→`field_of_study`, dates plus date precision, `gpa`→`description`, `source='resume'`, `source_resume_id`, `extraction_confidence`, `user_confirmed` after confirmation |
+| `experience[]` | `app.user_experiences` | `experience_type` = `internship` if applicable, otherwise `work`. Stores title, organization, role, location, description, highlights, dates and their precision, current status, source, and confirmation |
+| `projects[]` | `app.user_experiences` with `experience_type='project'` | Project name, role, URL, description, highlights, dates, and technology evidence |
+| `certifications[]` (competitions, workshops, awards, activities) | `app.user_certifications` | `kind`, name, issuer, award date and precision/details, source, confidence, and user confirmation |
+| `technicalSkills[]` + `tools[]` (+ `technologies` of each experience/project) | `app.user_skills` | Always stores the observed `raw_skill_name`; `skill_id` is nullable until matched to `core.skills`. Unmatched skills remain attached to the user's profile and do not create catalog skills automatically |
+| Where a skill was found (an experience's / project's `technologies`) | `app.user_skill_evidence` | `user_skill_id`, `experience_id`, `resume_id`, evidence type/text, and confidence |
+| Selected career, readiness, weekly time, learning preference, optional note | `app.user_career_goals` | Store the selected role title and catalog IDs when matched, readiness timeframe, weekly availability band, learning preference, and optional context (max 500 characters). Map an unmatched custom role before market comparison/roadmap generation |
 | `softSkills[]`, `languages[]`, `links[]`, `personal.headline` / `phone`, `warnings` | **no table**: kept only in `extracted_json` | Email belongs to `app.users` (auth), not to the CV |
 
 ## 8.3 Value conversions
 
 | Our value | DB value |
 |---|---|
-| `"2020"` / `"2023-06"` (strings) | `date`: first day of the period (`2020-01-01`, `2023-06-01`). Precision (year only / month) is lost, so keep the original strings in `extracted_json` |
-| `isCurrent: true`, `endDate: null` | `end_date = NULL` |
+| `"2020"` / `"2023-06"` (strings) | `date`: first day of the period (`2020-01-01`, `2023-06-01`) plus `date_precision` (`year` / `month`); retain source strings in `extracted_json` too |
+| `isCurrent: true`, `endDate: null` | `is_current = true`, `end_date = NULL` for an experience |
 | `confidence` `high` / `medium` / `low` | `extraction_confidence` / `confidence` `numeric(4,3)`: proposed **0.900 / 0.600 / 0.300** (to agree with the team) |
 | `needsReview` | not stored: the user has confirmed everything on save, so `user_confirmed = true` |
 | Our IDs (`upl_<uuid>`, `job_<uuid>`, `edu_ab12`) | DB `bigint` IDs (`resume_id`, `extraction_id`, ...). The API should return the DB IDs |
@@ -50,8 +51,8 @@ Our pipeline is exactly the "LLM extraction → extracted_json" step, and our `P
 | # | Issue | Options | Suggested |
 |---|---|---|---|
 | **D1** | **Resume file retention.** The DB stores the file in S3 (`app.resumes.storage_key`, `is_current`). Our design deletes the file right after extraction (privacy requirement 7.1). | (a) keep the file in a private S3 bucket (needs user consent text, lifecycle/delete on request); (b) delete after extraction and make `storage_key` nullable | Decide as a team. (a) matches the DB and lets the user re-run extraction; (b) is more private. Our code supports both: deletion happens in one place (`pipeline.py` `finally`) |
-| **D2** | **Skill IDs.** `user_skills.skill_id` points to `core.skills` (canonical, with `core.skill_aliases`). Our `skill_aliases.py` is a small stand-in. Skills not in `core.skills` have no ID. | (a) the DB is the source of truth: look names up in `core.skills` + `core.skill_aliases`, and keep unmatched ones only in `extracted_json`; (b) let the Data/RAG engineer add unmatched skills to `core.skills` | Use (a) now (replace our alias dict with a DB lookup behind the same function), and report unmatched skills to the Data/RAG engineer |
-| **D3** | **Certifications / awards / languages / soft skills have no table.** | (a) store certifications as `user_experiences` (mapping above) and keep the rest only in `extracted_json`; (b) add `app.user_certifications` / `app.user_languages` | (a) for the MVP. Ask whether the roadmap agent needs certifications or languages |
+| **D2** | **Skill catalog matching.** `user_skills.skill_id` points to `core.skills` when a match exists; the raw label is retained regardless. | Match through the canonical skill catalog and aliases; store `match_status` as matched, needs review, or unmatched. Do not create a catalog entry as a side effect of resume ingestion. | Persist unmatched labels on the user's skill row and let a separate review/catalog workflow decide whether to map or create a canonical skill |
+| **D3** | **Languages and soft skills have no dedicated tables.** Certifications, awards, competitions, workshops, and activities now have `app.user_certifications`. | Keep language and soft-skill details in `extracted_json` until product requirements call for first-class tables. | No additional table needed for the UI shown |
 | **D4** | **NOT NULL columns we may not fill.** `user_experiences.title` and `.experience_type` are `NOT NULL`; our `title` can be `null`. | Reject the save for items without a title (the review screen already asks for them), or fall back to `organization` | Validate on `PUT /profile`: title required for experiences |
 | **D5** | **API shape.** The project doc plans `POST /resumes`, `POST /resumes/{id}/extract`, `GET /profile`, `PATCH /profile`. Ours: `POST /cv/uploads` (+ file upload), `POST /cv/extractions`, `GET /cv/extractions/{id}`, `PUT /profiles`. | Align ours to theirs: `POST /resumes` = create `app.resumes` + return the upload target; `POST /resumes/{id}/extract` = start an extraction (creates `app.resume_extractions`); poll `GET /resumes/{id}/extractions/{extraction_id}`; `PATCH /profile` = save the confirmed data into the canonical tables | Rename routes when merging (the router, schemas and error format stay the same) |
 | **D6** | **Users / auth.** Everything is keyed by `user_id` (`app.users`). We use a placeholder `sessionId`. | Take `user_id` from the auth dependency of the backend app | Backend engineer's auth, injected into the router as a dependency |
@@ -59,7 +60,7 @@ Our pipeline is exactly the "LLM extraction → extracted_json" step, and our `P
 
 ## 8.5 How the code is meant to plug in
 
-The extraction engine stays database-free. The backend engineer adds the persistence around it by implementing the storage classes in `app/cv_extraction/storage.py` against PostgreSQL / S3 (the class names and methods are already the seam):
+The reusable extraction engine stays database-free. The backend owns persistence through its storage/service adapters in `backend/app/features/resume/`:
 
 | Our class | Becomes |
 |---|---|

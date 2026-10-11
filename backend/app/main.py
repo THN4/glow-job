@@ -1,13 +1,12 @@
-"""Standalone dev entry point. When the team's FastAPI app exists, only
-``app.include_router(cv_router, prefix="/api")`` is needed there (see app/cv_extraction/__init__.py)."""
+"""Standalone dev entry point for the Glow Job API."""
 
 import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .cv_extraction import router as cv_router
-from .cv_extraction.config import get_settings
+from .api.router import router as api_router
+from .features.resume.config import get_settings
 
 
 def create_app() -> FastAPI:
@@ -25,7 +24,7 @@ def create_app() -> FastAPI:
     async def health() -> dict:
         return {"status": "ok", "extractor": settings.EXTRACTOR}
 
-    app.include_router(cv_router, prefix=settings.API_PREFIX)
+    app.include_router(api_router, prefix=settings.API_PREFIX)
     return app
 
 

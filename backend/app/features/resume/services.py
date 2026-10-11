@@ -10,11 +10,9 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from .config import CvSettings, get_settings
-from .extractors import Extractor, create_extractor
-from .pipeline import Pipeline
-from .preprocess import Limits
-from .storage import (
+from app.features.resume.config import CvSettings, get_settings
+from app.features.resume.pipeline import Pipeline
+from app.features.resume.storage import (
     CacheRepo,
     FileProfilesRepo,
     JobQueue,
@@ -23,6 +21,9 @@ from .storage import (
     UsageCounter,
     default_upload_dir,
 )
+from src.resume.extraction.contracts import Extractor
+from src.resume.extraction.providers import create_extractor
+from src.resume.parsing.preprocess import Limits
 
 
 @dataclass

@@ -1,23 +1,53 @@
 # Glow Job backend (FastAPI): CV Extraction
 
 Turns an uploaded CV (PDF or image) into a structured, editable career profile.
-Design docs: [docs/cv-extraction/](../docs/cv-extraction/). Kiro spec: [.kiro/specs/cv-extraction/](../.kiro/specs/cv-extraction/).
+For the current extraction scope and domain boundary, see
+[`data-pipeline/docs/resume/`](../data-pipeline/docs/resume/README.md). The
+cross-layer API, schema, and historical prototype notes are indexed in
+[`docs/cv-extraction/`](../docs/cv-extraction/README.md).
 
-The feature is one self-contained package, `app/cv_extraction/`. In the team's FastAPI app it mounts with one line:
+The Resume API is exposed from `app/features/resume/` and composed through
+`app/api/`. Reusable parsing, extraction contracts, schemas, and normalization
+live in the sibling `data-pipeline/src/resume/` package. Resume processing
+commands live in `data-pipeline/scripts/resume/` and run from the data-pipeline
+repository root. Backend-only API, job orchestration, and storage code live in
+`app/features/resume/`.
 
-```python
-from app.cv_extraction import router as cv_router
-app.include_router(cv_router, prefix="/api")
+Backend layout:
+
+| Path | Responsibility |
+|---|---|
+| `app/api/` | Compose and register feature routers. |
+| `app/features/resume/` | Resume HTTP routes, job orchestration, settings, and local persistence. |
+| `app/features/documents/` | Reserved for future document/RAG-facing API behavior. |
+| `app/shared/` | Backend-only infrastructure shared by multiple features. |
+
+Initialize the submodule from the `glow-job` repository root before starting
+the backend:
+
+```bash
+git submodule update --init --recursive data-pipeline
 ```
 
-`app/main.py` is a standalone dev host for it (FastAPI + CORS + health). The AI model is Qwen on the DevOps notebook server, reached through its OpenAI-compatible API. AWS mode comes later.
+In the team's FastAPI app, mount the composed API router with one line:
+
+```python
+from app.api.router import router as api_router
+app.include_router(api_router, prefix="/api")
+```
+
+`app/main.py` is a standalone development host (FastAPI + CORS + health). The
+model provider is configured through the shared resume settings; use `mock`
+for local checks and backend integration tests, or the configured Ollama / OpenAI-
+compatible provider for model-backed extraction. AWS deployment is not part of
+the current backend implementation.
 
 ## Setup
 
 ```bash
-cd backend-py
+cd backend
 py -3.12 -m venv .venv            # Windows: use the py launcher so you get a regular CPython 3.12
-.venv\Scriptsctivate            # (macOS/Linux: python3.12 -m venv .venv ; source .venv/bin/activate)
+.\.venv\Scripts\Activate.ps1            # (macOS/Linux: python3.12 -m venv .venv ; source .venv/bin/activate)
 python --version                  # must say 3.12.x (not an MSYS/MinGW Python)
 pip install -r requirements-dev.txt
 copy .env.example .env            # then edit it (macOS/Linux: cp)
@@ -35,19 +65,19 @@ copy .env.example .env            # then edit it (macOS/Linux: cp)
 | `LLM_MODEL` | The **full tag** from `ollama list`, e.g. `vegeta/qwen3.5-4b-mtp:q8` (reads text and images). A shortened name gives "model not found" |
 | `LLM_VISION` | `true` if the model can read images. `false` for text-only models (`qwen2.5-coder`): scans/photos are then rejected with a clear message |
 
-All options with defaults are in [`app/cv_extraction/config.py`](app/cv_extraction/config.py).
+All model options with defaults are in [`data-pipeline/src/resume/config.py`](../data-pipeline/src/resume/config.py). Backend API-specific settings remain in `app/features/resume/config.py`.
 
-## Commands (venv active, from `backend-py/`)
+## Commands
 
 | Command | What it does |
 |---|---|
 | `uvicorn app.main:app --reload --port 8787` | API on http://localhost:8787/api. Swagger UI at `/docs`, OpenAPI at `/openapi.json` |
-| `pytest` | All tests, about 3 s. They use the mock model and a fake HTTP transport, no network |
+| `pytest` | Backend API and service integration tests. Resume domain/provider tests live in `data-pipeline/tests/resume/`. |
 | `python -m tests.fixtures` | Writes a few small synthetic CVs to `tests/generated/` (used by quick checks) |
-| `python -m tests.make_sample_cvs` | (Re)generates the 10 sample CVs in `test_cvs/` (Thai, two-column, scan, photo, not-a-CV...). See [test_cvs/README.md](test_cvs/README.md) |
-| `python -m app.scripts.extract tests/generated/sample-cv.pdf` | Runs one file through preprocess → model → post-process and prints the JSON (no server needed) |
-| `python -m app.scripts.extract test_cvs/01-fullstack-developer-en.pdf --summary` | Same, but prints a compact view laid out like the database tables (user_profiles, educations, experiences, skills with level + basis + evidence) |
-| `python -m app.scripts.try_api tests/generated/sample-cv.pdf` | Walks the full API flow (upload → extract → poll) against the running server |
+| `python -m tests.make_sample_cvs` | (Re)generates the 10 sample CVs in `test_resume/` (Thai, two-column, scan, photo, not-a-CV...). See [test_resume/README.md](test_resume/README.md) |
+| `python -m scripts.resume.extract ../backend/tests/generated/sample-cv.pdf` (run from `data-pipeline/`) | Runs one file through preprocess → model → post-process and prints the JSON (no server needed) |
+| `python -m scripts.resume.extract ../backend/test_resume/01-fullstack-developer-en.pdf --summary` (run from `data-pipeline/`) | Same, but prints a compact view laid out like the database tables (user_profiles, educations, experiences, skills with level + basis + evidence) |
+| `python -m scripts.resume.try_api ../backend/tests/generated/sample-cv.pdf` (run from `data-pipeline/`) | Walks the full API flow (upload → extract → poll) against the running server |
 
 ## API (summary)
 
@@ -64,7 +94,12 @@ GET  /api/health
 
 Full spec and error codes: [docs/cv-extraction/04-api-spec.md](../docs/cv-extraction/04-api-spec.md). JSON is camelCase. Every error has the shape `{"error": {"code", "message", "retryable"}}`.
 
-## Measured on the DevOps server (2026-10-05)
+## Historical model-server measurements (2026-10-05)
+
+These measurements document the earlier notebook-server prototype. They are
+kept as project history and should not be treated as current model-selection or
+deployment guidance; see the current resume scope documentation before choosing
+or configuring a provider.
 
 | Input | Model | Result |
 |---|---|---|
@@ -75,9 +110,12 @@ Full spec and error codes: [docs/cv-extraction/04-api-spec.md](../docs/cv-extrac
 | Scanned CV (image) | `vegeta/qwen3.5-4b-mtp:q8`, `LLM_NUM_CTX=16384`, thinking off | **Read correctly** (name, school, skills, projects, no invented jobs), ~2.5 min including the first model load |
 | Same model with the server default context (131k) | `vegeta/qwen3.5-4b-mtp:q8` via `/v1` | Timed out: only 18 % of the model fit on the GPU. Fixed by `EXTRACTOR=ollama` (16k context) |
 
-Per-file results for the 10 sample CVs (time 13-107 s each, all correct): [test_cvs/README.md](test_cvs/README.md).
+Per-file results for the 10 sample CVs (time 13-107 s each, all correct): [test_resume/README.md](test_resume/README.md).
 
 ## Notes
+
+The direct extraction CLI reads model settings from environment variables or
+`data-pipeline/.env`; the backend API reads its `.env` from `backend/`.
 
 - Files are deleted right after processing. Logs contain metadata only. Never commit real CVs: use `python -m tests.fixtures`.
 - Jobs and the result cache live in memory (1 h / 24 h) and uploads in a temp folder, so restarting the server clears them. Saved profiles go to `.data/profiles.json`.
@@ -85,15 +123,18 @@ Per-file results for the 10 sample CVs (time 13-107 s each, all correct): [test_
 
 ## Testing Command
 
-cd C:\Users\putte\Documents\GitHub\glow-job\backend-py
+cd C:\path\to\glow-job\backend
 .venv\Scripts\activate
 
 pytest
 
-python -m app.scripts.extract test_cvs\01-fullstack-developer-en.pdf --summary
+cd ..\data-pipeline
+python -m scripts.resume.extract ..\backend\test_resume\01-fullstack-developer-en.pdf --summary
 
+cd ..\backend
 uvicorn app.main:app --port 8787
 
-python -m app.scripts.try_api test_cvs\01-fullstack-developer-en.pdf
+cd ..\data-pipeline
+python -m scripts.resume.try_api ..\backend\test_resume\01-fullstack-developer-en.pdf
 
 
