@@ -780,7 +780,7 @@ Keep infrastructure scripts separate from backend code and data pipelines.
 
 # 11. Migrations
 
-Store versioned schema changes for `core`, `market`, `knowledge`, and `app` in `migrations/`. Coordinate their order across teams. Keep migration runner scripts in `scripts/migrate/`; they are separate from the migration files. See [Database Architecture](db/glow_job_database_architecture.md) for the schema plan.
+Store host-owned versioned schema changes in root `migrations/versions/` and pipeline-owned migrations in `data-pipeline/migrations/versions/`. They share one ordered history in `system.schema_migrations`; run both directories with `cd data-pipeline && python -m scripts.database.migrate`. See [Database Architecture](db/glow_job_database_architecture.md) for the schema plan and [the root migration guide](../migrations/README.md) for the convention.
 
 ---
 
@@ -838,7 +838,7 @@ Upload Resume
 
 # 13. Docs Folder
 
-Store architecture notes in `docs/db/` and database diagrams in `docs/schemas/`. The whole-system `glow-job.dbml` is canonical; pipeline and app DBML files are domain views of the same database.
+Store cross-domain architecture notes and the consolidated `glow-job.dbml` in the host repository's `docs/`. Keep each domain's schema view with its owning repository: app schemas remain in root `docs/schemas/`; market and planned knowledge schemas live in `data-pipeline/docs/database/schemas/`. These DBML files are design views, not migrations.
 
 ```text
 docs/
@@ -859,8 +859,11 @@ docs/db/
 
 docs/schemas/
 ├── glow-job.dbml
-├── pipeline-schema.dbml
 └── app-schema.dbml
+
+data-pipeline/docs/database/schemas/
+├── pipeline-schema.dbml
+└── knowledge-schema.dbml
 ```
 
 ```text

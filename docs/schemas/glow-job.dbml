@@ -1,6 +1,6 @@
 ﻿Project glow_job {
   database_type: 'PostgreSQL'
-  Note: 'Canonical design for one PostgreSQL database. The core, market, knowledge, app, and system schemas share one migration history in the root migrations folder. This DBML is a design artifact, not a migration.'
+  Note: 'Consolidated design view of the Glow-Job database. Domain-owned schema views live with their repositories: market and planned knowledge in data-pipeline/docs/database/schemas; app and whole-system view in root docs/schemas. This is a design artifact, not a migration or proof that every table is implemented.'
 }
 
 Enum requirement_type {
@@ -81,6 +81,57 @@ Enum experience_type {
   competition
   course
   other
+}
+
+Enum current_situation {
+  student
+  employed_full_time
+  employed_part_time
+  between_opportunities
+  other
+}
+
+Enum weekly_availability_band {
+  under_2_hours
+  hours_2_to_5
+  hours_5_to_10
+  hours_10_plus
+}
+
+Enum learning_preference {
+  structured_courses
+  hands_on_projects
+  reading_articles
+  videos_tutorials
+}
+
+Enum readiness_timeframe {
+  three_months
+  six_months
+  one_year
+  no_fixed_deadline
+}
+
+Enum user_skill_match_status {
+  matched
+  needs_review
+  unmatched
+}
+
+Enum certification_kind {
+  certification
+  award
+  competition
+  workshop
+  activity
+  license
+  other
+}
+
+Enum date_precision {
+  year
+  month
+  day
 }
 
 Enum application_status {
@@ -318,7 +369,7 @@ Table app.users {
 Table app.user_profiles {
   user_id bigint [pk]
   display_name text
-  current_status text [note: 'student, employed, or career_switcher']
+  current_status current_situation
   current_job_title text
   years_experience numeric(5, 2)
   location text
@@ -334,7 +385,7 @@ Table app.resumes {
   file_name text [not null]
   storage_key text [not null, note: 'Resume file is stored in S3']
   mime_type text
-  file_size_bytes bigint
+  file_size_bytes bigint [note: 'Upload flow currently accepts files up to 10 MB; enforce size and PDF/DOC/DOCX allow-list in the upload service']
   is_current boolean [not null, default: false]
   uploaded_at timestamptz [not null, default: `now()`]
   created_at timestamptz [not null, default: `now()`]
@@ -364,7 +415,9 @@ Table app.user_educations {
   degree text
   field_of_study text
   start_date date
+  start_date_precision date_precision [note: 'Preserves whether the source provided a year, month, or exact day']
   end_date date
+  end_date_precision date_precision
   description text
   source text [note: 'resume or self_report']
   source_resume_id bigint
@@ -380,9 +433,16 @@ Table app.user_experiences {
   experience_type experience_type [not null]
   title text [not null]
   organization text
+  role text [note: 'Role on a project or position title when different from title']
+  location text
+  url text [note: 'Optional project or portfolio URL']
   description text
+  highlights jsonb [note: 'Ordered achievement/highlight strings; application validates the JSON shape']
   start_date date
+  start_date_precision date_precision
   end_date date
+  end_date_precision date_precision
+  is_current boolean [not null, default: false]
   source text [note: 'resume or self_report']
   source_resume_id bigint
   extraction_confidence numeric(4, 3)
@@ -392,8 +452,12 @@ Table app.user_experiences {
 }
 
 Table app.user_skills {
+  user_skill_id bigint [pk, increment]
   user_id bigint [not null]
-  skill_id bigint [not null]
+  skill_id bigint [note: 'Nullable until a raw resume/self-reported skill is matched to core.skills; never create a catalog skill implicitly']
+  raw_skill_name text [not null, note: 'Original label shown to the user, including an unmatched skill']
+  normalized_skill_name text [note: 'Optional normalized comparison label; not a catalog identity']
+  match_status user_skill_match_status [not null, default: 'unmatched']
   proficiency_level proficiency_level [not null, default: 'unknown']
   source text [note: 'resume, self_report, assessment, or project']
   confidence numeric(4, 3)
@@ -403,14 +467,16 @@ Table app.user_skills {
   updated_at timestamptz [not null, default: `now()`]
 
   indexes {
-    (user_id, skill_id) [pk]
+    (user_id, skill_id) [unique, name: 'uq_user_skills_catalog_skill']
+    (user_id, raw_skill_name) [name: 'ix_user_skills_raw_name']
   }
+
+  Note: 'When skill_id is null, match_status must be unmatched or needs_review. When skill_id is set, match_status must be matched; enforce this consistency with a SQL CHECK constraint.'
 }
 
 Table app.user_skill_evidence {
   evidence_id bigint [pk, increment]
-  user_id bigint [not null]
-  skill_id bigint [not null]
+  user_skill_id bigint [not null]
   resume_id bigint
   experience_id bigint
   evidence_type text [not null, note: 'resume_text, experience, or assessment']
@@ -422,16 +488,37 @@ Table app.user_skill_evidence {
 Table app.user_career_goals {
   goal_id bigint [pk, increment]
   user_id bigint [not null]
-  career_id bigint [not null]
-  career_profile_id bigint [not null]
+  target_role_title text [not null, note: 'Selected role label from search or recommendation; retained even when not yet mapped to the role catalog']
+  career_id bigint [note: 'Null only while the selected role is not mapped to the catalog']
+  career_profile_id bigint [note: 'Null only while the selected role is not mapped to the catalog']
   is_primary boolean [not null, default: false]
+  readiness_timeframe readiness_timeframe [note: 'Wizard choice; no_fixed_deadline leaves target_date null']
   target_date date
-  available_hours_per_week numeric(5, 2)
-  preferred_learning_style text
+  weekly_availability weekly_availability_band
+  available_hours_per_week numeric(5, 2) [note: 'Optional exact value; the selected availability band remains the input when the user only chooses a range']
+  preferred_learning_style learning_preference
+  additional_context varchar(500) [note: 'Optional onboarding context, limited to 500 characters']
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
 
-  Note: 'Enforce at most one primary goal per user with a partial unique index in SQL.'
+  Note: 'Enforce at most one primary goal per user with a partial unique index in SQL. career_id and career_profile_id must either both be null (unmapped selected role) or both be set. Map custom roles before market comparison/roadmap generation. Role-match percentages and demand badges on onboarding recommendation cards are derived from the profile and market aggregates; they are not user input and are not persisted here.'
+}
+
+Table app.user_certifications {
+  certification_id bigint [pk, increment]
+  user_id bigint [not null]
+  kind certification_kind [not null, default: 'certification']
+  name text [not null]
+  issuer text
+  awarded_on date
+  awarded_on_precision date_precision
+  details text
+  source text [note: 'resume or self_report']
+  source_resume_id bigint
+  extraction_confidence numeric(4, 3)
+  user_confirmed boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
 }
 
 
@@ -620,13 +707,14 @@ Ref: app.user_experiences.user_id > app.users.user_id
 Ref: app.user_experiences.source_resume_id > app.resumes.resume_id
 Ref: app.user_skills.user_id > app.users.user_id
 Ref: app.user_skills.skill_id > core.skills.skill_id
-Ref: app.user_skill_evidence.user_id > app.users.user_id
-Ref: app.user_skill_evidence.skill_id > core.skills.skill_id
+Ref: app.user_skill_evidence.user_skill_id > app.user_skills.user_skill_id
 Ref: app.user_skill_evidence.resume_id > app.resumes.resume_id
 Ref: app.user_skill_evidence.experience_id > app.user_experiences.experience_id
 Ref: app.user_career_goals.user_id > app.users.user_id
 Ref: app.user_career_goals.career_id > core.careers.career_id
 Ref: app.user_career_goals.career_profile_id > core.career_profiles.career_profile_id
+Ref: app.user_certifications.user_id > app.users.user_id
+Ref: app.user_certifications.source_resume_id > app.resumes.resume_id
 Ref: app.roadmaps.user_id > app.users.user_id
 Ref: app.roadmaps.goal_id > app.user_career_goals.goal_id
 Ref: app.roadmaps.career_id > core.careers.career_id

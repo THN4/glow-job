@@ -373,7 +373,7 @@ Summary of user background used by the agent.
 |---|---|
 | `user_id` | User |
 | `display_name` | Display name |
-| `current_status` | student / employed / career_switcher |
+| `current_status` | student / employed_full_time / employed_part_time / between_opportunities / other |
 | `current_job_title` | Current job title |
 | `years_experience` | Total years of experience |
 | `location` | Location |
@@ -451,7 +451,9 @@ Canonical User Data
 | `degree` | Degree |
 | `field_of_study` | Field |
 | `start_date` | Start |
+| `start_date_precision` | Whether the source supplied a year, month, or exact day |
 | `end_date` | End |
+| `end_date_precision` | Precision of the source end date |
 | `description` | Detail |
 | `source` | resume / self_report |
 | `source_resume_id` | Source resume |
@@ -471,9 +473,16 @@ Store work, internships, projects, competitions, and courses.
 | `experience_type` | Experience type |
 | `title` | Title |
 | `organization` | Organization |
+| `role` | Role / project role |
+| `location` | Location |
+| `url` | Project or portfolio URL |
 | `description` | Detail |
+| `highlights` | Ordered achievement/highlight values |
 | `start_date` | Start |
+| `start_date_precision` | Precision of the source start date |
 | `end_date` | End |
+| `end_date_precision` | Precision of the source end date |
+| `is_current` | Whether this experience is current |
 | `source` | resume / self_report |
 | `source_resume_id` | Resume source |
 | `extraction_confidence` | Confidence |
@@ -483,12 +492,18 @@ Store work, internships, projects, competitions, and courses.
 
 ## `app.user_skills`
 
-The user's current skill state.
+The user's current skill state. Raw user skill labels are retained even before
+they match the canonical catalog; only a successful match sets `skill_id`.
+Resume ingestion must not create `core.skills` records implicitly.
 
 | Column | Meaning |
 |---|---|
+| `user_skill_id` | User skill row ID |
 | `user_id` | User |
-| `skill_id` | Canonical Skill ID (external if databases split) |
+| `skill_id` | Nullable canonical skill ID (external if databases split) |
+| `raw_skill_name` | Original label from the resume or user |
+| `normalized_skill_name` | Optional comparison text, not a canonical identity |
+| `match_status` | matched / needs_review / unmatched |
 | `proficiency_level` | Current level |
 | `source` | resume / self_report / assessment / project |
 | `confidence` | Confidence |
@@ -504,14 +519,32 @@ Evidence supporting a user's claimed or inferred skill.
 | Column | Meaning |
 |---|---|
 | `evidence_id` | ID |
-| `user_id` | User |
-| `skill_id` | Skill |
+| `user_skill_id` | User skill row supported by this evidence |
 | `resume_id` | Resume source |
 | `experience_id` | Experience source |
 | `evidence_type` | resume_text / experience / assessment |
 | `evidence_text` | Evidence |
 | `confidence` | Confidence |
 | `created_at` | Created |
+
+## `app.user_certifications`
+
+Certifications, awards, competitions, workshops, licenses, and other activities.
+
+| Column | Meaning |
+|---|---|
+| `certification_id` | ID |
+| `user_id` | User |
+| `kind` | certification / award / competition / workshop / activity / license / other |
+| `name` | Credential or activity name |
+| `issuer` | Issuing organization |
+| `awarded_on` | Date, when known |
+| `awarded_on_precision` | Whether the source supplied a year, month, or exact day |
+| `details` | Supporting detail |
+| `source` | resume / self_report |
+| `source_resume_id` | Resume source |
+| `extraction_confidence` | Extraction confidence |
+| `user_confirmed` | User confirmation |
 
 ---
 
@@ -523,14 +556,24 @@ Evidence supporting a user's claimed or inferred skill.
 |---|---|
 | `goal_id` | Goal ID |
 | `user_id` | User |
-| `career_id` | Career ID (external if databases split) |
-| `career_profile_id` | Career Profile ID (external if databases split) |
+| `target_role_title` | Selected role label from search or a recommendation |
+| `career_id` | Nullable Career ID (external if databases split) until matched |
+| `career_profile_id` | Nullable Career Profile ID (external if databases split) until matched |
 | `is_primary` | Primary goal |
+| `readiness_timeframe` | three_months / six_months / one_year / no_fixed_deadline |
 | `target_date` | Target date |
+| `weekly_availability` | under_2_hours / hours_2_to_5 / hours_5_to_10 / hours_10_plus |
 | `available_hours_per_week` | Available hours per week |
 | `preferred_learning_style` | Learning preference |
+| `additional_context` | Optional user context, at most 500 characters |
+
 | `created_at` | Created |
 | `updated_at` | Updated |
+
+Career recommendation match percentages and demand badges are derived from
+the profile and market aggregates; they are not stored as onboarding input.
+An unmatched custom role can be saved by title, but must be mapped to a career
+profile before market comparison and roadmap generation.
 
 ---
 
@@ -739,18 +782,26 @@ app.interview_feedback
 
 # 14. Migration and Implementation Plan
 
-- Keep versioned migrations in the repository root at `migrations/`. They cover `core`, `market`, `knowledge`, `app`, and `system` in one ordered history for the MVP database.
-- Create `core` first, then `system.ingestion_runs`, `market`, `knowledge`, and `app`. Create `system.ai_runs` after `app.users` because it references a user. Check that the selected RDS PostgreSQL version supports pgvector, then enable the `vector` extension before adding vector columns or indexes ([AWS extension versions](https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-extensions.html)).
-- Keep database access code in `backend/app/db/` and `data-engineering/db/`. Deployment configuration belongs in `infra/`; migration runner scripts belong in `scripts/migrate/`.
+- **Current implementation status:** migrations `001`–`007` in
+  `data-pipeline/migrations/versions/` create the pipeline schemas (`core`,
+  `market`, and `system`). Migration `008` in the root `migrations/versions/`
+  creates the app profile, resume, career-goal, and roadmap tables plus
+  `system.ai_runs`. The existing runner reads both locations in filename
+  order. These files change a database only when the migration command is run;
+  DBML files remain design references.
+- Keep host-owned versioned migrations in root `migrations/versions/` and pipeline-owned migrations in `data-pipeline/migrations/versions/`. The runner applies both directories in one filename-ordered history for the shared database.
+- Create `core` first, then `system.ingestion_runs`, `market`, `app`, and `knowledge`. Create `system.ai_runs` after `app.users` because it references a user. Check that the selected RDS PostgreSQL version supports pgvector, then enable the `vector` extension before adding vector columns or indexes ([AWS extension versions](https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-extensions.html)).
+- Keep database access code in `backend/app/db/` and `data-engineering/db/`. Deployment configuration belongs in `infra/`; the current migration runner is `data-pipeline/scripts/database/migrate.py`.
 - Coordinate migration changes across Backend and Data / RAG owners because one migration history affects all five schemas.
 
-## Decisions required before writing migrations
+## Remaining decisions before future migrations
 
 - Define numeric values for `requirement_score` and `proficiency_score`, and specify how `weighted_demand_score`, `target_level`, and `importance_tier` are derived.
-- Define SQL constraints and deletion behavior. The DBML marks keys and unique rows, but fallback deduplication for postings without a provider ID, partial unique indexes for a current resume and primary goal, and numeric checks still need SQL definitions.
-- Review deletion behavior and cross-domain ownership for the foreign keys in the canonical DBML. A future database split would require service-level validation.
+- The app migration defines SQL constraints, deletion behavior, partial unique indexes for a current resume and primary goal, and range checks for scores and percentages. Fallback deduplication for postings without a provider ID remains to be defined.
+- Review whether the app migration's deletion behavior and cross-domain foreign keys match the intended retention policy. A future database split would require service-level validation.
 - Define the pgvector model, dimensions, and index strategy before creating `knowledge.knowledge_chunks.embedding`.
 - Ensure an experience-linked skill evidence row refers to an experience owned by the same user. Define retention and access rules for resumes, extracted text, and other personal data before storing them in S3 or the database.
+- Add the `app.roadmap_steps.module_id` foreign key after the knowledge migration creates `knowledge.learning_modules`.
 
 ---
 
