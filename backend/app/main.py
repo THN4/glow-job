@@ -22,7 +22,7 @@ def create_app() -> FastAPI:
 
     @app.get(f"{settings.API_PREFIX}/health")
     async def health() -> dict:
-        return {"status": "ok", "extractor": settings.EXTRACTOR}
+        return {"status": "ok", "extractor": settings.RESUME_EXTRACTOR}
 
     app.include_router(api_router, prefix=settings.API_PREFIX)
     return app

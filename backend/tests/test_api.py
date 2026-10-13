@@ -17,7 +17,7 @@ from .fixtures import make_cv_image, make_text_pdf
 
 
 def make_app(tmp_path, extractor=None, **env) -> tuple[FastAPI, Services]:
-    settings = CvSettings(_env_file=None, EXTRACTOR="mock", MOCK_DELAY_MS=0, DATA_DIR=str(tmp_path / "data"), **env)
+    settings = CvSettings(_env_file=None, RESUME_EXTRACTOR="mock", MOCK_DELAY_MS=0, DATA_DIR=str(tmp_path / "data"), **env)
     svc = build_services(
         settings,
         extractor=extractor or MockExtractor(0),
@@ -181,7 +181,7 @@ class SlowExtractor:
 
 
 async def test_timeout_fails_the_job(tmp_path):
-    app, svc = make_app(tmp_path, extractor=SlowExtractor(), LLM_TIMEOUT_MS=100)
+    app, svc = make_app(tmp_path, extractor=SlowExtractor(), RESUME_GEMINI_TIMEOUT_MS=100)
     svc.queue._handler.__self__.timeout_s = 0.2  # keep the test fast (pipeline deadline)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost:8787") as c:
         poll = await Flow(c, svc).extract(make_text_pdf())

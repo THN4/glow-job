@@ -21,7 +21,8 @@ from pydantic import Field, ValidationError
 from app.features.resume.errors import AppError
 from app.features.resume.services import Services, get_services
 from app.features.resume.storage import Job, StoredProfile, now_iso
-from src.resume.normalization.postprocess import confirm_profile
+from src.resume.normalization.postprocess import confirm_profile, count_review
+from src.resume.normalization.catalog import resolve_profile_catalog_matches
 from src.resume.parsing.preprocess import ALLOWED_MIME, detect_mime
 from src.resume.schemas.cv_extraction import Camel, CvProfile, empty_profile
 from src.resume.errors import ResumeProcessingError
@@ -144,7 +145,12 @@ async def get_extraction(job_id: str, svc: Services = Depends(get_services)) -> 
         raise AppError("JOB_NOT_FOUND")
     out: dict[str, Any] = {"jobId": job.job_id, "status": job.status, "stage": job.stage}
     if job.result is not None:
-        out["result"] = job.result.model_dump(mode="json", by_alias=True)
+        result = job.result.model_copy(deep=True)
+        catalog = svc.skill_catalog.load()
+        if catalog is not None:
+            result.profile = resolve_profile_catalog_matches(result.profile, catalog)
+            result.meta.review_count = count_review(result.profile)
+        out["result"] = result.model_dump(mode="json", by_alias=True)
     if job.error is not None:
         out["error"] = job.error
     return out
@@ -182,6 +188,12 @@ async def save_profile(request: Request, svc: Services = Depends(get_services)) 
         created_at = existing.created_at
     else:
         profile_id = f"prf_{uuid.uuid4()}"
+    # Never trust a skill ID or match supplied by the client. Clear submitted
+    # matches, then recompute them from the current database catalog if enabled.
+    profile = _clear_catalog_matches(profile)
+    catalog = svc.skill_catalog.load()
+    if catalog is not None:
+        profile = resolve_profile_catalog_matches(profile, catalog)
     confirmed = confirm_profile(profile).model_dump(mode="json", by_alias=True)
     await svc.profiles.put(StoredProfile(profile_id, body.session_id, confirmed, created_at, now))
     return {"profileId": profile_id, "updatedAt": now}
@@ -197,4 +209,16 @@ async def get_profile(profile_id: str, svc: Services = Depends(get_services)) ->
 
 def _issues(err: ValidationError) -> list[dict[str, str]]:
     return [{"path": ".".join(str(p) for p in e["loc"]), "message": e["msg"]} for e in err.errors()]
+
+
+def _clear_catalog_matches(profile: CvProfile) -> CvProfile:
+    return profile.model_copy(
+        update={
+            "technical_skills": [
+                item.model_copy(update={"catalog_match": None})
+                for item in profile.technical_skills
+            ],
+            "tools": [item.model_copy(update={"catalog_match": None}) for item in profile.tools],
+        }
+    )
 

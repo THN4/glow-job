@@ -1,4 +1,4 @@
-"""Wires local mode together (in-process queue, temp-folder uploads, JSON-file profiles).
+"""Wire local extraction services to either PostgreSQL or file profile storage.
 
 ``get_services`` is a FastAPI dependency: tests (or a deployed app) can replace it with
 ``app.dependency_overrides[get_services] = ...``.
@@ -11,7 +11,9 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.features.resume.config import CvSettings, get_settings
+from app.features.resume.catalog import SkillCatalogRepository
 from app.features.resume.pipeline import Pipeline
+from app.features.resume.profiles import DatabaseProfilesRepo
 from app.features.resume.storage import (
     CacheRepo,
     FileProfilesRepo,
@@ -33,9 +35,10 @@ class Services:
     jobs: JobsRepo
     cache: CacheRepo
     usage: UsageCounter
-    profiles: FileProfilesRepo
+    profiles: FileProfilesRepo | DatabaseProfilesRepo
     queue: JobQueue
     extractor: Extractor
+    skill_catalog: SkillCatalogRepository
 
 
 def build_services(
@@ -58,7 +61,7 @@ def build_services(
         limits=Limits(settings.MAX_PDF_PAGES, settings.MAX_IMAGE_PAGES),
         daily_limit=settings.DAILY_EXTRACTION_LIMIT,
         # Model timeout plus headroom for preprocessing and one repair retry.
-        timeout_s=settings.LLM_TIMEOUT_MS / 1000 * 2 + 30,
+        timeout_s=settings.RESUME_GEMINI_TIMEOUT_MS / 1000 * 2 + 30,
         stage_interval_s=stage_interval_s,
     )
     return Services(
@@ -67,9 +70,14 @@ def build_services(
         jobs=jobs,
         cache=cache,
         usage=usage,
-        profiles=FileProfilesRepo(Path(settings.DATA_DIR) / "profiles.json"),
+        profiles=(
+            DatabaseProfilesRepo(settings)
+            if settings.database_configured
+            else FileProfilesRepo(Path(settings.DATA_DIR) / "profiles.json")
+        ),
         queue=JobQueue(pipeline.run),
         extractor=extractor,
+        skill_catalog=SkillCatalogRepository(settings),
     )
 
 
