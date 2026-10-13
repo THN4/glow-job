@@ -1,5 +1,9 @@
 # 7. Local Qwen Setup (DevOps notebook server)
 
+> **Historical prototype instructions only.** Resume extraction now uses the
+> shared Gemini API through `RESUME_EXTRACTOR=gemini`; these notebook, Ollama,
+> and vLLM steps do not configure the current application.
+
 The backend talks to the model through an **OpenAI-compatible API**, so any of these servers work: **Ollama** (recommended, easiest), **vLLM** (faster, needs a bigger GPU) or LM Studio. The backend only needs three values: `LLM_BASE_URL`, `LLM_MODEL` and optionally `LLM_API_KEY`.
 
 > Model tags and server flags change often. Check the current Ollama library / vLLM docs for the exact names before setting up.

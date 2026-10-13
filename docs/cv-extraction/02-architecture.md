@@ -4,14 +4,14 @@ The system runs in two modes from **one codebase**:
 
 | | **Local mode (now)** | **AWS mode (at deploy, by DevOps)** |
 |---|---|---|
-| AI model | **Qwen VL on the DevOps notebook server** (Ollama/vLLM, OpenAI-compatible API) | Chosen at deploy time (see [06-aws-setup-and-cost.md](06-aws-setup-and-cost.md)) |
+| AI model | **Gemini API**, using the same pinned model and credential as market extraction | Gemini API, using the same resume-specific prompt and response schema |
 | API | FastAPI + Uvicorn | The same FastAPI app behind API Gateway / a container (DevOps decides) |
 | Background jobs | In-process queue, concurrency 1 | Worker Lambda (async invoke) |
 | File upload | Local temp folder (upload URL points back to the API) | S3 presigned POST |
 | Data | In-memory TTL maps / JSON file | DynamoDB |
-| Cost | $0 | See 06 |
+| Cost | Gemini API usage charges apply | Not estimated in the historical deployment plan |
 
-Switching modes is configuration only (`EXTRACTOR`, `STORAGE`, `LLM_*`). Routes and services don't change.
+The model is selected by `RESUME_EXTRACTOR` (`gemini` or `mock`). Routes and services do not depend on the provider.
 
 ## 2.1 Tech stack
 
@@ -19,28 +19,28 @@ Switching modes is configuration only (`EXTRACTOR`, `STORAGE`, `LLM_*`). Routes 
 |---|---|---|
 | Dev environment | **Kiro** (spec-driven: requirements → design → tasks) | Team standard. Specs in `.kiro/specs/`, context in `.kiro/steering/` |
 | Language / framework | **Python 3.12 + FastAPI** | The backend composes routes through `app/api/`; Resume API and job orchestration live in `app/features/resume/`, while reusable processing lives in `data-pipeline/src/resume/` |
-| AI model | **Qwen VL** (default `qwen3-vl:8b`) served by Ollama or vLLM | Free to run locally, reads text and images, OpenAI-compatible, JSON-schema output |
-| AI client | `openai` Python package (async) with `base_url` = the Qwen server | Works with Ollama, vLLM and LM Studio, and with vLLM on AWS later |
-| Validation / schema | **Pydantic v2** (`data-pipeline/src/resume/schemas/cv_extraction.py`); `model_json_schema()` feeds the model's `response_format` | One schema for model output, API validation and OpenAPI. The frontend can generate TypeScript types from `/openapi.json` |
-| Document processing | **PyMuPDF** (PDF text + render scans to images), Pillow (images), `filetype` (magic bytes) | Qwen can't read PDFs, so we turn them into text or images ourselves. PyMuPDF is AGPL-licensed (check before a closed-source release) |
+| AI model | **Gemini**, shared with market extraction | Reads text and images and supports structured JSON output |
+| AI client | Google GenAI Python SDK (async API) | Uses the shared `GEMINI_API_KEY`; resume keeps its own prompt and schema |
+| Validation / schema | **Pydantic v2** (`data-pipeline/src/resume/schemas/cv_extraction.py`); Gemini uses structured output | One schema for model output, API validation and OpenAPI. The frontend can generate TypeScript types from `/openapi.json` |
+| Document processing | **PyMuPDF** (PDF text + render scans to images), Pillow (images), `filetype` (magic bytes) | The model receives extracted text or prepared page images. PyMuPDF is AGPL-licensed (check before a closed-source release) |
 | AWS (deploy) | API Gateway, Lambda, S3, DynamoDB, CDK v2, CloudWatch, Budgets | Serverless, ~$0 when idle |
-| Testing | pytest + pytest-asyncio + httpx | Model server faked with `httpx.MockTransport` |
+| Testing | pytest + pytest-asyncio + httpx | API integration uses the mock extractor to avoid external model calls |
 
-**Deliberately not used:** Textract (Qwen-VL reads scans), Step Functions, RDS, NAT Gateway, OpenSearch, WAF, Cognito (no auth in this phase).
+**Deliberately not used:** Textract, Step Functions, RDS, NAT Gateway, OpenSearch, WAF, Cognito (no auth in this phase).
 
 ## 2.2 Local mode
 
 ```
- Developer machines (frontend / backend devs)                 DevOps notebook server
-┌─────────────────────────────────────────────┐   Tailscale  ┌────────────────────────────┐
-│ Browser ──► FastAPI (localhost:8787)        │   / LAN      │ Ollama or vLLM             │
-│               ├─ local upload folder (tmp)  │ ───────────► │ qwen3-vl:8b                │
-│               ├─ in-process job queue (1)   │  /v1/chat/   │ context 16k, 1 at a time   │
-│               └─ in-memory repos            │  completions └────────────────────────────┘
+ Developer machines (frontend / backend devs)                   Google Gemini API
+┌─────────────────────────────────────────────┐     HTTPS     ┌────────────────────────────┐
+│ Browser ──► FastAPI (localhost:8787)        │ ────────────► │ Shared market Gemini model │
+│               ├─ local upload folder (tmp)  │               │ resume-specific prompt     │
+│               ├─ in-process job queue (1)   │               └────────────────────────────┘
+│               └─ in-memory repos            │
 └─────────────────────────────────────────────┘
 ```
 
-The backend can also run **on the notebook server itself**, next to Ollama, and teammates point their frontend at it. Either way works.
+The API remains local for development; model inference runs through the shared Gemini API.
 
 ## 2.3 AWS mode
 
@@ -65,7 +65,7 @@ Why presigned upload + async worker (AWS mode): a synchronous Lambda request is 
 | `app/features/resume/router.py` | CV upload, extraction-job, and profile endpoints; returns the documented error envelope |
 | `app/features/resume/pipeline.py` | Orchestrates one API job: cache → limit → preprocess → extract → post-process, updating stages and deleting the upload |
 | `data-pipeline/src/resume/parsing/` | Type detection, PDF text extraction, and scan/photo preparation as JPEG pages |
-| `data-pipeline/src/resume/extraction/` | Extraction prompt, model input/output contract, and provider implementations |
+| `data-pipeline/src/resume/extraction/` | Resume-specific prompt, model input/output contract, and Gemini/mock adapters |
 | `data-pipeline/src/resume/normalization/` | Grounding, skill-name normalization, deduplication, evidence, and derived facts |
 | `data-pipeline/src/resume/schemas/` | Pydantic extraction and profile contracts, the single source of truth |
 | `app/features/resume/storage.py` / `services.py` | Local uploads, jobs/cache, profile JSON persistence, queue, and FastAPI dependency wiring |
@@ -84,11 +84,9 @@ Why presigned upload + async worker (AWS mode): a synchronous Lambda request is 
 
 | Env var | Local default | AWS | Notes |
 |---|---|---|---|
-| `EXTRACTOR` | `openai-compatible` (or `mock` with no model server) | depends on option | `mock` = fixtures, used in tests/CI |
-| `LLM_BASE_URL` | `http://<notebook-host>:11434/v1` | option B/C | OpenAI-compatible endpoint |
-| `LLM_MODEL` | `qwen3-vl:8b` | option-specific | |
-| `LLM_API_KEY` | (empty) | secret (SSM/Secrets Manager) if the server requires one | |
-| `LLM_TIMEOUT_MS` | `180000` | `180000` | |
+| `RESUME_EXTRACTOR` | `gemini` | `gemini` | Use `mock` for tests and local development without model calls |
+| `GEMINI_API_KEY` | shared Gemini API key | secret (SSM/Secrets Manager) | Same credential used by market extraction |
+| `RESUME_GEMINI_TIMEOUT_MS` | `180000` | `180000` | Model request timeout |
 | `STORAGE` | `local` | `aws` | |
 | `MAX_FILE_MB` / `MAX_PDF_PAGES` / `MAX_IMAGE_PAGES` | `10` / `10` / `4` | same | |
 | `DAILY_EXTRACTION_LIMIT` | `0` (unlimited) | e.g. `50` | Credit protection when deployed |

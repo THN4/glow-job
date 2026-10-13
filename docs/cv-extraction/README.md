@@ -21,7 +21,7 @@ persistence. The reusable resume extraction domain lives in
 | [02-architecture.md](02-architecture.md) | Cross-layer architecture notes. Some model and deployment details describe the earlier local prototype. |
 | [03-data-schema.md](03-data-schema.md) | Resume profile contract reference used by the API and frontend work. |
 | [04-api-spec.md](04-api-spec.md) | API endpoint and error-envelope reference, linked by the current backend router. |
-| [05-extraction-pipeline.md](05-extraction-pipeline.md) | Pipeline design notes; provider-specific examples are from the earlier prototype. |
+| [05-extraction-pipeline.md](05-extraction-pipeline.md) | Current Gemini-based extraction flow and provider contract. |
 | [06-aws-setup-and-cost.md](06-aws-setup-and-cost.md) | **Historical planning only.** AWS services, prices, and deployment options were not verified as the current deployment plan. |
 | [07-local-qwen-setup.md](07-local-qwen-setup.md) | **Historical experiment record.** Ollama/Qwen notebook setup and model results are not the current model selection instructions. |
 | [08-database-mapping.md](08-database-mapping.md) | Cross-layer mapping between extracted profiles and the app database design; confirm against the current DBML before implementation. |

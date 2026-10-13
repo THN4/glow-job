@@ -76,6 +76,8 @@ market.career_skill_stats
 
 # 3. CORE — Shared Canonical Data
 
+The current local Resume onboarding flow uses anonymous `app.users` rows keyed by the client-generated `sessionId`. After the user confirms the extracted profile, the backend stores its full JSON in `app.user_profiles.profile_data` and writes normalized facts to related `app.*` tables. The CV file and extraction job are still temporary; this does not yet create `app.resumes` or `app.resume_extractions` rows. See [Resume database mapping](../cv-extraction/08-database-mapping.md) for field-level details.
+
 ## `core.companies`
 
 Canonical company records normalize names from multiple sources.
@@ -417,7 +419,7 @@ LLM or resume parser output before user confirmation.
 | `error_message` | Error |
 | `created_at` | Creation time |
 
-CV flow:
+Planned durable CV flow (not the current local implementation):
 
 ```text
 CV Upload
@@ -436,6 +438,8 @@ User Edit / Confirm
 ↓
 Canonical User Data
 ```
+
+The current local Resume flow instead uses temporary file storage and in-memory extraction jobs. It writes the confirmed profile to `app.user_profiles` and related profile tables; it does not create `app.resumes` or `app.resume_extractions` rows yet. See [Resume database mapping](../cv-extraction/08-database-mapping.md).
 
 ---
 

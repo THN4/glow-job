@@ -14,7 +14,8 @@ python -m scripts.database.migrate
 The runner applies both directories in filename order and skips versions
 already recorded in `system.schema_migrations`. Migration `008` creates the
 application schema used by onboarding, resume review, career goals, and
-roadmaps. It is not applied to any database until the command is run.
+roadmaps. Migration `009` adds anonymous Resume profile persistence. These
+migrations are not applied to any database until the command is run.
 
 Add a new migration with the next unused, zero-padded version number across
 both directories. Do not edit or renumber an already-applied migration. The

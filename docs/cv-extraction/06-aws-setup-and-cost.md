@@ -1,7 +1,12 @@
 # 6. AWS Deployment & Cost
 
-**Now:** everything runs locally. The model is Qwen on the DevOps notebook server (see [07-local-qwen-setup.md](07-local-qwen-setup.md)) and **AWS is not used**, so it costs $0.
-**Later:** DevOps deploys to AWS. This page lists the options for hosting the model on AWS and what each one costs against the **$350 credit**.
+> **Historical planning only.** Current resume extraction uses the shared Gemini
+> API. The model-hosting and cost options below were written for the earlier
+> Qwen prototype and are not current deployment guidance.
+
+**At the time of this plan:** everything ran locally and AWS was not used.
+This page records possible AWS hosting options considered against the **$350
+credit** at that time.
 
 ## 6.1 What gets deployed
 

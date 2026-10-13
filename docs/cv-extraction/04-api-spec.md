@@ -62,7 +62,7 @@ Starts the analysis of an uploaded file.
 
 ## 4.4 `GET /api/cv/extractions/{jobId}`
 
-Poll every ~1.5 s, and stop after `succeeded`/`failed` or after 300 s (local Qwen can take 1–3 min for multi-page scans). While `status` is `queued`, another CV is being processed first (the local server runs one at a time).
+Poll every ~1.5 s, and stop after `succeeded`/`failed` or after the configured job timeout. While `status` is `queued`, another CV is being processed first (the local worker runs one at a time).
 
 **Response `200`** (processing)
 ```json
@@ -94,6 +94,13 @@ Poll every ~1.5 s, and stop after `succeeded`/`failed` or after 300 s (local Qwe
 }
 ```
 
+When database access is configured, `technicalSkills[]` and `tools[]`
+include `catalogMatch`, resolved deterministically against the same
+`core.skills` and `core.skill_aliases` catalog used by Market. A match includes
+the canonical `skillId`, `canonicalName`, and `matchMethod`; no match is
+`{"status":"unmatched"}`. If catalog access is not configured,
+`catalogMatch` is `null`. This lookup never creates or changes catalog rows.
+
 **Response `200`** (failed)
 ```json
 { "jobId": "job_93c2…", "status": "failed", "error": { "code": "NOT_A_CV", "message": "This document does not look like a CV.", "retryable": false } }
@@ -111,13 +118,16 @@ Saves the profile after the user has reviewed and edited it ("Looks good, contin
 
 **Request**
 ```json
-{ "sessionId": "temp-session-uuid", "profileId": null, "profile": { "schemaVersion": 1, "…": "…" } }
+{ "sessionId": "f93efc05-e67b-47a7-a81a-c9834d6d8b85", "profileId": null, "profile": { "schemaVersion": 1, "…": "…" } }
 ```
 
 - `profileId: null` creates a new profile. Passing an existing id updates it.
 - The body is validated against `CvProfile`. Invalid input returns `400 INVALID_PROFILE` with field paths in `error.details`.
+- The backend ignores any client-supplied `catalogMatch` and recomputes it from
+  the current catalog before saving. It never trusts a client-provided `skillId`.
 - Every item gets `needsReview: false` on save, because the user has now confirmed it.
-- `sessionId` is a placeholder until authentication exists (e.g. Cognito later).
+- `sessionId` identifies the anonymous user in the current product flow. The backend uses it as `auth_subject` with `auth_provider='anonymous'`; clients should generate and retain a hard-to-guess UUID. Losing it means the anonymous profile cannot be recovered.
+- When DB settings and migration `009` are present, the confirmed profile is saved to `app.user_profiles` and normalized child tables. Without DB settings, local mode stores profiles in `.data/profiles.json`.
 
 **Response `200`**: `{ "profileId": "prf_51aa…", "updatedAt": "2026-10-05T10:00:00Z" }`
 
@@ -147,21 +157,23 @@ One envelope everywhere (for job failures it appears under `error` in the poll r
 | 404 | `JOB_NOT_FOUND` / `PROFILE_NOT_FOUND` | Unknown id (or the job expired) | Restart the flow |
 | 429 | `RATE_LIMITED` | API Gateway throttling | "Too many requests. Please wait a moment." (`retryable: true`) |
 | 429 | `DAILY_LIMIT_REACHED` | The daily extraction cap (credit protection) is used up | "We've reached today's limit. Please try again tomorrow or fill in your profile manually." (`retryable: false`) |
+| 503 | `SKILL_CATALOG_UNAVAILABLE` | Catalog access is configured but the DB is unreachable, empty, or invalid | Retry later; do not treat skills as unmatched |
+| 503 | `PROFILE_STORE_UNAVAILABLE` | The configured DB could not save or load the confirmed profile | Retry later; the profile was not saved |
 | — (job) | `TOO_MANY_PAGES` | PDF > 10 pages | "Your CV is longer than 10 pages." |
 | — (job) | `UNREADABLE_DOCUMENT` | Blank, encrypted or corrupt file | "We couldn't read this file. Try a clearer scan or a PDF." |
 | — (job) | `NOT_A_CV` | The model judged it is not a CV/résumé | "This doesn't look like a CV. Please check the file." |
-| — (job) | `EXTRACTION_DECLINED` | Bedrock `stop_reason: "refusal"` | "We couldn't process this file." |
-| — (job) | `EXTRACTION_FAILED` | Bedrock error after retries, or invalid output | "Something went wrong. Please try again." (`retryable: true`) |
-| — (job) | `EXTRACTION_TIMEOUT` | Worker exceeded 100 s | Same as above (`retryable: true`) |
+| — (job) | `EXTRACTION_DECLINED` | Provider declines the extraction | "We couldn't process this file." |
+| — (job) | `EXTRACTION_FAILED` | Provider error after retries, or invalid output | "Something went wrong. Please try again." (`retryable: true`) |
+| — (job) | `EXTRACTION_TIMEOUT` | Worker exceeded the configured extraction timeout | Same as above (`retryable: true`) |
 
-## 4.10 Frontend integration notes (for later)
+## 4.10 Frontend integration
 
-1. **Upload step:** call `uploads` → upload the file (PUT or POST, see §4.2) → call `extractions`. Show the "Analyzing your CV" screen right after the S3 upload starts.
+1. **Upload step:** implemented at `/onboarding/cv`: call `uploads` → upload the file (PUT or POST, see §4.2) → call `extractions`.
 2. **Analyzing screen:** poll the job and tick off rows as `stage` advances. Show "This usually takes less than a minute".
-3. **Review step:** render one card per section of `result.profile`. Show a "Please confirm" badge when `needsReview` is true. Use `meta.reviewCount` and `meta.warnings` for a summary banner.
+3. **Review step:** render one card per section of `result.profile`. For each technical skill/tool, show the matched canonical catalog name when `catalogMatch.status === "matched"`; retain the extracted label as the user's wording. Show an unmatched state when status is `unmatched`, and a neutral “catalog not checked” state when `catalogMatch` is `null`. Unmatched catalog entries are flagged `needsReview` for the user's attention. Use `meta.reviewCount` and `meta.warnings` for a summary banner.
 4. **Edit:** keep the profile in local state (e.g. React Hook Form). Set `source: "user"` on any item the user edits or adds.
-5. **Continue:** `PUT /api/profiles`, store the `profileId`, then go to Step 3.
+5. **Continue:** `PUT /api/profiles`, store the `profileId`, then continue onboarding.
 6. **Continue without CV:** `GET /api/profiles/empty` → the same Review/Edit form.
 7. **Errors:** map `error.code` to the messages above, and show "Try again" when `retryable`.
 8. **Types:** generate them from the backend's OpenAPI document (`/openapi.json`, e.g. with `openapi-typescript`) and never redefine them by hand.
-9. **CORS:** add the deployed frontend URL to `CORS_ORIGINS` (API) and to the S3 bucket CORS (CDK).
+9. **CORS:** local Compose allows `http://localhost:5173`; add the deployed frontend URL to `CORS_ORIGINS` and to the S3 bucket CORS when deployment is implemented.

@@ -25,6 +25,13 @@ interface FieldMeta {
   needsReview: boolean;     // drives the "Please confirm" badge
   source: Source;
 }
+
+interface CatalogMatch {
+  status: "matched" | "unmatched";
+  skillId: number | null;
+  canonicalName: string | null;
+  matchMethod: "exact_canonical" | "exact_alias" | null;
+}
 ```
 
 ## 3.3 `CvProfile`
@@ -58,7 +65,9 @@ interface CvProfile {
 
   technicalSkills: Array<{
     id: string;
-    name: string;                     // normalized: "React", "PostgreSQL"
+    name: string;                     // display label: Unicode/whitespace cleanup only; not a catalog canonical name
+    rawName: string | null;            // original skill label returned by the extractor
+    catalogMatch: CatalogMatch | null; // backend lookup against core.skills + core.skill_aliases; never guessed by Gemini
     category: "language" | "framework" | "database" | "cloud" | "devops" | "data" | "other";
     // Same scale as the database's user_skills.proficiency_level / market target_level.
     proficiency: "unknown" | "beginner" | "intermediate" | "advanced" | "expert";
@@ -106,7 +115,7 @@ interface CvProfile {
     detail: string | null;            // "Finalist", "Top 10"
   } & FieldMeta>;
 
-  tools: Array<{ id: string; name: string } & FieldMeta>;   // Figma, Jira, VS Code, …
+  tools: Array<{ id: string; name: string; catalogMatch: CatalogMatch | null } & FieldMeta>;   // Figma, Jira, VS Code, …
 
   languages: Array<{
     id: string;
@@ -134,10 +143,15 @@ interface CvExtractionResult {
   profile: CvProfile;
   meta: {
     extractionId: string;          // = jobId, for support/debug
-    model: string;                 // e.g. "qwen3-vl:8b", or "mock"
+    provider: string;              // provider family, currently "gemini" or "mock"
+    model: string;                 // provider's model identifier
+    promptVersion: string;         // bump when extraction instructions change
+    profileSchemaVersion: number;  // API profile contract
+    extractionSchemaVersion: number; // structured model-output schema
+    processingVersion: string;     // deterministic preprocessing/post-processing
     durationMs: number;
     inputKind: "text" | "images";  // extracted text, or page images (scans/photos)
-    cached: boolean;               // true = same file seen in the last 24 h, no AI call made
+    cached: boolean;               // true = same file + extraction configuration seen in the last 24 h
     detectedLanguage: "en" | "th" | "mixed";
     pageCount: number | null;
     warnings: string[];            // e.g. "Image is blurry; some text may be missed"
@@ -209,4 +223,4 @@ The AI does **not** produce `id`, `source`, `needsReview` or `schemaVersion`. Th
 
 ## 3.7 Versioning
 
-`schemaVersion` starts at `1`. Any breaking change (renaming or removing a field) bumps it, and the backend keeps a migration function for stored profiles. Adding optional fields is non-breaking.
+`schemaVersion` starts at `1`. Any breaking change (renaming or removing a field) bumps it, and the backend keeps a migration function for stored profiles. Adding optional fields is non-breaking. Extraction metadata separately records prompt, profile-schema, extraction-schema, and processing versions so a model result can be traced without changing the profile's version for an additive field.

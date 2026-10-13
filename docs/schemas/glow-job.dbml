@@ -353,9 +353,9 @@ Table knowledge.learning_modules {
 // APP: account, resume review, user state, goal, roadmap, and progress.
 Table app.users {
   user_id bigint [pk, increment]
-  email text [not null, unique]
-  auth_provider text [not null, note: 'cognito, google, or local']
-  auth_subject text [note: 'External identity subject; null for local auth']
+  email text [unique, note: 'Nullable for anonymous users']
+  auth_provider text [not null, note: 'anonymous, cognito, google, or local']
+  auth_subject text [note: 'External identity subject or anonymous session ID; required and nonblank when auth_provider is anonymous']
   password_hash text [note: 'Used only for local auth']
   is_active boolean [not null, default: true]
   created_at timestamptz [not null, default: `now()`]
@@ -368,6 +368,8 @@ Table app.users {
 
 Table app.user_profiles {
   user_id bigint [pk]
+  profile_id text [not null, unique]
+  profile_data jsonb [not null, note: 'Full confirmed Resume profile, including fields without dedicated relational columns']
   display_name text
   current_status current_situation
   current_job_title text
@@ -376,6 +378,7 @@ Table app.user_profiles {
   education_level text
   field_of_study text
   background_summary text
+  created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
 }
 
@@ -459,6 +462,7 @@ Table app.user_skills {
   normalized_skill_name text [note: 'Optional normalized comparison label; not a catalog identity']
   match_status user_skill_match_status [not null, default: 'unmatched']
   proficiency_level proficiency_level [not null, default: 'unknown']
+  proficiency_basis text [not null, default: 'unknown', note: 'explicit, inferred, or unknown']
   source text [note: 'resume, self_report, assessment, or project']
   confidence numeric(4, 3)
   verification_type text
