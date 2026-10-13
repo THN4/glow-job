@@ -37,12 +37,18 @@ app.include_router(api_router, prefix="/api")
 ```
 
 `app/main.py` is a standalone development host (FastAPI + CORS + health). The
-model provider is configured through the shared resume settings; use `mock`
-for local checks and backend integration tests, or the configured Ollama / OpenAI-
-compatible provider for model-backed extraction. AWS deployment is not part of
-the current backend implementation.
+resume extractor uses Gemini, sharing the API key and pinned model with market
+extraction. Use `mock` for local checks and backend integration tests. AWS
+deployment is not part of the current backend implementation.
 
 ## Setup
+
+For containerized local development, follow the root repository's
+[Docker Compose instructions](../README.md#run-postgresql-and-the-backend-with-docker-compose).
+Compose reads the root `.env` and passes `DB_HOST` to the container (defaulting
+to `postgres`, the database service name). For direct host execution, this
+backend's `.env` is read from the `backend/` working directory; use
+`DB_HOST=localhost` to reach the same published port.
 
 ```bash
 cd backend
@@ -59,11 +65,16 @@ copy .env.example .env            # then edit it (macOS/Linux: cp)
 
 | Variable | Use |
 |---|---|
-| `EXTRACTOR=mock` | Fixture data, no model server needed. Use for frontend work and when the notebook server is offline |
-| `EXTRACTOR=ollama` | **Recommended for the notebook server.** Ollama's native API: the backend sets the context size (`LLM_NUM_CTX`) and thinking (`LLM_THINK`) per request. `LLM_BASE_URL` is the plain address, e.g. `http://192.168.1.144:11434` |
-| `EXTRACTOR=openai-compatible` | Any OpenAI-style server (vLLM, LM Studio, or Ollama's `/v1`). `LLM_BASE_URL` ends in `/v1` |
-| `LLM_MODEL` | The **full tag** from `ollama list`, e.g. `vegeta/qwen3.5-4b-mtp:q8` (reads text and images). A shortened name gives "model not found" |
-| `LLM_VISION` | `true` if the model can read images. `false` for text-only models (`qwen2.5-coder`): scans/photos are then rejected with a clear message |
+| `RESUME_EXTRACTOR=gemini` | Gemini model-backed extraction. Uses the same model selection as market extraction |
+| `RESUME_EXTRACTOR=mock` | Fixture data, no model call. Use for tests and frontend work |
+| `GEMINI_API_KEY` | API key shared with market extraction |
+| `RESUME_GEMINI_TIMEOUT_MS` | Request timeout; defaults to `180000` |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Optional database connection. When configured, the backend reads the shared skill catalog and saves confirmed profiles to `app.*`; the role needs catalog read access and profile-table write access. If omitted, skill matches are not returned and profiles use the local JSON-file fallback. |
+
+If your existing `backend/.env` still has the prototype setting
+`EXTRACTOR=ollama` or `EXTRACTOR=openai-compatible`, replace it with
+`RESUME_EXTRACTOR=gemini` and add the shared `GEMINI_API_KEY`. Keep
+`RESUME_EXTRACTOR=mock` when you want to run without calling Gemini.
 
 All model options with defaults are in [`data-pipeline/src/resume/config.py`](../data-pipeline/src/resume/config.py). Backend API-specific settings remain in `app/features/resume/config.py`.
 
@@ -108,7 +119,7 @@ or configuring a provider.
 | Receipt PDF | `qwen2.5-coder:7b` | `NOT_A_CV` in ~10 s |
 | Scanned CV (image) | `gemma4:e4b` | Failed: the Gemma vision models never receive the image on this server |
 | Scanned CV (image) | `vegeta/qwen3.5-4b-mtp:q8`, `LLM_NUM_CTX=16384`, thinking off | **Read correctly** (name, school, skills, projects, no invented jobs), ~2.5 min including the first model load |
-| Same model with the server default context (131k) | `vegeta/qwen3.5-4b-mtp:q8` via `/v1` | Timed out: only 18 % of the model fit on the GPU. Fixed by `EXTRACTOR=ollama` (16k context) |
+| Same model with the server default context (131k) | `vegeta/qwen3.5-4b-mtp:q8` via `/v1` | Timed out: only 18 % of the model fit on the GPU. The prototype fix was Ollama's 16k context setting. |
 
 Per-file results for the 10 sample CVs (time 13-107 s each, all correct): [test_resume/README.md](test_resume/README.md).
 
@@ -118,7 +129,7 @@ The direct extraction CLI reads model settings from environment variables or
 `data-pipeline/.env`; the backend API reads its `.env` from `backend/`.
 
 - Files are deleted right after processing. Logs contain metadata only. Never commit real CVs: use `python -m tests.fixtures`.
-- Jobs and the result cache live in memory (1 h / 24 h) and uploads in a temp folder, so restarting the server clears them. Saved profiles go to `.data/profiles.json`.
+- Jobs and the result cache live in memory (1 h / 24 h) and uploads in a temp folder, so restarting the server clears them. With DB settings configured and migrations through `009` applied, confirmed profiles are saved to `app.user_profiles` and related `app.*` tables; the full profile payload is retained in `app.user_profiles.profile_data`. Without DB settings, profiles fall back to `.data/profiles.json`.
 - PyMuPDF (PDF text and rendering) is AGPL-licensed: fine for the hackathon, but check the license before a closed-source release.
 
 ## Testing Command
