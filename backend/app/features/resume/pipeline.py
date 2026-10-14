@@ -6,16 +6,23 @@ Never raises: failures are written to the job. The uploaded file is always delet
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
 import time
 from dataclasses import dataclass
 
-from .errors import AppError, to_app_error
-from .extractors import Extractor
-from .postprocess import BuildContext, build_result
-from .preprocess import Limits, prepare_cv, sha256
-from .storage import CacheRepo, JobsRepo, LocalUploadStore, UsageCounter
+from app.features.resume.errors import AppError, to_app_error
+from app.features.resume.storage import CacheRepo, JobsRepo, LocalUploadStore, UsageCounter
+from src.resume.extraction.contracts import Extractor
+from src.resume.normalization.postprocess import BuildContext, build_result
+from src.resume.parsing.preprocess import Limits, prepare_cv, sha256
+from src.resume.versions import (
+    EXTRACTION_SCHEMA_VERSION,
+    PROCESSING_VERSION,
+    PROFILE_SCHEMA_VERSION,
+    PROMPT_VERSION,
+)
 
 log = logging.getLogger("cv_extraction")
 
@@ -49,7 +56,8 @@ class Pipeline:
                     raise AppError("UPLOAD_NOT_FOUND")
 
                 file_hash = sha256(data)
-                cached = self.cache.get(file_hash)
+                cache_key = _cache_key(file_hash, self.extractor, self.limits)
+                cached = self.cache.get(cache_key)
                 if cached is not None:
                     cached.meta.extraction_id = job_id
                     cached.meta.cached = True
@@ -82,16 +90,26 @@ class Pipeline:
                         duration_ms=_ms(started),
                         input_kind=prepared.kind,
                         page_count=prepared.page_count,
+                        is_partial=bool(prepared.omitted_pages),
+                        # Mixed documents contain only partial OCR/text; grounding
+                        # against it would incorrectly reject claims from scanned pages.
                         source_text=prepared.text if prepared.kind == "text" and self.extractor.groundable else None,
+                        skill_level_text=(
+                            prepared.text
+                            if prepared.kind in ("text", "mixed") and self.extractor.groundable
+                            else None
+                        ),
                         warnings=list(prepared.warnings),
+                        provider=_provider_name(self.extractor),
                     ),
                 )
-                self.cache.put(file_hash, result)
+                self.cache.put(cache_key, result)
                 self.jobs.update(job_id, status="succeeded", stage="building", result=result)
                 # Metadata only: never log CV content.
                 self._log(
                     "extraction.succeeded",
                     jobId=job_id,
+                    provider=result.meta.provider,
                     model=self.extractor.name,
                     inputKind=prepared.kind,
                     pageCount=prepared.page_count,
@@ -132,4 +150,28 @@ class Pipeline:
 
 def _ms(since: float) -> int:
     return round((time.monotonic() - since) * 1000)
+
+
+def _cache_key(file_hash: str, extractor: Extractor, limits: Limits) -> str:
+    """Identify an extraction by bytes and all output-affecting pipeline versions/settings."""
+    identity = {
+        "fileSha256": file_hash,
+        "provider": _provider_name(extractor),
+        "model": extractor.name,
+        "providerConfig": getattr(extractor, "cache_identity", {}),
+        "promptVersion": PROMPT_VERSION,
+        "profileSchemaVersion": PROFILE_SCHEMA_VERSION,
+        "extractionSchemaVersion": EXTRACTION_SCHEMA_VERSION,
+        "processingVersion": PROCESSING_VERSION,
+        "limits": {
+            "maxPdfPages": limits.max_pdf_pages,
+            "maxImagePages": limits.max_image_pages,
+        },
+    }
+    encoded = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _provider_name(extractor: Extractor) -> str:
+    return getattr(extractor, "provider", extractor.__class__.__name__)
 

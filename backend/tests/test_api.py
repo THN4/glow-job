@@ -6,17 +6,18 @@ import httpx
 import pytest
 from fastapi import FastAPI
 
-from app.cv_extraction import router as cv_router
-from app.cv_extraction.config import CvSettings
-from app.cv_extraction.extractors.mock import MockExtractor, mock_extraction
-from app.cv_extraction.schemas import CvExtractionResult
-from app.cv_extraction.services import Services, build_services, get_services
+from app.features.resume.config import CvSettings
+from app.features.resume.router import router as cv_router
+from app.features.resume.services import Services, build_services, get_services
+from src.resume.extraction.contracts import ExtractorOutput
+from src.resume.extraction.providers.mock import MockExtractor, mock_extraction
+from src.resume.schemas.cv_extraction import CvExtractionResult
 
 from .fixtures import make_cv_image, make_text_pdf
 
 
 def make_app(tmp_path, extractor=None, **env) -> tuple[FastAPI, Services]:
-    settings = CvSettings(_env_file=None, EXTRACTOR="mock", MOCK_DELAY_MS=0, DATA_DIR=str(tmp_path / "data"), **env)
+    settings = CvSettings(_env_file=None, RESUME_EXTRACTOR="mock", MOCK_DELAY_MS=0, DATA_DIR=str(tmp_path / "data"), **env)
     svc = build_services(
         settings,
         extractor=extractor or MockExtractor(0),
@@ -160,8 +161,6 @@ class NotACvExtractor:
     name, groundable = "fake", True
 
     async def extract(self, prepared):
-        from app.cv_extraction.extractors.base import ExtractorOutput
-
         ex = mock_extraction()
         ex.is_document_a_cv = False
         return ExtractorOutput(extraction=ex)
@@ -182,7 +181,7 @@ class SlowExtractor:
 
 
 async def test_timeout_fails_the_job(tmp_path):
-    app, svc = make_app(tmp_path, extractor=SlowExtractor(), LLM_TIMEOUT_MS=100)
+    app, svc = make_app(tmp_path, extractor=SlowExtractor(), RESUME_GEMINI_TIMEOUT_MS=100)
     svc.queue._handler.__self__.timeout_s = 0.2  # keep the test fast (pipeline deadline)
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost:8787") as c:
         poll = await Flow(c, svc).extract(make_text_pdf())

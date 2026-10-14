@@ -1,9 +1,9 @@
-"""Generates SYNTHETIC sample CVs (fictional people, example.com emails) into backend-py/test_cvs/.
+"""Generates SYNTHETIC sample CVs (fictional people, example.com emails) into backend/test_resume/.
 
     python -m tests.make_sample_cvs
 
 Covers different fields, layouts, languages and file types so extraction can be tried by hand
-(python -m app.scripts.try_api test_cvs/<file>) and later evaluated against test_cvs/manifest.json.
+(python -m scripts.resume.try_api ../backend/test_resume/<file> from data-pipeline/) and later evaluated against test_resume/manifest.json.
 Output is deterministic (fixed random seed). No real person's data.
 """
 
@@ -18,7 +18,7 @@ from pathlib import Path
 import pymupdf
 from PIL import Image, ImageChops, ImageFilter
 
-OUT = Path(__file__).resolve().parent.parent / "test_cvs"
+OUT = Path(__file__).resolve().parent.parent / "test_resume"
 TAHOMA = Path("C:/Windows/Fonts/tahoma.ttf")
 TAHOMA_BOLD = Path("C:/Windows/Fonts/tahomabd.ttf")
 A4 = (595, 842)

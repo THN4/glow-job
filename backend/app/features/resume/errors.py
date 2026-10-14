@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.resume.errors import ResumeProcessingError
+
 # code -> (http status, retryable, default message)
 _CATALOG: dict[str, tuple[int, bool, str]] = {
     "INVALID_REQUEST": (400, False, "The request is missing or has invalid fields."),
@@ -18,7 +20,9 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "TOO_MANY_PAGES": (422, False, "The PDF has too many pages."),
     "UNREADABLE_DOCUMENT": (422, False, "The file could not be read."),
     "NOT_A_CV": (422, False, "This document does not look like a CV."),
-    "MODEL_UNAVAILABLE": (503, True, "The AI server is not reachable right now."),
+    "MODEL_UNAVAILABLE": (503, True, "The AI provider is not available right now."),
+    "SKILL_CATALOG_UNAVAILABLE": (503, True, "The skill catalog is not available right now."),
+    "PROFILE_STORE_UNAVAILABLE": (503, True, "The profile could not be saved right now."),
     "EXTRACTION_FAILED": (502, True, "The CV could not be extracted. Please try again."),
     "EXTRACTION_TIMEOUT": (504, True, "The extraction took too long. Please try again."),
     "INTERNAL_ERROR": (500, True, "Something went wrong."),
@@ -43,4 +47,8 @@ class AppError(Exception):
 
 
 def to_app_error(err: BaseException) -> AppError:
-    return err if isinstance(err, AppError) else AppError("INTERNAL_ERROR")
+    if isinstance(err, AppError):
+        return err
+    if isinstance(err, ResumeProcessingError):
+        return AppError(err.code, err.message)
+    return AppError("INTERNAL_ERROR")

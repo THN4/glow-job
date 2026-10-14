@@ -1,21 +1,26 @@
 # 5. Extraction Pipeline
 
 ```
- file ─► [0 Cache/limit] ─► [1 Validate] ─► [2 Preprocess: text or page images] ─► [3 Extractor (Qwen)] ─► [4 Validate + ground-check] ─► [5 Post-process] ─► CvProfile
+ file ─► [0 Cache/limit] ─► [1 Validate] ─► [2 Preprocess: text or page images] ─► [3 Extractor (Gemini)] ─► [4 Validate + ground-check] ─► [5 Post-process] ─► CvProfile
 ```
 
 ## 5.1 Why an AI model instead of OCR + rules
 
 An ID-card scanner works with a fixed layout. CVs have no fixed layout: one or two columns, tables, icons, Thai and English mixed, photos of printed pages. A classic OCR + regex pipeline would need a separate parser for every layout and would still miss things like "Jun 2023 – Present".
 
-A **vision-language model (Qwen-VL)** reads both text and page images, and **JSON-schema structured output** (constrained decoding on the server) forces the response into our schema. The backend never parses free text.
+A **vision-language model (Gemini)** reads extracted text and page images. Structured JSON output guides the response to the resume schema, and Pydantic validates it before post-processing.
 
-## 5.2 Provider abstraction: local first, AWS later
+Project URLs must be copied from a complete URL visibly present in the CV. A
+plain-text label such as `GitHub: moviecade` is accepted as an explicit GitHub
+reference and normalized to `https://github.com/moviecade`. Other text is kept
+as project description text instead of being guessed into a URL.
 
-All model access goes through one interface, so moving from the notebook server to AWS is a config change:
+## 5.2 Provider abstraction: Gemini and mock
+
+All model access goes through one interface. Gemini is the model-backed provider; `mock` is available for tests and local development:
 
 ```python
-# backend-py/app/cv_extraction/extractors/base.py
+# data-pipeline/src/resume/extraction/contracts.py
 @dataclass
 class PreparedCv:
     kind: Literal["text", "images"]      # text PDF / DOCX  |  scan / photo
@@ -25,23 +30,22 @@ class PreparedCv:
     warnings: list[str] = field(default_factory=list)
 
 class Extractor(Protocol):
-    name: str                            # e.g. "qwen3-vl:8b", "mock"
+    name: str                            # e.g. the pinned Gemini model ID, "mock"
     groundable: bool                     # False for the mock
     async def extract(self, prepared: PreparedCv) -> ExtractorOutput: ...
     # ExtractorOutput = CvExtraction (validated with Pydantic) + optional token usage
 ```
 
-| `EXTRACTOR` | Implementation | Used for |
+| `RESUME_EXTRACTOR` | Implementation | Used for |
 |---|---|---|
-| `mock` | Returns a fixture `CvExtraction` after a ~3 s delay | Unit/integration tests, CI, frontend development without the model server |
-| `openai-compatible` | `openai` Python package → any OpenAI-compatible server | **Qwen on the DevOps notebook (Ollama / vLLM) now.** Also vLLM on an AWS GPU later |
-| `bedrock` | AWS SDK / Bedrock (added at deploy time if DevOps picks a Bedrock-hosted model) | AWS deployment option, see 06-aws-setup-and-cost.md |
+| `mock` | Returns a fixture `CvExtraction` after a configurable delay | Unit/integration tests and frontend development without external model calls |
+| `gemini` | Google GenAI SDK async API using shared `GEMINI_API_KEY` and market's pinned model | Model-backed CV extraction; resume keeps its own prompt and response schema |
 
 ## 5.3 Step 0–2: cache, limit, validate, preprocess
 
-**Step 0.** SHA-256 the file. If `CACHE#<hash>` exists (24 h), return the cached result with `meta.cached: true`. This saves minutes of local GPU time on repeated test uploads and saves money on AWS. When deployed, also enforce `DAILY_EXTRACTION_LIMIT` (`0` = unlimited, the local default).
+**Step 0.** SHA-256 the file. If a cache entry for the file and extraction configuration exists (24 h), return it with `meta.cached: true`. This avoids repeating model calls for the same input. Also enforce `DAILY_EXTRACTION_LIMIT` (`0` = unlimited, the local default).
 
-**Step 1–2.** Qwen cannot read PDF files, so everything becomes either **text** or **page images**:
+**Step 1–2.** The preprocessor converts each supported file to **text** or **page images**:
 
 | Input | Handling | `PreparedCv.kind` |
 |---|---|---|
@@ -50,49 +54,43 @@ class Extractor(Protocol):
 | JPG / PNG / WEBP | Pillow: EXIF rotate, resize long edge ≤ 1280 px, JPEG quality 85 | `images` |
 | DOCX (stretch) | `mammoth` → plain text | `text` |
 
-> Why 1280 px and max 4 images: on an 8B VL model, each image adds a lot of tokens and VRAM, and processing time grows quickly. 1280 px keeps normal CV font sizes readable. Tune this in the eval.
+> Why 1280 px and max 4 images: this bounds request size and processing cost while keeping normal CV font sizes readable. Tune these limits with the evaluation set.
 
-## 5.4 Step 3: the Qwen call (OpenAI-compatible)
+## 5.4 Step 3: the Gemini call
 
 ```python
-# backend-py/app/cv_extraction/extractors/openai_compatible.py (simplified)
-client = AsyncOpenAI(
-    base_url=settings.LLM_BASE_URL,            # e.g. http://notebook-server:11434/v1 (Ollama)
-    api_key=settings.LLM_API_KEY,              # Ollama ignores it; vLLM can require one
-    timeout=settings.LLM_TIMEOUT_MS / 1000,
-    max_retries=1,
-)
-schema = cv_extraction_json_schema()           # Pydantic model_json_schema(), $refs inlined
+# Simplified provider example; the adapter implementation also maps errors and usage.
+import base64
 
-user_content = (
-    [{"type": "text", "text": f"<cv>\n{prepared.text}\n</cv>\n\n{USER_INSTRUCTIONS}"}]
-    if prepared.kind == "text"
-    else [*({"type": "image_url", "image_url": {"url": f"data:{i.mime};base64,{i.b64}"}} for i in prepared.images),
-          {"type": "text", "text": USER_INSTRUCTIONS}]
+client = create_gemini_client(api_key=settings.GEMINI_API_KEY).aio
+parts = [
+    *(
+        types.Part.from_bytes(data=base64.b64decode(image.b64), mime_type=image.mime)
+        for image in prepared.images
+    ),
+    USER_INSTRUCTIONS,
+]
+user_content = parts if prepared.kind == "images" else f"<cv>\n{prepared.text}\n</cv>\n{USER_INSTRUCTIONS}"
+res = await client.models.generate_content(
+    model=GEMINI_MODEL,                                  # same pinned model as market
+    contents=user_content,
+    config=types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        temperature=0,
+        response_mime_type="application/json",
+        response_schema=CvExtraction,
+    ),
 )
-
-res = await client.chat.completions.create(
-    model=settings.LLM_MODEL,
-    temperature=0,
-    max_tokens=4096,
-    response_format={"type": "json_schema", "json_schema": {"name": "cv_extraction", "schema": schema, "strict": True}},
-    messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_content}],
-)
-
-choice = res.choices[0]
-if choice.finish_reason == "length":
-    raise AppError("EXTRACTION_FAILED")                    # output cut off
-extraction = CvExtraction.model_validate(parse_json_loose(choice.message.content))   # ValidationError -> one repair retry
+extraction = CvExtraction.model_validate_json(res.text)   # ValidationError -> one repair retry
 # the pipeline then raises NOT_A_CV when extraction.is_document_a_cv is False
 ```
 
 Notes for the implementer:
-- **Always validate with Pydantic.** Small local models can still produce schema-valid nonsense, and some server versions ignore `response_format`. Allow **one repair retry** that feeds the validation error back to the model, then fail with `EXTRACTION_FAILED`.
-- **Keep every field required.** The server only guarantees keys that are `required` in the schema, so model fields are nullable but not optional. Strip Pydantic's `title` annotations from the schema **without** dropping a real field called `title` (this bug happened once and has a regression test).
-- **Context window:** Ollama's default context is small (a few thousand tokens), so the CV + schema would be silently truncated. The server must run with a context of at least **16k** (see 07-local-qwen-setup.md). Log `usage.prompt_tokens` and warn when it gets close to the limit.
-- **No thinking:** use the *Instruct* variant. If a Qwen3 text model with thinking is used, disable thinking (e.g. `/no_think` in the system prompt) or the JSON will be preceded by reasoning.
-- **Concurrency 1:** the local job runner processes one extraction at a time. The notebook GPU can't run several in parallel, and queuing gives predictable latency. Extra jobs wait with `status: "queued"`.
-- **Timeouts:** local inference is slower than a cloud API. The client timeout is 180 s (configurable) and the job poll timeout is 300 s.
+- **Always validate with Pydantic.** Structured output reduces formatting errors but semantic validation and a single repair retry are still required; after that, fail with `EXTRACTION_FAILED`.
+- **Keep every field required.** Model fields are nullable but not optional so the response shape remains predictable.
+- **Concurrency 1:** the local job runner processes one extraction at a time. Extra jobs wait with `status: "queued"`.
+- **Transient API failures:** retry Gemini `429`, `500`, and `503` responses up to two times with exponential delays before returning an extraction error.
+- **Timeouts:** the Gemini request timeout is configurable (`RESUME_GEMINI_TIMEOUT_MS`); the job timeout also includes preprocessing and cleanup.
 - **Logging:** log model, `kind`, page count, `usage`, `durationMs` and `finish_reason`. **Never** log the text, images or output content.
 
 ## 5.5 The AI-facing schema (`CvExtraction`)
@@ -136,7 +134,7 @@ Small models follow concrete examples better than rules. If the eval shows mista
 1. **Pydantic validation** (already done in step 3) plus:
    - Date sanity check (`startDate ≤ endDate`, year between 1950 and next year). If it fails, set confidence to `low`.
    - Validate emails and URLs. Invalid values become `null` and a warning is added.
-2. **Grounding check (text inputs only):** this is an anti-hallucination guard, important with smaller local models. For each item, check that its key strings (institution, organization, project name, skill name, certification name) actually occur in the extracted CV text (case- and whitespace-insensitive, with a small fuzzy tolerance). If not, set confidence to `low`, which flags the item for review. Image inputs can't be checked this way, so they rely on the model's confidence plus the review step.
+2. **Grounding check (text inputs only):** this is an anti-hallucination guard. For each item, check that its key strings (institution, organization, project name, skill name, certification name) actually occur in the extracted CV text (case- and whitespace-insensitive, with a small fuzzy tolerance). If not, set confidence to `low`, which flags the item for review. Image inputs can't be checked this way, so they rely on the model's confidence plus the review step.
 3. **Normalize skills** with `skill_aliases.py` (`reactjs`/`react.js` → `React`, `postgres` → `PostgreSQL`, …). Deduplicate and keep the highest confidence.
 4. **Assign IDs** and set `source: "cv"`.
 5. **Compute `needsReview`** = `confidence !== "high"` OR a key field is null (education: `institution`; experience: `title` or `organization`; project: `name`).
@@ -146,11 +144,10 @@ Steps 1, 2, 3, 4 and 5 are pure functions, fully unit-tested without any model.
 
 ## 5.8 Privacy and security checklist
 
-**Local (notebook server)**
-- [ ] The Ollama/vLLM port is reachable only on the LAN/Tailscale, never port-forwarded to the internet.
-- [ ] If the server is shared, put a reverse proxy with an API key in front (`LLM_API_KEY`).
+**Gemini API**
+- [ ] Keep `GEMINI_API_KEY` in environment/secret storage and never commit it or log it.
 - [ ] Uploaded files go to a temp folder and are deleted right after processing (in `finally`), plus a startup sweep of leftovers.
-- [ ] Ollama doesn't keep prompts. Don't enable any request logging/tracing that would store CV content.
+- [ ] Avoid request logging/tracing that would store CV content.
 
 **AWS (deployment)**
 - [ ] The S3 uploads bucket blocks public access, uses SSE, and expires objects after 1 day as a safety net. The worker deletes each object in `finally`.

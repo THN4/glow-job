@@ -2,7 +2,7 @@
 
     python -m tests.fixtures          # writes tests/generated/*
 
-Used by the tests and for manual runs (scripts/extract.py, scripts/try_api.py).
+Used by backend tests and the resume CLI commands under data-pipeline/scripts/resume/.
 """
 
 from __future__ import annotations

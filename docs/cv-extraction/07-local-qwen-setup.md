@@ -1,5 +1,9 @@
 # 7. Local Qwen Setup (DevOps notebook server)
 
+> **Historical prototype instructions only.** Resume extraction now uses the
+> shared Gemini API through `RESUME_EXTRACTOR=gemini`; these notebook, Ollama,
+> and vLLM steps do not configure the current application.
+
 The backend talks to the model through an **OpenAI-compatible API**, so any of these servers work: **Ollama** (recommended, easiest), **vLLM** (faster, needs a bigger GPU) or LM Studio. The backend only needs three values: `LLM_BASE_URL`, `LLM_MODEL` and optionally `LLM_API_KEY`.
 
 > Model tags and server flags change often. Check the current Ollama library / vLLM docs for the exact names before setting up.
@@ -79,8 +83,8 @@ curl http://<host>:11434/v1/chat/completions -H "Content-Type: application/json"
 # Expect the reply content to be ONLY JSON matching the schema.
 
 # 3. From the repo, run a real CV through the whole pipeline
-# from backend-py/ (venv active); create the sample files first with: python -m tests.fixtures
-python -m app.scripts.extract tests/generated/sample-cv.pdf
+# From data-pipeline/ (environment active); create sample files first from backend/ with: python -m tests.fixtures
+From `data-pipeline/`: `python -m scripts.resume.extract ../backend/tests/generated/sample-cv.pdf`
 ```
 
 ## 7.6 Expected performance (rough, measure in the eval)

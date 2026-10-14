@@ -9,8 +9,13 @@ import { WorkspacePlaceholderPage } from '../features/workspace/pages/WorkspaceP
 import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
 import { SkillProfilePage } from '../features/skill-profile/pages/SkillProfilePage'
 import { ApplicationsPage } from '../features/applications/pages/ApplicationsPage'
+import { CvOnboardingPage } from '../features/resume/pages/CvOnboardingPage'
 
 const router = createBrowserRouter([
+  {
+    path: '/onboarding/cv',
+    element: <CvOnboardingPage />,
+  },
   {
     path: '/',
     element: <Navigate to="/app/roadmap" replace />,

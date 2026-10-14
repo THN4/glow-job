@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Generic, TypeVar
 
-from .schemas import CvExtractionResult
+from src.resume.schemas.cv_extraction import CvExtractionResult
 
 log = logging.getLogger("cv_extraction")
 
