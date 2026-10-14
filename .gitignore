@@ -8,3 +8,4 @@ __pycache__/
 backend-py/.data/
 backend-py/tests/generated/
 backend-py/tests/eval/out/
+glowjob-full.dump
