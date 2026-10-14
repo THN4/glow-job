@@ -18,6 +18,10 @@ roadmaps. Migration `009` adds anonymous Resume profile persistence. These
 migrations are not applied to any database until the command is run.
 
 Add a new migration with the next unused, zero-padded version number across
-both directories. Do not edit or renumber an already-applied migration. The
-knowledge schema remains a future migration; `app.roadmap_steps.module_id`
-will receive its foreign key when `knowledge.learning_modules` is implemented.
+both directories. Do not edit or renumber an already-applied migration.
+Pipeline migration `010` enables pgvector, `011` creates the MVP knowledge
+source and chunk tables, `012` normalizes the Apache Airflow skill label, and
+`013` adds many-to-many chunk-to-skill links for chunks covering multiple skills.
+Dependency and learning-module tables remain future
+migrations; `app.roadmap_steps.module_id` will receive its foreign key when
+`knowledge.learning_modules` is implemented.
