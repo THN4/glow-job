@@ -15,8 +15,11 @@ appropriate to share with the teammate before sending the archive.
 
 - Docker Desktop is installed and running.
 - The repository and its `data-pipeline` submodule are available locally.
-- Use the database name, user, and password from `data-pipeline/.env` when
-  starting PostgreSQL. Adjust the restore command if you use different values.
+- The sender's root Compose PostgreSQL service reads its settings from the
+  repository-root `.env`. The teammate's standalone PostgreSQL service reads
+  settings from `data-pipeline/.env`. Keep the database name, user, and password
+  consistent when creating and restoring the dump; adjust commands if you use
+  different values.
 - The commands below use the defaults `glowjob` for the database and user.
   Replace them if your `.env` uses different values.
 
@@ -39,6 +42,27 @@ docker compose up -d postgres
 Run this command from the repository root. If PostgreSQL was started from a
 different Compose file, use that same Compose context for both `up` and the dump
 commands below.
+
+Before creating a dump for the current application version, apply any pending
+migrations to the sender's database. This makes the shared database schema
+match the repository's migration files. The migration runner reads its
+connection settings from `data-pipeline/.env`, so set `DB_HOST=localhost`,
+`DB_PORT` to the host port published by the root Compose stack, and use the same
+`DB_NAME`, `DB_USER`, and `DB_PASSWORD` as the repository-root `.env`.
+
+Run the migration command from the `data-pipeline` directory:
+
+```powershell
+Set-Location "C:\path\to\glow-job\data-pipeline"
+python -m scripts.database.migrate
+```
+
+The command reports each migration it applies, or reports that the database
+schema is already up to date. It applies pending pipeline and host migrations
+recorded in `system.schema_migrations`. After it completes, return to the
+repository root and run the `pg_dump` commands below. Do not run this command
+on the teammate's restored database before restoring the archive; the full dump
+already contains the schema and migration history.
 
 The following commands create a compressed dump of the entire `glowjob` database
 (schema and data) inside the Postgres container, then copy it to the repository
