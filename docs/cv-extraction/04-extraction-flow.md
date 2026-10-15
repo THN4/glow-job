@@ -1,10 +1,10 @@
-# 5. Extraction Pipeline
+# Extraction Flow
 
 ```
  file ─► [0 Cache/limit] ─► [1 Validate] ─► [2 Preprocess: text or page images] ─► [3 Extractor (Gemini)] ─► [4 Validate + ground-check] ─► [5 Post-process] ─► CvProfile
 ```
 
-## 5.1 Why an AI model instead of OCR + rules
+## 4.1 Why an AI model instead of OCR + rules
 
 An ID-card scanner works with a fixed layout. CVs have no fixed layout: one or two columns, tables, icons, Thai and English mixed, photos of printed pages. A classic OCR + regex pipeline would need a separate parser for every layout and would still miss things like "Jun 2023 – Present".
 
@@ -15,7 +15,7 @@ plain-text label such as `GitHub: moviecade` is accepted as an explicit GitHub
 reference and normalized to `https://github.com/moviecade`. Other text is kept
 as project description text instead of being guessed into a URL.
 
-## 5.2 Provider abstraction: Gemini and mock
+## 4.2 Provider abstraction: Gemini and mock
 
 All model access goes through one interface. Gemini is the model-backed provider; `mock` is available for tests and local development:
 
@@ -41,7 +41,7 @@ class Extractor(Protocol):
 | `mock` | Returns a fixture `CvExtraction` after a configurable delay | Unit/integration tests and frontend development without external model calls |
 | `gemini` | Google GenAI SDK async API using shared `GEMINI_API_KEY` and market's pinned model | Model-backed CV extraction; resume keeps its own prompt and response schema |
 
-## 5.3 Step 0–2: cache, limit, validate, preprocess
+## 4.3 Step 0–2: cache, limit, validate, preprocess
 
 **Step 0.** SHA-256 the file. If a cache entry for the file and extraction configuration exists (24 h), return it with `meta.cached: true`. This avoids repeating model calls for the same input. Also enforce `DAILY_EXTRACTION_LIMIT` (`0` = unlimited, the local default).
 
@@ -56,7 +56,7 @@ class Extractor(Protocol):
 
 > Why 1280 px and max 4 images: this bounds request size and processing cost while keeping normal CV font sizes readable. Tune these limits with the evaluation set.
 
-## 5.4 Step 3: the Gemini call
+## 4.4 Step 3: the Gemini call
 
 ```python
 # Simplified provider example; the adapter implementation also maps errors and usage.
@@ -93,9 +93,9 @@ Notes for the implementer:
 - **Timeouts:** the Gemini request timeout is configurable (`RESUME_GEMINI_TIMEOUT_MS`); the job timeout also includes preprocessing and cleanup.
 - **Logging:** log model, `kind`, page count, `usage`, `durationMs` and `finish_reason`. **Never** log the text, images or output content.
 
-## 5.5 The AI-facing schema (`CvExtraction`)
+## 4.5 The AI-facing schema (`CvExtraction`)
 
-This is a reduced version of `CvProfile`: no `id`, `source`, `needsReview` or `schemaVersion` (see 03-data-schema.md §3.5), plus three top-level fields:
+This is a reduced version of `CvProfile`: no `id`, `source`, `needsReview` or `schemaVersion` (see [02-profile-schema.md](02-profile-schema.md) §2.5), plus three top-level fields:
 
 ```ts
 const CvExtraction = z.object({
@@ -110,7 +110,7 @@ const CvExtraction = z.object({
 
 Each item includes `confidence: z.enum(["high","medium","low"])`. Add `.describe()` text to fields, because it ends up in the JSON schema the model sees. Keep the schema **flat and small**: smaller models follow simpler schemas more reliably.
 
-## 5.6 Prompt (draft)
+## 4.6 Prompt behavior
 
 **System prompt**
 
@@ -129,7 +129,7 @@ Each item includes `confidence: z.enum(["high","medium","low"])`. Add `.describe
 
 Small models follow concrete examples better than rules. If the eval shows mistakes, add **one short worked example** (a mini CV and its JSON) to the system prompt before trying a bigger model.
 
-## 5.7 Step 4–5: validate, ground-check, post-process
+## 4.7 Step 4–5: validate, ground-check, post-process
 
 1. **Pydantic validation** (already done in step 3) plus:
    - Date sanity check (`startDate ≤ endDate`, year between 1950 and next year). If it fails, set confidence to `low`.
@@ -142,20 +142,14 @@ Small models follow concrete examples better than rules. If the eval shows mista
 
 Steps 1, 2, 3, 4 and 5 are pure functions, fully unit-tested without any model.
 
-## 5.8 Privacy and security checklist
+## 4.8 Privacy and security
 
 **Gemini API**
 - [ ] Keep `GEMINI_API_KEY` in environment/secret storage and never commit it or log it.
 - [ ] Uploaded files go to a temp folder and are deleted right after processing (in `finally`), plus a startup sweep of leftovers.
 - [ ] Avoid request logging/tracing that would store CV content.
 
-**AWS (deployment)**
-- [ ] The S3 uploads bucket blocks public access, uses SSE, and expires objects after 1 day as a safety net. The worker deletes each object in `finally`.
-- [ ] Size and type are enforced by the presigned POST policy and re-checked from magic bytes.
-- [ ] Job records have a 1-hour TTL and the hash cache a 24-hour TTL. Only profiles the user saves persist.
-- [ ] If the model runs on a GPU instance, it is in a private subnet / security group reachable only from the worker.
-
-**Both**
+**Privacy and security**
 - [ ] Logs carry only metadata, never CV content.
 - [ ] CORS is restricted to the frontend origins.
 - [ ] Test fixtures are synthetic CVs. No real people's CVs are committed to the repo.

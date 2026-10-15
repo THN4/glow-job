@@ -1,32 +1,24 @@
-# Resume and CV Extraction Documentation
+# Resume/CV Documentation
 
-> **Documentation status (2026-10-11):** This folder contains reference material
-> from the original backend prototype, updated cross-layer notes, and a few
-> historical deployment/model experiments. It is retained for traceability;
-> it is not all a statement of the current implementation.
+This folder keeps the cross-layer references for CV extraction, confirmed
+profile storage, and resume-to-market skill matching. The current frontend is a
+temporary local demo; the API and profile schema documentation describe the
+backend contracts a replacement frontend can use. The current extraction code
+review and domain specification are in
+[`data-pipeline/docs/resume/`](../../data-pipeline/docs/resume/).
 
-## Current source of truth
+## Documents
 
-For the current resume extraction code boundary, current-state review, and
-proposed implementation scope, start with the
-[`data-pipeline` resume documentation](../../data-pipeline/docs/resume/README.md).
-The backend owns HTTP routes, upload handling, job lifecycle, and profile
-persistence. The reusable resume extraction domain lives in
-`data-pipeline/src/resume/`.
-
-## Documents in this folder
-
-| Document | Status and purpose |
+| Document | Purpose |
 |---|---|
-| [02-architecture.md](02-architecture.md) | Cross-layer architecture notes. Some model and deployment details describe the earlier local prototype. |
-| [03-data-schema.md](03-data-schema.md) | Resume profile contract reference used by the API and frontend work. |
-| [04-api-spec.md](04-api-spec.md) | API endpoint and error-envelope reference, linked by the current backend router. |
-| [05-extraction-pipeline.md](05-extraction-pipeline.md) | Current Gemini-based extraction flow and provider contract. |
-| [06-aws-setup-and-cost.md](06-aws-setup-and-cost.md) | **Historical planning only.** AWS services, prices, and deployment options were not verified as the current deployment plan. |
-| [07-local-qwen-setup.md](07-local-qwen-setup.md) | **Historical experiment record.** Ollama/Qwen notebook setup and model results are not the current model selection instructions. |
-| [08-database-mapping.md](08-database-mapping.md) | Cross-layer mapping between extracted profiles and the app database design; confirm against the current DBML before implementation. |
-| [09-fields-needed-from-cv.md](09-fields-needed-from-cv.md) | Database/extraction gap analysis, updated for the current app schema design. |
+| [01-architecture.md](01-architecture.md) | Demo frontend, backend, data-pipeline, and database responsibilities and flow. |
+| [02-profile-schema.md](02-profile-schema.md) | `CvProfile` contract used by extraction, API, and profile review. |
+| [03-api-reference.md](03-api-reference.md) | Implemented CV, profile, and career-match API endpoints. |
+| [04-extraction-flow.md](04-extraction-flow.md) | Parsing, extraction, validation, normalization, and privacy details. |
+| [05-database-mapping.md](05-database-mapping.md) | Mapping from confirmed profile fields to PostgreSQL `app.*` tables. |
+| [06-profile-data-requirements.md](06-profile-data-requirements.md) | CV fields needed by profile, skill-gap, and roadmap consumers. |
+| [07-market-matching.md](07-market-matching.md) | Resume-to-market matching formula, implementation status, and limitations. |
 
-The historical files are intentionally kept as project evidence and context.
-Do not use the AWS cost estimates or local Qwen setup steps as operational
-instructions without re-validating them.
+Use the database design in [`docs/schemas/glow-job.dbml`](../schemas/glow-job.dbml)
+as the schema reference. The files in this folder describe how the current CV
+flow maps to that design; they do not define a separate database schema.
