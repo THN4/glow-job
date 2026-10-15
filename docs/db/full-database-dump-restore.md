@@ -1,162 +1,88 @@
-# Sharing a full Glow-Job database dump
+# วิธีนำไฟล์ฐานข้อมูล Glow-Job ไป restore
 
-This guide packages the complete `glowjob` PostgreSQL database for a teammate.
-The archive includes the database schema and all data, including the `market`,
-`core`, `knowledge`, `app`, and `system` schemas. It does not include PostgreSQL
-roles or other databases on the same server. The teammate does not need to run
-JSearch, crawl source websites, extract documents, chunk text, or generate
-embeddings.
+เอกสารนี้อธิบายขั้นตอนสำหรับผู้ที่ได้รับไฟล์ full database dump เพื่อนำเข้า
+PostgreSQL ในเครื่องของตนเอง โดยไฟล์ dump มีทั้งโครงสร้างฐานข้อมูลและข้อมูล
+เช่น schema, tables, indexes, extensions และข้อมูลใน schema `market`, `core`,
+`knowledge`, `app` และ `system`
 
-Because this is a full database dump, it may also include user, resume/profile,
-market, and other application data. Confirm that the complete database is
-appropriate to share with the teammate before sending the archive.
+**ไม่ต้องสร้าง schema หรือตาราง และไม่ต้องรัน migration ก่อน restore** เพราะ
+คำสั่ง restore จะสร้างสิ่งเหล่านี้จากไฟล์ dump ให้เอง ไฟล์นี้ไม่รวม PostgreSQL
+roles หรือฐานข้อมูลอื่นบน server ต้นทาง
 
-## Prerequisites
+## สิ่งที่ต้องมี
 
-- Docker Desktop is installed and running.
-- The repository and its `data-pipeline` submodule are available locally.
-- The sender's root Compose PostgreSQL service reads its settings from the
-  repository-root `.env`. The teammate's standalone PostgreSQL service reads
-  settings from `data-pipeline/.env`. Keep the database name, user, and password
-  consistent when creating and restoring the dump; adjust commands if you use
-  different values.
-- The commands below use the defaults `glowjob` for the database and user.
-  Replace them if your `.env` uses different values.
+- ติดตั้งและเปิด Docker Desktop แล้ว
+- มี repository `glow-job` และ submodule `data-pipeline`
+- ได้รับไฟล์ `glowjob-full.dump` จากผู้ส่ง
+- ไฟล์ dump ต้องเป็น full dump รูปแบบ custom archive ซึ่งสร้างด้วย `pg_dump -Fc`
 
-The PostgreSQL image includes pgvector; a separate vector database is not
-needed. Run Compose commands from the same directory/configuration that started
-that PostgreSQL service. In the current Glow-Job workspace, PostgreSQL is
-running from the root `compose.yaml`, so the sender's dump commands below run
-from the repository root. The teammate can start a fresh PostgreSQL service
-from `data-pipeline` as described below.
+ตัวอย่างด้านล่างใช้ชื่อฐานข้อมูลและผู้ใช้ `glowjob` หากตั้งค่าใน `.env` เป็นชื่ออื่น
+ให้เปลี่ยนค่า `-U` และ `-d` ในคำสั่ง restore ให้ตรงกัน
 
-## Create a fresh full dump on the sender's computer
+## 1. เตรียม repository และค่าฐานข้อมูล
 
-First make sure the root Compose PostgreSQL service is running and contains the
-current data:
-
-```text
-docker compose up -d postgres
-```
-
-Run this command from the repository root. If PostgreSQL was started from a
-different Compose file, use that same Compose context for both `up` and the dump
-commands below.
-
-Before creating a dump for the current application version, apply any pending
-migrations to the sender's database. This makes the shared database schema
-match the repository's migration files. The migration runner reads its
-connection settings from `data-pipeline/.env`, so set `DB_HOST=localhost`,
-`DB_PORT` to the host port published by the root Compose stack, and use the same
-`DB_NAME`, `DB_USER`, and `DB_PASSWORD` as the repository-root `.env`.
-
-Run the migration command from the `data-pipeline` directory:
+เปิด PowerShell ที่ root ของ `glow-job` แล้วเตรียม submodule หากยังไม่มี:
 
 ```powershell
-Set-Location "C:\path\to\glow-job\data-pipeline"
-python -m scripts.database.migrate
+git submodule update --init --recursive data-pipeline
 ```
 
-The command reports each migration it applies, or reports that the database
-schema is already up to date. It applies pending pipeline and host migrations
-recorded in `system.schema_migrations`. After it completes, return to the
-repository root and run the `pg_dump` commands below. Do not run this command
-on the teammate's restored database before restoring the archive; the full dump
-already contains the schema and migration history.
-
-The following commands create a compressed dump of the entire `glowjob` database
-(schema and data) inside the Postgres container, then copy it to the repository
-root. Do not commit the dump file to Git; share it with the
-teammate as a separate file.
-
-### Command Prompt (CMD)
-
-```bat
-cd /d C:\path\to\glow-job
-docker compose exec postgres pg_dump -U glowjob -d glowjob -Fc -f /tmp/glowjob-full.dump
-docker compose cp postgres:/tmp/glowjob-full.dump .\glowjob-full.dump
-```
-
-### PowerShell
-
-```powershell
-Set-Location "C:\path\to\glow-job"
-docker compose exec postgres pg_dump -U glowjob -d glowjob -Fc `
-  -f /tmp/glowjob-full.dump
-docker compose cp postgres:/tmp/glowjob-full.dump .\glowjob-full.dump
-```
-
-Replace `C:\path\to\glow-job` with the repository's actual path. The archive
-format (`-Fc`) keeps the output compressed and includes schema definitions,
-table data, indexes, constraints, extensions, and the migration history table.
-Restore it with `pg_restore` into a fresh, empty database.
-
-## Set up a teammate's database and restore the dump
-
-### 1. Prepare local settings
-
-From the repository root, initialize the submodule if necessary:
-
-```text
-git submodule update --init --recursive
-```
-
-In `data-pipeline`, copy `.env.example` to `.env` and edit it. For CMD:
-
-```bat
-cd /d C:\path\to\glow-job\data-pipeline
-copy .env.example .env
-```
-
-For PowerShell:
+จากนั้นเข้า `data-pipeline` และถ้ายังไม่มี `.env` ให้สร้างจากตัวอย่าง:
 
 ```powershell
 Set-Location "C:\path\to\glow-job\data-pipeline"
 Copy-Item .env.example .env
 ```
 
-Keep `DB_HOST=localhost` for commands run from Windows, and set `DB_NAME`,
-`DB_USER`, `DB_PASSWORD`, and `DB_PORT` as needed. Keep `.env` private and out
-of Git.
+แก้ `data-pipeline/.env` ให้มีค่า `DB_NAME`, `DB_USER`, `DB_PASSWORD` และ
+`DB_PORT` ตามที่ต้องการ โดยใช้ `DB_HOST=localhost` สำหรับคำสั่งที่รันจาก Windows
+เก็บไฟล์ `.env` ไว้ในเครื่องและอย่า commit เข้า Git
 
-### 2. Start PostgreSQL
+## 2. เปิด PostgreSQL เปล่า
 
-Run in `data-pipeline` from either CMD or PowerShell:
+รันจากโฟลเดอร์ `data-pipeline`:
 
-```text
+```powershell
 docker compose up -d postgres
 ```
 
-This starts only PostgreSQL. Docker downloads the configured pgvector image if
-it is not already present. The backend container is not required just to load
-the database.
+คำสั่งนี้เริ่ม PostgreSQL และสร้างฐาน `glowjob` เปล่าตามค่าใน `.env` ยังไม่ต้อง
+เตรียม schema หรือตารางเอง ให้ใช้ PostgreSQL ชุดนี้สำหรับ restore และอย่าเปิด
+PostgreSQL จาก root Compose พร้อมกัน
 
-### 3. Copy and restore the archive
+## 3. นำเข้าไฟล์ dump
 
-Do not run migrations before restoring a full dump: the archive already
-contains the schemas, tables, and `system.schema_migrations` history. Place
-`glowjob-full.dump` in the teammate's `data-pipeline` directory. Run the
-following commands from there in either CMD or PowerShell:
+วาง `glowjob-full.dump` ไว้ในโฟลเดอร์ `data-pipeline` แล้วรัน:
 
-```text
+```powershell
 docker compose cp .\glowjob-full.dump postgres:/tmp/glowjob-full.dump
 docker compose exec postgres pg_restore -U glowjob -d glowjob --clean --if-exists --exit-on-error --no-owner --no-privileges /tmp/glowjob-full.dump
 ```
 
-The default Compose setup creates an empty `glowjob` database when its data
-volume is first initialized. Restore only into a database that is safe to
-replace: `--clean` drops the objects represented in the archive before
-recreating them. If the target database has unrelated data or should be
-preserved, create a separate fresh database and restore there instead. If the
-database name or user differs from the defaults, update `-d glowjob` and
-`-U glowjob` to match the target. The teammate does not need to install Python
-or run the migration runner just to restore and use this database.
+`pg_restore` จะสร้าง schema และตาราง แล้วใส่ข้อมูลจาก archive ลงในฐานข้อมูล
+ถ้าใช้ชื่อฐานหรือผู้ใช้ต่างจาก `glowjob` ให้แก้ `-d` และ `-U` ให้ตรงกับ `.env`
 
-## What the teammate runs and does not run
+ตัวเลือก `--clean --if-exists` จะลบ object ที่อยู่ใน archive ก่อนสร้างใหม่
+จึงควร restore ลงฐานว่างหรือฐานที่ตั้งใจให้ถูกแทนที่เท่านั้น หากมีข้อมูลที่ต้องเก็บ
+ให้สร้างฐานข้อมูลใหม่แยกต่างหากก่อน restore
 
-The teammate starts PostgreSQL and restores the full dump. They do not run the
-market/JSearch pipeline, document crawler/extraction, chunking, or embedding
-scripts. The restored `system.schema_migrations` history allows the migration
-runner to skip already-applied versions if it is needed later. To use the data
-through the application, they can start the backend and other required
-services separately.
+## 4. ตรวจสอบผลลัพธ์
+
+ตรวจสอบว่ามี schema หลักในฐานข้อมูล:
+
+```powershell
+docker compose exec postgres psql -U glowjob -d glowjob -c "SELECT schema_name FROM information_schema.schemata WHERE schema_name IN ('app', 'core', 'knowledge', 'market', 'system') ORDER BY schema_name;"
+```
+
+ควรเห็น schema ที่มีอยู่ใน dump รวมถึง `system` ซึ่งเก็บประวัติ migration
+
+## หลัง restore
+
+โดยปกติไม่ต้องรัน migration เพิ่ม เพราะ archive มี schema และตาราง
+`system.schema_migrations` อยู่แล้ว หากภายหลังใช้โค้ดที่มี migration ใหม่กว่า
+dump ที่ได้รับ ให้รัน `python -m scripts.database.migrate` จาก `data-pipeline`
+หลัง restore เพื่อเติม migration ที่ยังขาด ตัว runner จะข้าม migration ที่บันทึก
+ว่าใช้ไปแล้ว
+
+ผู้รับไม่ต้องรัน pipeline ดึงงานจาก JSearch, crawler, document extraction,
+chunking หรือ embedding เพื่อให้ได้ข้อมูลที่อยู่ใน dump
