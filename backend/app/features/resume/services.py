@@ -11,6 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from app.features.resume.config import CvSettings, get_settings
+from app.features.resume.career_matching import CareerMatchRepository
 from app.features.resume.catalog import SkillCatalogRepository
 from app.features.resume.pipeline import Pipeline
 from app.features.resume.profiles import DatabaseProfilesRepo
@@ -39,6 +40,7 @@ class Services:
     queue: JobQueue
     extractor: Extractor
     skill_catalog: SkillCatalogRepository
+    career_match: CareerMatchRepository | None
 
 
 def build_services(
@@ -78,6 +80,7 @@ def build_services(
         queue=JobQueue(pipeline.run),
         extractor=extractor,
         skill_catalog=SkillCatalogRepository(settings),
+        career_match=CareerMatchRepository(settings) if settings.database_configured else None,
     )
 
 

@@ -1,4 +1,4 @@
-"""Error codes shared by the API and job failures. See docs/cv-extraction/04-api-spec.md section 4.9."""
+"""Error codes shared by the API and job failures. See docs/cv-extraction/03-api-reference.md section 3.9."""
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "MODEL_UNAVAILABLE": (503, True, "The AI provider is not available right now."),
     "SKILL_CATALOG_UNAVAILABLE": (503, True, "The skill catalog is not available right now."),
     "PROFILE_STORE_UNAVAILABLE": (503, True, "The profile could not be saved right now."),
+    "CAREER_MATCH_UNAVAILABLE": (503, True, "Career match data is not available right now."),
     "EXTRACTION_FAILED": (502, True, "The CV could not be extracted. Please try again."),
     "EXTRACTION_TIMEOUT": (504, True, "The extraction took too long. Please try again."),
     "INTERNAL_ERROR": (500, True, "Something went wrong."),

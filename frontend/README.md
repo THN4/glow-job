@@ -30,7 +30,7 @@ VITE_API_BASE_URL=http://localhost:8787/api
 Supported uploads are PDF, JPEG, PNG, and WEBP, up to 10 MB. The CV file and
 in-progress extraction are temporary; only the profile saved after user
 confirmation is persisted to the database. See
-[`docs/cv-extraction/04-api-spec.md`](../docs/cv-extraction/04-api-spec.md)
+[`docs/cv-extraction/03-api-reference.md`](../docs/cv-extraction/03-api-reference.md)
 for the API contract and
-[`docs/cv-extraction/08-database-mapping.md`](../docs/cv-extraction/08-database-mapping.md)
+[`docs/cv-extraction/05-database-mapping.md`](../docs/cv-extraction/05-database-mapping.md)
 for database mapping.

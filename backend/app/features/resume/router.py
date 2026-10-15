@@ -1,4 +1,4 @@
-"""CV extraction API. Same endpoints and JSON as docs/cv-extraction/04-api-spec.md.
+"""CV extraction API. Same endpoints and JSON as docs/cv-extraction/03-api-reference.md.
 
 Mount into any FastAPI app (no lifespan or exception-handler wiring needed):
 
@@ -12,7 +12,7 @@ import logging
 import uuid
 from typing import Any, Awaitable, Callable
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -205,6 +205,30 @@ async def get_profile(profile_id: str, svc: Services = Depends(get_services)) ->
     if stored is None:
         raise AppError("PROFILE_NOT_FOUND")
     return {"profileId": stored.profile_id, "updatedAt": stored.updated_at, "profile": stored.profile}
+
+
+@router.get("/career-profiles")
+async def list_career_profiles(svc: Services = Depends(get_services)) -> dict[str, Any]:
+    """List career profiles with market statistics for career selection."""
+    if svc.career_match is None:
+        raise AppError("CAREER_MATCH_UNAVAILABLE", "Career matching requires the shared database.")
+    return {"careerProfiles": await svc.career_match.list_career_profiles()}
+
+
+@router.get("/profiles/{profile_id}/career-match")
+async def get_career_match(
+    profile_id: str,
+    session_id: str = Header(alias="X-Session-Id", min_length=1, max_length=100),
+    career_profile_id: int = Query(alias="careerProfileId", gt=0),
+    svc: Services = Depends(get_services),
+) -> dict[str, Any]:
+    """Compare a saved profile with the latest available Market statistics window."""
+    if svc.career_match is None:
+        raise AppError("CAREER_MATCH_UNAVAILABLE", "Career matching requires the shared database.")
+    result = await svc.career_match.calculate(profile_id, session_id, career_profile_id)
+    if result is None:
+        raise AppError("PROFILE_NOT_FOUND")
+    return result
 
 
 def _issues(err: ValidationError) -> list[dict[str, str]]:

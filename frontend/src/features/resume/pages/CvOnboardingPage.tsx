@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, Clock3, FileText, LoaderCircle, Sparkles, UploadCloud } from 'lucide-react'
-import { extractCv, loadSavedProfile, saveProfile, type CvItem, type CvProfile, type ExtractionResult } from '../api'
+import { extractCv, loadCareerMatch, loadCareerProfiles, loadSavedProfile, saveProfile, type CareerMatchResult, type CareerProfileOption, type CvItem, type CvProfile, type ExtractionResult } from '../api'
 
 const sections: Array<{ key: keyof Pick<CvProfile, 'education' | 'technicalSkills' | 'softSkills' | 'experience' | 'projects' | 'certifications' | 'tools' | 'languages'>; title: string; fields: Array<{ key: string; label: string; multiline?: boolean; list?: boolean }> }> = [
   { key: 'education', title: 'การศึกษา', fields: [{ key: 'degree', label: 'วุฒิการศึกษา' }, { key: 'fieldOfStudy', label: 'สาขา' }, { key: 'institution', label: 'สถาบัน' }, { key: 'startDate', label: 'เริ่มต้น' }, { key: 'endDate', label: 'สิ้นสุด' }] },
@@ -46,6 +46,12 @@ export function CvOnboardingPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [savedId, setSavedId] = useState('')
+  const [careerProfiles, setCareerProfiles] = useState<CareerProfileOption[]>([])
+  const [careerProfilesLoaded, setCareerProfilesLoaded] = useState(false)
+  const [careerProfileId, setCareerProfileId] = useState('')
+  const [match, setMatch] = useState<CareerMatchResult | null>(null)
+  const [matchBusy, setMatchBusy] = useState(false)
+  const [matchError, setMatchError] = useState('')
   const extractionController = useRef<AbortController | null>(null)
 
   useEffect(() => {
@@ -57,6 +63,17 @@ export function CvOnboardingPage() {
       }
     })
   }, [])
+
+  useEffect(() => {
+    if (step !== 'done') return
+    let active = true
+    void loadCareerProfiles().then((profiles) => {
+      if (active) { setCareerProfiles(profiles); setCareerProfilesLoaded(true) }
+    }).catch((caught) => {
+      if (active) { setCareerProfilesLoaded(true); setMatchError(caught instanceof Error ? caught.message : 'โหลดรายการอาชีพไม่สำเร็จ') }
+    })
+    return () => { active = false }
+  }, [step])
 
   function updateItem(section: keyof CvProfile, index: number, field: string, value: string) {
     setProfile((current) => {
@@ -127,6 +144,31 @@ export function CvOnboardingPage() {
     } finally { setBusy(false) }
   }
 
+  async function calculateMatch() {
+    if (!savedId || !careerProfileId) return
+    setMatchBusy(true); setMatchError(''); setMatch(null)
+    try {
+      setMatch(await loadCareerMatch(savedId, Number(careerProfileId)))
+    } catch (caught) {
+      setMatchError(caught instanceof Error ? caught.message : 'คำนวณผล match ไม่สำเร็จ')
+    } finally { setMatchBusy(false) }
+  }
+
+  function percentage(value: number | null | undefined): string {
+    return value == null ? 'ยังประเมินไม่ได้' : `${value.toFixed(1)}%`
+  }
+
+  function matchStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      covered: 'มีทักษะนี้',
+      proficiency_gap: 'ควรเพิ่มระดับ',
+      missing_from_profile: 'ยังไม่พบในโปรไฟล์',
+      not_assessed: 'ยังไม่มีข้อมูลระดับ',
+      market_data_insufficient: 'ข้อมูลตลาดไม่พอ',
+    }
+    return labels[status] ?? status
+  }
+
   const activeStep = step === 'upload' || step === 'processing' ? 1 : step === 'review' ? 2 : 5
   return (
     <main className="min-h-screen bg-sky-50 p-4 sm:p-8">
@@ -172,7 +214,32 @@ export function CvOnboardingPage() {
           {savedId && <p className="mt-3 text-right text-xs text-slate-500">โปรไฟล์ที่บันทึกไว้: {savedId}</p>}
         </section>}
 
-        {step === 'done' && <section className="py-12 text-center"><span className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><Check size={34}/></span><h1 className="mt-5 text-3xl font-bold text-slate-900">บันทึกโปรไฟล์แล้ว</h1><p className="mt-2 text-slate-500">ข้อมูลที่คุณยืนยันถูกบันทึกลงฐานข้อมูลแล้ว</p><p className="mt-3 text-xs text-slate-400">Profile ID: {savedId}</p><button onClick={()=>setStep('review')} className="mt-6 rounded-xl border border-blue-200 px-5 py-2.5 font-semibold text-blue-700">กลับไปดูโปรไฟล์</button></section>}
+        {step === 'done' && <section>
+          <div className="text-center"><span className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><Check size={34}/></span><h1 className="mt-5 text-3xl font-bold text-slate-900">บันทึกโปรไฟล์แล้ว</h1><p className="mt-2 text-slate-500">ข้อมูลที่คุณยืนยันถูกบันทึกลงฐานข้อมูลแล้ว</p><p className="mt-3 text-xs text-slate-400">Profile ID: {savedId}</p><button onClick={()=>setStep('review')} className="mt-4 rounded-xl border border-blue-200 px-5 py-2.5 font-semibold text-blue-700">กลับไปแก้ไขโปรไฟล์</button></div>
+
+          <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50/50 p-5 sm:p-6">
+            <h2 className="text-xl font-bold text-slate-900">ผลการ Match กับอาชีพ</h2>
+            <p className="mt-1 text-sm text-slate-600">เลือกอาชีพเพื่อเทียบโปรไฟล์ที่ยืนยันแล้วกับทักษะที่ตลาดต้องการ</p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <select aria-label="อาชีพที่ต้องการเทียบ" value={careerProfileId} onChange={(event) => { setCareerProfileId(event.target.value); setMatch(null) }} className="min-w-0 flex-1 rounded-xl border border-blue-200 bg-white px-3 py-3 text-slate-900" disabled={careerProfiles.length === 0}>
+                <option value="">{careerProfiles.length ? 'เลือกอาชีพและระดับ' : careerProfilesLoaded ? 'ไม่มีอาชีพที่เลือกได้' : 'กำลังโหลดรายการอาชีพ…'}</option>
+                {careerProfiles.map((career) => <option key={career.careerProfileId} value={career.careerProfileId}>{career.careerName} · {career.profileName} ({career.seniorityLevel})</option>)}
+              </select>
+              <button onClick={() => void calculateMatch()} disabled={!careerProfileId || matchBusy} className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{matchBusy && <LoaderCircle className="animate-spin" size={18}/>}คำนวณผล Match</button>
+            </div>
+            {matchError && <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{matchError}</p>}
+            {careerProfiles.length === 0 && !matchError && <p className="mt-3 text-sm text-slate-500">ยังไม่มีอาชีพที่มีข้อมูลตลาดให้เปรียบเทียบ</p>}
+            {match && <div className="mt-6 space-y-5">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[["ความครอบคลุมทักษะตลาด", match.scores.marketSkillCoveragePct], ["ความสอดคล้องของระดับ", match.scores.proficiencyAlignmentPct], ["ทักษะที่ประเมินระดับได้", match.scores.assessmentCoveragePct]].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-blue-100 bg-white p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold text-blue-700">{percentage(value as number | null)}</p></div>)}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600"><span>สถานะ: <strong className="text-slate-900">{match.status === 'ready' ? 'พร้อมใช้งาน' : match.status === 'estimated' ? 'ผลประเมินเบื้องต้น' : 'ข้อมูลไม่เพียงพอ'}</strong></span><span>ตลาดอ้างอิง {match.marketSample.totalJobs} ประกาศงาน</span>{match.marketWindow && <span>ช่วงข้อมูล {match.marketWindow.startDate} ถึง {match.marketWindow.endDate}</span>}</div>
+              {match.warnings.length > 0 && <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{match.warnings.join(' ')}</div>}
+              <div className="overflow-x-auto rounded-xl border border-blue-100 bg-white"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="px-4 py-3">ทักษะที่ตลาดต้องการ</th><th className="px-4 py-3">ระดับในตลาด</th><th className="px-4 py-3">ระดับจาก CV</th><th className="px-4 py-3">ผล</th></tr></thead><tbody className="divide-y divide-slate-100">{match.skills.map((skill) => <tr key={skill.skillName}><td className="px-4 py-3 font-medium text-slate-900">{skill.skillName}<span className="ml-2 text-xs font-normal text-slate-500">ความต้องการ {skill.demandPercentage.toFixed(1)}%</span></td><td className="px-4 py-3">{skill.marketTargetLevel ?? 'ไม่ระบุ'}</td><td className="px-4 py-3">{skill.userProficiencyLevel ?? 'ไม่พบ/ไม่ระบุ'}</td><td className="px-4 py-3">{matchStatusLabel(skill.status)}</td></tr>)}</tbody></table></div>
+              {match.unmatchedUserSkills.length > 0 && <p className="text-xs text-slate-500">ทักษะจาก CV ที่ยังจับคู่กับ catalog ไม่ได้: {match.unmatchedUserSkills.map((skill) => skill.rawSkillName).join(', ')}</p>}
+            </div>}
+          </div>
+        </section>}
       </div>
     </main>
   )

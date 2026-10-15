@@ -1,23 +1,23 @@
-# 9. What the database needs from a CV (gap analysis)
+# Profile Data Requirements
 
-> **Implementation status (2026-10-12):** migration `009` and `DatabaseProfilesRepo` now persist a confirmed anonymous profile in `app.user_profiles` and normalized education, experience/project, skill/evidence, and certification rows. The full profile JSON preserves fields without relational columns. Resume files and extraction jobs remain temporary/in-memory; career goals and roadmap preferences are not yet saved by this Resume flow.
+> **Current boundary:** `DatabaseProfilesRepo` persists confirmed anonymous profiles in `app.user_profiles` and normalized education, experience/project, skill/evidence, and certification rows. The full profile JSON preserves fields without relational columns. Resume files and extraction jobs remain temporary/in-memory; career goals and roadmap preferences are not yet saved by this Resume flow.
 
-Method: read every table in the canonical design ([docs/schemas/glow-job.dbml](../schemas/glow-job.dbml)), keep the ones a CV can fill, and compare their columns with what extraction produces today ([03-data-schema.md](03-data-schema.md)). The table-by-table mapping is in [08-database-mapping.md](08-database-mapping.md); this page is about **which fields are missing or should change**.
+Method: read the relevant tables in the canonical design ([docs/schemas/glow-job.dbml](../schemas/glow-job.dbml)), keep the ones a CV can fill, and compare their columns with the extraction contract ([02-profile-schema.md](02-profile-schema.md)). The table-by-table mapping is in [05-database-mapping.md](05-database-mapping.md); this page is about **which fields are needed by downstream consumers**.
 
 Legend: ✅ extracted today · ⚠ partly / needs conversion · ❌ not extracted today · 🧮 should be **computed in code** (not asked from the model) · 👤 comes from the user (onboarding), not from the CV.
 
-## 9.1 Who consumes CV data, and what they need
+## 6.1 Who consumes CV data, and what they need
 
 | Consumer (from the DB design) | Reads | What it needs from the CV |
 |---|---|---|
 | **Skill Gap** (`ai/skill_gap`) | `app.user_skills` vs `market.career_skill_stats` | A **canonical skill** (`skill_id`) and a **proficiency level** on the same scale as the market's `target_level` (`beginner / intermediate / advanced / expert / unknown`). Gap = target level minus user level |
 | **Priority engine / Roadmap** | `user_skills`, `knowledge.skill_dependencies`, `roadmap_steps.current_level` | The same: skill + current level, plus evidence that the user really has it |
 | **Agent context** | `app.user_profiles` | `current_status`, `current_job_title`, `years_experience`, `education_level`, `field_of_study`, `location`, `background_summary` |
-| **Auto-fill UI** (Figma step 2) | In-memory extraction result before confirmation; confirmed result in `app.user_profiles.profile_data` | Education, skills, projects, experience, certifications/activities, each with "please confirm" |
+| **Profile review step** | In-memory extraction result before confirmation; confirmed result in `app.user_profiles.profile_data` | Education, skills, projects, experience, certifications/activities for user review; frontend presentation is replaceable |
 
 Skill proficiency is now extracted when explicitly stated, otherwise estimated from experience/project evidence where possible. A profile may still have `unknown` proficiency when the CV has too little evidence; downstream gap analysis must handle that honestly rather than treating it as beginner.
 
-## 9.2 Table by table
+## 6.2 Table by table
 
 ### `app.user_profiles` (one row per user)
 
@@ -75,9 +75,9 @@ Skill proficiency is now extracted when explicitly stated, otherwise estimated f
 
 ### Not from the CV
 
-`app.users` is created with an anonymous `sessionId` subject for now; login is not part of the current plan. `user_career_goals`, `roadmaps*`, and `*_progress` come from onboarding steps 3-4 and the agent, and are not saved by this Resume profile endpoint yet. `core.*`, `market.*`, `knowledge.*`: data engineering / RAG. `app.resumes`, `app.resume_extractions`, and `system.ai_runs` are not populated by the current temporary upload/extraction flow (see doc 08).
+`app.users` is created with an anonymous `sessionId` subject for now; login is not part of the current plan. `user_career_goals`, `roadmaps*`, and `*_progress` come from onboarding steps 3-4 and the agent, and are not saved by this Resume profile endpoint yet. `core.*`, `market.*`, `knowledge.*`: data engineering / RAG. `app.resumes`, `app.resume_extractions`, and `system.ai_runs` are not populated by the current temporary upload/extraction flow (see [05-database-mapping.md](05-database-mapping.md)).
 
-## 9.3 Mapping behavior now implemented
+## 6.3 Mapping behavior now implemented
 
 | Area | Current behavior | Limit |
 |---|---|---|
@@ -88,30 +88,30 @@ Skill proficiency is now extracted when explicitly stated, otherwise estimated f
 | Evidence and confidence | Skill evidence is linked to normalized experience/project rows where possible; confidence values map from high/medium/low to 0.9/0.6/0.3. | Evidence may be absent when the skill appears only in a skills list. |
 | Education details | `description` carries honors, thesis, or notable coursework when the model finds them. | Extraction completeness still depends on CV readability and model output. |
 
-## 9.4 Extracted today but not stored in dedicated canonical tables
+## 6.4 Extracted today but not stored in dedicated canonical tables
 
 Kept in `app.user_profiles.profile_data` rather than dedicated columns: `personal.email` (it is not an account email), phone, links, headline, `softSkills`, `languages`, and warnings. They remain available to reload the confirmed profile. Certifications, issuer/date/details, experience location/highlights, and project URLs are also represented in normalized tables.
 
-If the roadmap agent needs languages or soft skills as first-class data, that is a separate schema decision. The current UI/schema design gives certifications and activities first-class storage.
+If the roadmap agent needs languages or soft skills as first-class data, that is a separate schema decision. The profile schema gives certifications and activities first-class storage, independent of which frontend presents them.
 
-## 9.5 Remaining work
+## 6.5 Remaining work
 
 1. Persist career goal and preference answers from onboarding steps 3-4 to `app.user_career_goals`.
 2. Decide whether uploaded CVs and extraction history should become durable `app.resumes` / `app.resume_extractions` records. Current behavior intentionally keeps files temporary and jobs in memory.
 3. The current product plan is anonymous access; there is no login or account-linking work in scope.
 
-## 9.6 What was implemented
+## 6.6 What was implemented
 
 | Item | Where | Notes |
 |---|---|---|
 | Skill `proficiency` (model, explicit only) | `schemas.py` `TechnicalSkillAi.proficiency`, `prompt.py` | Required field, value `"unknown"` unless the CV states a level |
 | Explicit level read by code | `derive.explicit_level_from_text` | English and Thai keywords, looked up only inside the comma/line-separated segment that holds the skill, whole-word matching (`Go` ≠ `Google`). With the CV text available **the code decides**: a model-claimed level that the text doesn't show is dropped. For scans/photos the model's level is trusted |
 | Inferred level | `derive.infer_level`, `skill_usage` | Union of the months of the jobs/projects that list or mention the skill (year-only dates count mid-year; ongoing ends today; undated projects +2 months). `< 24` months beginner, `< 60` intermediate, otherwise advanced. **Never "expert"** (only an explicit claim gives that). A certification that names the skill lifts it to at least intermediate |
-| `proficiencyBasis` | `explicit` / `inferred` / `unknown` | The UI can show "estimated" next to inferred levels. **Deviation from the proposal above:** inferred levels do **not** set `needsReview`: a CV with 15 skills would get 15 "Please confirm" badges and bury the real doubts |
+| `proficiencyBasis` | `explicit` / `inferred` / `unknown` | A client can show "estimated" next to inferred levels. **Deviation from the proposal above:** inferred levels do **not** set `needsReview`: a CV with 15 skills would get 15 "Please confirm" badges and bury the real doubts |
 | Skill `evidence` | `derive.skill_usage`, `snippet_with_skill` | Linked jobs/projects (with their `id`) and, if none, the CV sentence mentioning the skill. At most 3 |
 | `derived` block | `derive.derive_profile` | `yearsExperience` (merged overlaps, volunteering excluded), `currentJobTitle`, `educationLevel` (English + Thai degree names), `fieldOfStudy`, `suggestedStatus` (an internship alone doesn't make someone "employed"). Recomputed in `PUT /profiles` from the user's edits |
 | Education `description` | `schemas.py`, `prompt.py` | |
 | Tests | `data-pipeline/tests/resume/test_derive.py`, plus backend API integration tests | |
 
-The PostgreSQL row writer and deterministic catalog matching are implemented in `backend/app/features/resume/profiles.py` and `backend/app/features/resume/catalog.py`. The DB adapter recomputes catalog matches on save, stores unmatched labels without adding catalog entries, converts partial dates and confidence values, and writes the confirmed profile atomically. Remaining gaps are listed in §9.5.
+The PostgreSQL row writer and deterministic catalog matching are implemented in `backend/app/features/resume/profiles.py` and `backend/app/features/resume/catalog.py`. The DB adapter recomputes catalog matches on save, stores unmatched labels without adding catalog entries, converts partial dates and confidence values, and writes the confirmed profile atomically. Remaining gaps are listed in §6.5.
 
