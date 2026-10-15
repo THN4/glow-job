@@ -4,6 +4,7 @@ node_modules/
 *.log
 __pycache__/
 .venv/
+.venv-clean/
 .pytest_cache/
 backend-py/.data/
 backend-py/tests/generated/

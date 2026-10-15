@@ -65,11 +65,14 @@ async def test_full_flow(flow: Flow):
     assert poll["status"] == "succeeded"
     CvExtractionResult.model_validate(poll["result"])
     assert poll["result"]["meta"]["inputKind"] == "text"
-    assert any(s["name"] == "React" for s in poll["result"]["profile"]["technicalSkills"])
-    # new fields for the database (docs/cv-extraction/09-fields-needed-from-cv.md), camelCase on the wire
+    # MockExtractor emits the raw label `reactjs`; resume extraction preserves
+    # that label instead of canonicalizing it to the catalog name `React`.
+    assert any(s["name"] == "reactjs" for s in poll["result"]["profile"]["technicalSkills"])
+    # new fields for the database (docs/cv-extraction/06-profile-data-requirements.md), camelCase on the wire
     skills = {s["name"]: s for s in poll["result"]["profile"]["technicalSkills"]}
-    assert skills["JavaScript"]["proficiency"] == "advanced" and skills["JavaScript"]["proficiencyBasis"] == "explicit"  # mock: model-stated
-    assert isinstance(skills["React"]["evidence"], list)
+    # MockExtractor is not grounded in the uploaded CV, so its stated level is discarded.
+    assert skills["JavaScript"]["proficiency"] == "unknown" and skills["JavaScript"]["proficiencyBasis"] == "unknown"
+    assert isinstance(skills["reactjs"]["evidence"], list)
     derived = poll["result"]["profile"]["derived"]
     assert {"yearsExperience", "currentJobTitle", "educationLevel", "fieldOfStudy", "suggestedStatus"} <= derived.keys()
     assert derived["educationLevel"] == "bachelor" and derived["currentJobTitle"] == "Freelance Web Developer"
@@ -152,6 +155,87 @@ async def test_unknown_profile_id_on_update(flow: Flow):
 async def test_empty_profile_for_continue_without_cv(flow: Flow):
     r = await flow.c.get("/api/profiles/empty")
     assert r.json()["profile"]["education"] == []
+
+
+async def test_career_match_requires_shared_database(flow: Flow):
+    r = await flow.c.get(
+        "/api/profiles/prf_any/career-match?careerProfileId=12",
+        headers={"X-Session-Id": "s1"},
+    )
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == "CAREER_MATCH_UNAVAILABLE"
+
+
+async def test_career_profiles_returns_available_market_profiles(flow: Flow):
+    expected = [
+        {
+            "careerProfileId": 7,
+            "careerName": "AI Engineer",
+            "profileName": "AI Engineer",
+            "seniorityLevel": "mid",
+        }
+    ]
+
+    class StubCareerMatch:
+        async def list_career_profiles(self):
+            return expected
+
+    flow.svc.career_match = StubCareerMatch()
+    r = await flow.c.get("/api/career-profiles")
+    assert r.status_code == 200
+    assert r.json() == {"careerProfiles": expected}
+
+
+async def test_career_profiles_requires_shared_database(flow: Flow):
+    r = await flow.c.get("/api/career-profiles")
+    assert r.status_code == 503
+    assert r.json()["error"]["code"] == "CAREER_MATCH_UNAVAILABLE"
+
+
+async def test_career_match_returns_calculated_result(flow: Flow):
+    expected = {
+        "careerProfileId": 12,
+        "status": "ready",
+        "scores": {"marketSkillCoveragePct": 100.0},
+    }
+
+    class StubCareerMatch:
+        async def calculate(self, profile_id, session_id, career_profile_id):
+            assert profile_id == "prf_demo"
+            assert session_id == "s1"
+            assert career_profile_id == 12
+            return expected
+
+    flow.svc.career_match = StubCareerMatch()
+    r = await flow.c.get(
+        "/api/profiles/prf_demo/career-match?careerProfileId=12",
+        headers={"X-Session-Id": "s1"},
+    )
+    assert r.status_code == 200
+    assert r.json() == expected
+
+
+async def test_career_match_unknown_profile_returns_not_found(flow: Flow):
+    class StubCareerMatch:
+        async def calculate(self, profile_id, session_id, career_profile_id):
+            return None
+
+    flow.svc.career_match = StubCareerMatch()
+    r = await flow.c.get(
+        "/api/profiles/prf_missing/career-match?careerProfileId=12",
+        headers={"X-Session-Id": "s1"},
+    )
+    assert r.status_code == 404
+    assert r.json()["error"]["code"] == "PROFILE_NOT_FOUND"
+
+
+async def test_career_match_rejects_invalid_career_profile_id(flow: Flow):
+    r = await flow.c.get(
+        "/api/profiles/prf_demo/career-match?careerProfileId=0",
+        headers={"X-Session-Id": "s1"},
+    )
+    assert r.status_code == 400
+    assert r.json()["error"]["code"] == "INVALID_REQUEST"
 
 
 # --------------------------------------------------------------------------- pipeline failures

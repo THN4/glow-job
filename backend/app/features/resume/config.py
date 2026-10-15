@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
 from src.resume.config import ResumeModelSettings
@@ -27,6 +28,13 @@ class CvSettings(ResumeModelSettings):
     DB_NAME: str | None = None
     DB_USER: str | None = None
     DB_PASSWORD: str | None = None
+
+    # Initial, configurable quality gates for the demo career match. Coverage
+    # remains available with small samples; low-quality inputs are disclosed.
+    MATCH_MIN_TOTAL_JOBS: int = Field(default=10, ge=0)
+    MATCH_MAX_MARKET_AGE_DAYS: int = Field(default=180, ge=0)
+    MATCH_MIN_LEVEL_OBSERVATIONS: int = Field(default=3, ge=0)
+    MATCH_MIN_TARGET_LEVEL_CONFIDENCE: float = Field(default=0.6, ge=0, le=1)
 
     @property
     def database_configured(self) -> bool:

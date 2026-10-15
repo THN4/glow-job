@@ -50,6 +50,37 @@ export type ExtractionResult = {
   meta: { reviewCount: number; warnings: string[]; [key: string]: unknown }
 }
 
+export type CareerProfileOption = {
+  careerProfileId: number
+  careerName: string
+  profileName: string
+  seniorityLevel: string
+}
+
+export type CareerMatchResult = {
+  careerProfileId: number
+  marketWindow: { startDate: string; endDate: string } | null
+  marketSample: { totalJobs: number; lastUpdated: string | null }
+  status: string
+  scores: {
+    marketSkillCoveragePct: number | null
+    proficiencyAlignmentPct: number | null
+    assessmentCoveragePct: number | null
+  }
+  skillSummary: { considered: number; covered: number; missingFromProfile: number; notAssessed: number; marketDataInsufficient: number; excludedMarketSkills: number }
+  skills: Array<{
+    skillName: string
+    marketTargetLevel: string | null
+    userProficiencyLevel: string | null
+    demandPercentage: number
+    status: string
+    reasonCode: string
+    evidence: Array<{ text?: string; source?: string; [key: string]: unknown }>
+  }>
+  unmatchedUserSkills: Array<{ rawSkillName: string; matchStatus: string }>
+  warnings: string[]
+}
+
 type ApiErrorBody = { error?: { code?: string; message?: string; retryable?: boolean } }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -157,4 +188,15 @@ export async function loadSavedProfile(): Promise<{ profileId: string; profile: 
   } catch {
     return null
   }
+}
+
+export async function loadCareerProfiles(): Promise<CareerProfileOption[]> {
+  const result = await request<{ careerProfiles: CareerProfileOption[] }>('/career-profiles')
+  return result.careerProfiles
+}
+
+export async function loadCareerMatch(profileId: string, careerProfileId: number): Promise<CareerMatchResult> {
+  return request<CareerMatchResult>(`/profiles/${encodeURIComponent(profileId)}/career-match?careerProfileId=${careerProfileId}`, {
+    headers: { 'X-Session-Id': getSessionId() },
+  })
 }

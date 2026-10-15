@@ -3,7 +3,7 @@
 Turns an uploaded CV (PDF or image) into a structured, editable career profile.
 For the current extraction scope and domain boundary, see
 [`data-pipeline/docs/resume/`](../data-pipeline/docs/resume/README.md). The
-cross-layer API, schema, and historical prototype notes are indexed in
+cross-layer API, schema, and database references are indexed in
 [`docs/cv-extraction/`](../docs/cv-extraction/README.md).
 
 The Resume API is exposed from `app/features/resume/` and composed through
@@ -70,6 +70,7 @@ copy .env.example .env            # then edit it (macOS/Linux: cp)
 | `GEMINI_API_KEY` | API key shared with market extraction |
 | `RESUME_GEMINI_TIMEOUT_MS` | Request timeout; defaults to `180000` |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Optional database connection. When configured, the backend reads the shared skill catalog and saves confirmed profiles to `app.*`; the role needs catalog read access and profile-table write access. If omitted, skill matches are not returned and profiles use the local JSON-file fallback. |
+| `MATCH_MIN_TOTAL_JOBS`, `MATCH_MAX_MARKET_AGE_DAYS`, `MATCH_MIN_LEVEL_OBSERVATIONS`, `MATCH_MIN_TARGET_LEVEL_CONFIDENCE` | Initial quality gates for market sample and target proficiency level. Defaults are 10 jobs, 180 days, 3 level observations, and 0.6 confidence; low-quality inputs are disclosed in the match response. |
 
 If your existing `backend/.env` still has the prototype setting
 `EXTRACTOR=ollama` or `EXTRACTOR=openai-compatible`, replace it with
@@ -100,10 +101,12 @@ GET  /api/cv/extractions/{jobId}      -> { status, stage, result?, error? }
 GET  /api/profiles/empty              -> { profile }
 PUT  /api/profiles                    { sessionId, profileId?, profile } -> { profileId, updatedAt }
 GET  /api/profiles/{profileId}        -> { profileId, updatedAt, profile }
+GET  /api/career-profiles             -> active career profiles with market stats
+GET  /api/profiles/{profileId}/career-match?careerProfileId=12 (header: X-Session-Id) -> market skill coverage (requires DB)
 GET  /api/health
 ```
 
-Full spec and error codes: [docs/cv-extraction/04-api-spec.md](../docs/cv-extraction/04-api-spec.md). JSON is camelCase. Every error has the shape `{"error": {"code", "message", "retryable"}}`.
+Full spec and error codes: [docs/cv-extraction/03-api-reference.md](../docs/cv-extraction/03-api-reference.md). JSON is camelCase. Every error has the shape `{"error": {"code", "message", "retryable"}}`.
 
 ## Historical model-server measurements (2026-10-05)
 
