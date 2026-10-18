@@ -1,6 +1,17 @@
 # glow-job
 NTT DATA Digital Innovation Challenge 2026
 
+## System specifications
+
+- [RAG and Skill Context specification (Thai, Draft v0.3)](docs/rag/skill-context-spec.md) — data preparation, skill selection, dependency review, retrieval, and the Context contract delivered to the AI/Backend team.
+- [Knowledge ingestion and retrieval baseline](data-pipeline/docs/documents/skill-knowledge-rag-spec.md) — pipeline-owned document collection, chunks, embeddings, and knowledge preparation.
+- [RAG implementation progress](docs/rag/implementation-progress.md) and [input preview commands](docs/rag/context-data-guide.md) — staged delivery and read-only experiments for the Context layer.
+- [Demo user seed (Thai)](docs/db/demo-user-seed.md) — standalone SQL for three synthetic, confirmed profiles; develop against user data without uploading CVs or calling an LLM.
+- [Prepared-document dependencies](data-pipeline/docs/documents/skill-dependency-review-guide.md) — read the prepared corpus, review cited proposals with a/r, export accepted guidance for the AI team. Quick review in CMD: `scripts\rag\review_dependencies.cmd`.
+- [Skill Knowledge Context](docs/rag/skill-knowledge-context-guide.md) — skill-filtered retrieval, Gemini text review, cited learning context and foundation mentions without inventing missing lessons.
+- [Agent Context assembly](docs/rag/agent-context-guide.md) — combine saved profile/goal, Market gaps, cited knowledge and grouped foundations locally; includes the AI handoff schema.
+- [Local RAG data layout](rag/data/README.md) — output folders, file origins, current examples, archived runs, and generated-file handling.
+
 ## `data-pipeline` submodule
 
 `data-pipeline/` is a Git submodule that points to a specific commit in the
