@@ -1,6 +1,6 @@
 ﻿Project glow_job {
   database_type: 'PostgreSQL'
-  Note: 'Consolidated design view of the Glow-Job database. Domain-owned schema views live with their repositories: market and planned knowledge in data-pipeline/docs/database/schemas; app and whole-system view in root docs/schemas. This is a design artifact, not a migration or proof that every table is implemented.'
+  Note: 'Consolidated design view. Pipeline migrations 011/013 define knowledge sources/chunks/skill mappings; 014 defines dependencies and 015 adds scope, chunk provenance and review metadata. Explicit migration runs are required. Learning modules remain deferred. Domain views live in data-pipeline/docs/database/schemas; App schemas live in root docs/schemas. This artifact does not prove a migration has been applied.'
 }
 
 Enum requirement_type {
@@ -36,6 +36,13 @@ Enum dependency_strength {
   strong
   recommended
   weak
+}
+
+Enum dependency_scope {
+  general
+  document_specific
+  conditional
+  unknown
 }
 
 Enum extraction_status {
@@ -304,17 +311,27 @@ Table knowledge.knowledge_sources {
 Table knowledge.knowledge_chunks {
   chunk_id bigint [pk, increment]
   source_id bigint [not null]
-  skill_id bigint
   topic text
   chunk_index integer [not null]
   content text [not null]
   metadata jsonb
   embedding_model text
-  embedding vector [note: 'Requires the vector extension; dimension depends on the chosen model']
+  embedding vector(768) [note: 'Requires pgvector; current corpus uses Gemini Embedding 2 with 768 output dimensions']
   created_at timestamptz [not null, default: `now()`]
 
   indexes {
     (source_id, chunk_index) [unique, name: 'uq_knowledge_chunks_source_index']
+    (chunk_id, source_id) [unique, name: 'uq_knowledge_chunks_chunk_source']
+  }
+}
+
+Table knowledge.knowledge_chunk_skills {
+  chunk_id bigint [not null]
+  skill_id bigint [not null]
+
+  indexes {
+    (chunk_id, skill_id) [pk]
+    (skill_id) [name: 'ix_knowledge_chunk_skills_skill_id']
   }
 }
 
@@ -327,16 +344,25 @@ Table knowledge.skill_dependencies {
   confidence numeric(4, 3)
   source_id bigint
   evidence_text text
+  scope_type dependency_scope [not null, default: 'unknown']
+  scope_note varchar(500) [note: 'Required document/audience/learner condition for verified scoped rows. Text is not automatically evaluated against a user.']
+  chunk_id bigint
+  evidence_content_hash text [note: 'SHA-256 of the reviewed chunk content.']
+  reviewed_by varchar(100) [note: 'Local reviewer label, not an authentication identity.']
+  reviewed_at timestamptz
+  review_note text
   is_verified boolean [not null, default: false]
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
 
   indexes {
-    (prerequisite_skill_id, target_skill_id, dependency_type) [unique, name: 'uq_skill_dependencies_edge']
+    (prerequisite_skill_id) [name: 'ix_skill_dependencies_prerequisite']
   }
+
+  Note: 'Migrations 014/015 reject self-links and require evidence, known scope, exact chunk provenance and review metadata for new verified rows. SQL partial unique indexes enforce one general edge per pair/type, separate scoped contexts by scope/source/note, and retain unknown legacy rows. Partial indexes are not fully represented here. Only general ordering edges enter the global cycle check. Scoped rows are context only.'
 }
 
-Table knowledge.learning_modules {
+Table knowledge.learning_modules [note: 'Deferred design; no current table migration.'] {
   module_id bigint [pk, increment]
   skill_id bigint [not null]
   level proficiency_level [not null]
@@ -696,10 +722,12 @@ Ref: market.career_skill_stats.skill_id > core.skills.skill_id
 
 Ref: knowledge.knowledge_sources.skill_id > core.skills.skill_id
 Ref: knowledge.knowledge_chunks.source_id > knowledge.knowledge_sources.source_id
-Ref: knowledge.knowledge_chunks.skill_id > core.skills.skill_id
+Ref: knowledge.knowledge_chunk_skills.chunk_id > knowledge.knowledge_chunks.chunk_id
+Ref: knowledge.knowledge_chunk_skills.skill_id > core.skills.skill_id
 Ref: knowledge.skill_dependencies.prerequisite_skill_id > core.skills.skill_id
 Ref: knowledge.skill_dependencies.target_skill_id > core.skills.skill_id
 Ref: knowledge.skill_dependencies.source_id > knowledge.knowledge_sources.source_id
+Ref: knowledge.skill_dependencies.(chunk_id, source_id) > knowledge.knowledge_chunks.(chunk_id, source_id)
 Ref: knowledge.learning_modules.skill_id > core.skills.skill_id
 
 Ref: app.user_profiles.user_id - app.users.user_id

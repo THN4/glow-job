@@ -1,0 +1,702 @@
+{
+  "$defs": {
+    "Background": {
+      "additionalProperties": false,
+      "properties": {
+        "current_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "student",
+                "employed_full_time",
+                "employed_part_time",
+                "between_opportunities",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Status"
+        },
+        "current_situation_detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Situation Detail"
+        },
+        "current_job_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Job Title"
+        },
+        "years_experience": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Years Experience"
+        },
+        "education_level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Education Level"
+        },
+        "field_of_study": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field Of Study"
+        }
+      },
+      "title": "Background",
+      "type": "object"
+    },
+    "CareerProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "career_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Id",
+          "type": "integer"
+        },
+        "career_profile_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Profile Id",
+          "type": "integer"
+        },
+        "career_name": {
+          "title": "Career Name",
+          "type": "string"
+        },
+        "profile_name": {
+          "title": "Profile Name",
+          "type": "string"
+        },
+        "seniority_level": {
+          "title": "Seniority Level",
+          "type": "string"
+        }
+      },
+      "required": [
+        "career_id",
+        "career_profile_id",
+        "career_name",
+        "profile_name",
+        "seniority_level"
+      ],
+      "title": "CareerProfile",
+      "type": "object"
+    },
+    "ConfirmedSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        },
+        "raw_skill_name": {
+          "title": "Raw Skill Name",
+          "type": "string"
+        },
+        "proficiency_level": {
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Proficiency Level",
+          "type": "string"
+        },
+        "proficiency_basis": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "unknown"
+          ],
+          "title": "Proficiency Basis",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name",
+        "raw_skill_name",
+        "proficiency_level",
+        "proficiency_basis"
+      ],
+      "title": "ConfirmedSkill",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_type": {
+          "title": "Evidence Type",
+          "type": "string"
+        },
+        "excerpt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Excerpt"
+        },
+        "experience_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Id"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        }
+      },
+      "required": [
+        "evidence_type"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "Goal": {
+      "additionalProperties": false,
+      "properties": {
+        "goal_id": {
+          "exclusiveMinimum": 0,
+          "title": "Goal Id",
+          "type": "integer"
+        },
+        "career_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Id",
+          "type": "integer"
+        },
+        "career_profile_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Profile Id",
+          "type": "integer"
+        },
+        "target_role_title": {
+          "title": "Target Role Title",
+          "type": "string"
+        },
+        "readiness_timeframe": {
+          "anyOf": [
+            {
+              "enum": [
+                "three_months",
+                "six_months",
+                "one_year",
+                "no_fixed_deadline"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readiness Timeframe"
+        },
+        "target_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Date"
+        },
+        "weekly_availability": {
+          "anyOf": [
+            {
+              "enum": [
+                "under_2_hours",
+                "hours_2_to_5",
+                "hours_5_to_10",
+                "hours_10_plus"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weekly Availability"
+        },
+        "available_hours_per_week": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Available Hours Per Week"
+        },
+        "preferred_learning_style": {
+          "anyOf": [
+            {
+              "enum": [
+                "structured_courses",
+                "hands_on_projects",
+                "reading_articles",
+                "videos_tutorials"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preferred Learning Style"
+        },
+        "additional_context": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Additional Context"
+        }
+      },
+      "required": [
+        "goal_id",
+        "career_id",
+        "career_profile_id",
+        "target_role_title"
+      ],
+      "title": "Goal",
+      "type": "object"
+    },
+    "MarketInputs": {
+      "additionalProperties": false,
+      "properties": {
+        "career_profile_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Profile Id",
+          "type": "integer"
+        },
+        "window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarketWindow"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "skills": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MarketSkill"
+          },
+          "title": "Skills",
+          "type": "array"
+        }
+      },
+      "required": [
+        "career_profile_id"
+      ],
+      "title": "MarketInputs",
+      "type": "object"
+    },
+    "MarketSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        },
+        "demand_count": {
+          "minimum": 0,
+          "title": "Demand Count",
+          "type": "integer"
+        },
+        "total_jobs": {
+          "exclusiveMinimum": 0,
+          "title": "Total Jobs",
+          "type": "integer"
+        },
+        "demand_percentage": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Demand Percentage",
+          "type": "number"
+        },
+        "required_count": {
+          "minimum": 0,
+          "title": "Required Count",
+          "type": "integer"
+        },
+        "preferred_count": {
+          "minimum": 0,
+          "title": "Preferred Count",
+          "type": "integer"
+        },
+        "optional_count": {
+          "minimum": 0,
+          "title": "Optional Count",
+          "type": "integer"
+        },
+        "weighted_demand_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weighted Demand Score"
+        },
+        "target_level": {
+          "default": "unknown",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Target Level",
+          "type": "string"
+        },
+        "target_level_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Level Confidence"
+        },
+        "level_observation_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Level Observation Count",
+          "type": "integer"
+        },
+        "importance_tier": {
+          "default": "unknown",
+          "enum": [
+            "core",
+            "important",
+            "optional",
+            "unknown"
+          ],
+          "title": "Importance Tier",
+          "type": "string"
+        },
+        "last_updated": {
+          "format": "date-time",
+          "title": "Last Updated",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name",
+        "demand_count",
+        "total_jobs",
+        "demand_percentage",
+        "required_count",
+        "preferred_count",
+        "optional_count",
+        "last_updated"
+      ],
+      "title": "MarketSkill",
+      "type": "object"
+    },
+    "MarketWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_start_date": {
+          "format": "date",
+          "title": "Analysis Start Date",
+          "type": "string"
+        },
+        "analysis_end_date": {
+          "format": "date",
+          "title": "Analysis End Date",
+          "type": "string"
+        },
+        "analysis_date_basis": {
+          "enum": [
+            "posted_at",
+            "first_seen_at"
+          ],
+          "title": "Analysis Date Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "analysis_start_date",
+        "analysis_end_date",
+        "analysis_date_basis"
+      ],
+      "title": "MarketWindow",
+      "type": "object"
+    },
+    "UnresolvedSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "raw_skill_name": {
+          "title": "Raw Skill Name",
+          "type": "string"
+        },
+        "match_status": {
+          "enum": [
+            "unmatched",
+            "needs_review"
+          ],
+          "title": "Match Status",
+          "type": "string"
+        },
+        "proficiency_level": {
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Proficiency Level",
+          "type": "string"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "raw_skill_name",
+        "match_status",
+        "proficiency_level"
+      ],
+      "title": "UnresolvedSkill",
+      "type": "object"
+    },
+    "UserInputs": {
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "background": {
+          "$ref": "#/$defs/Background"
+        },
+        "goal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Goal"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confirmed_skills": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConfirmedSkill"
+          },
+          "title": "Confirmed Skills",
+          "type": "array"
+        },
+        "unresolved_skills": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/UnresolvedSkill"
+          },
+          "title": "Unresolved Skills",
+          "type": "array"
+        }
+      },
+      "required": [
+        "profile_id",
+        "background"
+      ],
+      "title": "UserInputs",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.3",
+      "default": "0.3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "status": {
+      "const": "input_preview",
+      "default": "input_preview",
+      "title": "Status",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "career": {
+      "$ref": "#/$defs/CareerProfile"
+    },
+    "market": {
+      "$ref": "#/$defs/MarketInputs"
+    },
+    "user": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/UserInputs"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "score_policy_status": {
+      "const": "pending_example_comparison",
+      "default": "pending_example_comparison",
+      "title": "Score Policy Status",
+      "type": "string"
+    },
+    "warnings": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "career",
+    "market"
+  ],
+  "title": "ContextInputs",
+  "type": "object"
+}

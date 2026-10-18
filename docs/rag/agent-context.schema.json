@@ -1,0 +1,1412 @@
+{
+  "$defs": {
+    "Background": {
+      "additionalProperties": false,
+      "properties": {
+        "current_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "student",
+                "employed_full_time",
+                "employed_part_time",
+                "between_opportunities",
+                "other"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Status"
+        },
+        "current_situation_detail": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Situation Detail"
+        },
+        "current_job_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Current Job Title"
+        },
+        "years_experience": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Years Experience"
+        },
+        "education_level": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Education Level"
+        },
+        "field_of_study": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Field Of Study"
+        }
+      },
+      "title": "Background",
+      "type": "object"
+    },
+    "CareerContext": {
+      "additionalProperties": false,
+      "properties": {
+        "career_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Id",
+          "type": "integer"
+        },
+        "career_profile_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Profile Id",
+          "type": "integer"
+        },
+        "career_name": {
+          "title": "Career Name",
+          "type": "string"
+        },
+        "profile_name": {
+          "title": "Profile Name",
+          "type": "string"
+        },
+        "seniority_level": {
+          "title": "Seniority Level",
+          "type": "string"
+        },
+        "market_window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarketWindow"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "total_jobs": {
+          "minimum": 0,
+          "title": "Total Jobs",
+          "type": "integer"
+        },
+        "market_skill_count": {
+          "minimum": 0,
+          "title": "Market Skill Count",
+          "type": "integer"
+        },
+        "scores": {
+          "$ref": "#/$defs/ScoreState"
+        }
+      },
+      "required": [
+        "career_id",
+        "career_profile_id",
+        "career_name",
+        "profile_name",
+        "seniority_level",
+        "market_window",
+        "total_jobs",
+        "market_skill_count"
+      ],
+      "title": "CareerContext",
+      "type": "object"
+    },
+    "CitationRef": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "exclusiveMinimum": 0,
+          "title": "Chunk Id",
+          "type": "integer"
+        },
+        "quote": {
+          "maxLength": 1800,
+          "minLength": 20,
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "quote"
+      ],
+      "title": "CitationRef",
+      "type": "object"
+    },
+    "CitedClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "support_kind": {
+          "enum": [
+            "instructional",
+            "topic_outline"
+          ],
+          "title": "Support Kind",
+          "type": "string"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/CitationRef"
+          },
+          "minItems": 1,
+          "title": "Citations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "text",
+        "support_kind",
+        "citations"
+      ],
+      "title": "CitedClaim",
+      "type": "object"
+    },
+    "ConfirmedSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        },
+        "raw_skill_name": {
+          "title": "Raw Skill Name",
+          "type": "string"
+        },
+        "proficiency_level": {
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Proficiency Level",
+          "type": "string"
+        },
+        "proficiency_basis": {
+          "enum": [
+            "explicit",
+            "inferred",
+            "unknown"
+          ],
+          "title": "Proficiency Basis",
+          "type": "string"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name",
+        "raw_skill_name",
+        "proficiency_level",
+        "proficiency_basis"
+      ],
+      "title": "ConfirmedSkill",
+      "type": "object"
+    },
+    "DependencyLink": {
+      "additionalProperties": false,
+      "properties": {
+        "dependency_id": {
+          "exclusiveMinimum": 0,
+          "title": "Dependency Id",
+          "type": "integer"
+        },
+        "target_skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Target Skill Id",
+          "type": "integer"
+        },
+        "dependency_type": {
+          "enum": [
+            "prerequisite",
+            "recommended_before",
+            "related"
+          ],
+          "title": "Dependency Type",
+          "type": "string"
+        },
+        "scope_type": {
+          "enum": [
+            "general",
+            "document_specific",
+            "conditional"
+          ],
+          "title": "Scope Type",
+          "type": "string"
+        },
+        "scope_note": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Scope Note"
+        },
+        "runtime_role": {
+          "enum": [
+            "global_ordering",
+            "context_only",
+            "informational"
+          ],
+          "title": "Runtime Role",
+          "type": "string"
+        },
+        "applicability": {
+          "enum": [
+            "not_assessed_for_user",
+            "document_context_required",
+            "needs_confirmation"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "chunk_id": {
+          "exclusiveMinimum": 0,
+          "title": "Chunk Id",
+          "type": "integer"
+        },
+        "evidence_quote": {
+          "title": "Evidence Quote",
+          "type": "string"
+        },
+        "blocks_unconditional_progress": {
+          "title": "Blocks Unconditional Progress",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "dependency_id",
+        "target_skill_id",
+        "dependency_type",
+        "scope_type",
+        "scope_note",
+        "runtime_role",
+        "applicability",
+        "chunk_id",
+        "evidence_quote",
+        "blocks_unconditional_progress"
+      ],
+      "title": "DependencyLink",
+      "type": "object"
+    },
+    "Evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_type": {
+          "title": "Evidence Type",
+          "type": "string"
+        },
+        "excerpt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Excerpt"
+        },
+        "experience_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Experience Id"
+        },
+        "confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Confidence"
+        }
+      },
+      "required": [
+        "evidence_type"
+      ],
+      "title": "Evidence",
+      "type": "object"
+    },
+    "EvidenceEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "exclusiveMinimum": 0,
+          "title": "Chunk Id",
+          "type": "integer"
+        },
+        "source_id": {
+          "exclusiveMinimum": 0,
+          "title": "Source Id",
+          "type": "integer"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Url"
+        },
+        "heading_path": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Heading Path",
+          "type": "array"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "usage_roles": {
+          "items": {
+            "enum": [
+              "learning_content",
+              "dependency_evidence"
+            ],
+            "type": "string"
+          },
+          "title": "Usage Roles",
+          "type": "array"
+        },
+        "used_by_skill_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Used By Skill Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "source_id",
+        "title",
+        "source_url",
+        "content",
+        "content_hash",
+        "usage_roles",
+        "used_by_skill_ids"
+      ],
+      "title": "EvidenceEntry",
+      "type": "object"
+    },
+    "FoundationMention": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        },
+        "presentation": {
+          "enum": [
+            "foundation_mention",
+            "related_mention"
+          ],
+          "title": "Presentation",
+          "type": "string"
+        },
+        "learning_content_status": {
+          "enum": [
+            "not_requested",
+            "unavailable"
+          ],
+          "title": "Learning Content Status",
+          "type": "string"
+        },
+        "confirmed_in_user_profile": {
+          "title": "Confirmed In User Profile",
+          "type": "boolean"
+        },
+        "user_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "beginner",
+                "intermediate",
+                "advanced",
+                "expert",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "User Level"
+        },
+        "learner_satisfaction": {
+          "const": "not_assessed",
+          "default": "not_assessed",
+          "title": "Learner Satisfaction",
+          "type": "string"
+        },
+        "creates_learning_activity": {
+          "const": false,
+          "default": false,
+          "title": "Creates Learning Activity",
+          "type": "boolean"
+        },
+        "notice": {
+          "title": "Notice",
+          "type": "string"
+        },
+        "relationships": {
+          "items": {
+            "$ref": "#/$defs/DependencyLink"
+          },
+          "title": "Relationships",
+          "type": "array"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name",
+        "presentation",
+        "learning_content_status",
+        "confirmed_in_user_profile",
+        "user_level",
+        "notice",
+        "relationships"
+      ],
+      "title": "FoundationMention",
+      "type": "object"
+    },
+    "GapAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "covered",
+            "proficiency_gap",
+            "missing_from_profile",
+            "not_assessed",
+            "market_data_insufficient"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "current_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "beginner",
+                "intermediate",
+                "advanced",
+                "expert",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Current Level"
+        },
+        "target_level": {
+          "anyOf": [
+            {
+              "enum": [
+                "beginner",
+                "intermediate",
+                "advanced",
+                "expert",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Level"
+        },
+        "observed_level_gap": {
+          "anyOf": [
+            {
+              "maximum": 3,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Observed Level Gap"
+        },
+        "gap_score": {
+          "default": null,
+          "title": "Gap Score",
+          "type": "null"
+        },
+        "reason_code": {
+          "title": "Reason Code",
+          "type": "string"
+        },
+        "limitations": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "status",
+        "current_level",
+        "target_level",
+        "reason_code"
+      ],
+      "title": "GapAssessment",
+      "type": "object"
+    },
+    "GapSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "considered": {
+          "minimum": 0,
+          "title": "Considered",
+          "type": "integer"
+        },
+        "covered": {
+          "minimum": 0,
+          "title": "Covered",
+          "type": "integer"
+        },
+        "proficiency_gap": {
+          "minimum": 0,
+          "title": "Proficiency Gap",
+          "type": "integer"
+        },
+        "missing_from_profile": {
+          "minimum": 0,
+          "title": "Missing From Profile",
+          "type": "integer"
+        },
+        "not_assessed": {
+          "minimum": 0,
+          "title": "Not Assessed",
+          "type": "integer"
+        },
+        "market_data_insufficient": {
+          "minimum": 0,
+          "title": "Market Data Insufficient",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "considered",
+        "covered",
+        "proficiency_gap",
+        "missing_from_profile",
+        "not_assessed",
+        "market_data_insufficient"
+      ],
+      "title": "GapSummary",
+      "type": "object"
+    },
+    "Goal": {
+      "additionalProperties": false,
+      "properties": {
+        "goal_id": {
+          "exclusiveMinimum": 0,
+          "title": "Goal Id",
+          "type": "integer"
+        },
+        "career_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Id",
+          "type": "integer"
+        },
+        "career_profile_id": {
+          "exclusiveMinimum": 0,
+          "title": "Career Profile Id",
+          "type": "integer"
+        },
+        "target_role_title": {
+          "title": "Target Role Title",
+          "type": "string"
+        },
+        "readiness_timeframe": {
+          "anyOf": [
+            {
+              "enum": [
+                "three_months",
+                "six_months",
+                "one_year",
+                "no_fixed_deadline"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Readiness Timeframe"
+        },
+        "target_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Date"
+        },
+        "weekly_availability": {
+          "anyOf": [
+            {
+              "enum": [
+                "under_2_hours",
+                "hours_2_to_5",
+                "hours_5_to_10",
+                "hours_10_plus"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weekly Availability"
+        },
+        "available_hours_per_week": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Available Hours Per Week"
+        },
+        "preferred_learning_style": {
+          "anyOf": [
+            {
+              "enum": [
+                "structured_courses",
+                "hands_on_projects",
+                "reading_articles",
+                "videos_tutorials"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preferred Learning Style"
+        },
+        "additional_context": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Additional Context"
+        }
+      },
+      "required": [
+        "goal_id",
+        "career_id",
+        "career_profile_id",
+        "target_role_title"
+      ],
+      "title": "Goal",
+      "type": "object"
+    },
+    "MarketSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        },
+        "demand_count": {
+          "minimum": 0,
+          "title": "Demand Count",
+          "type": "integer"
+        },
+        "total_jobs": {
+          "exclusiveMinimum": 0,
+          "title": "Total Jobs",
+          "type": "integer"
+        },
+        "demand_percentage": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Demand Percentage",
+          "type": "number"
+        },
+        "required_count": {
+          "minimum": 0,
+          "title": "Required Count",
+          "type": "integer"
+        },
+        "preferred_count": {
+          "minimum": 0,
+          "title": "Preferred Count",
+          "type": "integer"
+        },
+        "optional_count": {
+          "minimum": 0,
+          "title": "Optional Count",
+          "type": "integer"
+        },
+        "weighted_demand_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weighted Demand Score"
+        },
+        "target_level": {
+          "default": "unknown",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Target Level",
+          "type": "string"
+        },
+        "target_level_confidence": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Target Level Confidence"
+        },
+        "level_observation_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Level Observation Count",
+          "type": "integer"
+        },
+        "importance_tier": {
+          "default": "unknown",
+          "enum": [
+            "core",
+            "important",
+            "optional",
+            "unknown"
+          ],
+          "title": "Importance Tier",
+          "type": "string"
+        },
+        "last_updated": {
+          "format": "date-time",
+          "title": "Last Updated",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name",
+        "demand_count",
+        "total_jobs",
+        "demand_percentage",
+        "required_count",
+        "preferred_count",
+        "optional_count",
+        "last_updated"
+      ],
+      "title": "MarketSkill",
+      "type": "object"
+    },
+    "MarketWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "analysis_start_date": {
+          "format": "date",
+          "title": "Analysis Start Date",
+          "type": "string"
+        },
+        "analysis_end_date": {
+          "format": "date",
+          "title": "Analysis End Date",
+          "type": "string"
+        },
+        "analysis_date_basis": {
+          "enum": [
+            "posted_at",
+            "first_seen_at"
+          ],
+          "title": "Analysis Date Basis",
+          "type": "string"
+        }
+      },
+      "required": [
+        "analysis_start_date",
+        "analysis_end_date",
+        "analysis_date_basis"
+      ],
+      "title": "MarketWindow",
+      "type": "object"
+    },
+    "Priority": {
+      "additionalProperties": false,
+      "properties": {
+        "rank": {
+          "exclusiveMinimum": 0,
+          "title": "Rank",
+          "type": "integer"
+        },
+        "priority_score": {
+          "default": null,
+          "title": "Priority Score",
+          "type": "null"
+        },
+        "policy_version": {
+          "const": "explicit-caller-selection-v1",
+          "default": "explicit-caller-selection-v1",
+          "title": "Policy Version",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "rank",
+        "reasons"
+      ],
+      "title": "Priority",
+      "type": "object"
+    },
+    "RoadmapCandidate": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        },
+        "selection_role": {
+          "const": "main",
+          "default": "main",
+          "title": "Selection Role",
+          "type": "string"
+        },
+        "gap": {
+          "$ref": "#/$defs/GapAssessment"
+        },
+        "proficiency_basis": {
+          "anyOf": [
+            {
+              "enum": [
+                "explicit",
+                "inferred",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Proficiency Basis"
+        },
+        "market": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarketSkill"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "priority": {
+          "$ref": "#/$defs/Priority"
+        },
+        "learning_recommendation": {
+          "enum": [
+            "candidate",
+            "reference_only",
+            "needs_confirmation"
+          ],
+          "title": "Learning Recommendation",
+          "type": "string"
+        },
+        "rag_status": {
+          "enum": [
+            "supported",
+            "partial",
+            "insufficient_evidence",
+            "not_reviewed",
+            "error"
+          ],
+          "title": "Rag Status",
+          "type": "string"
+        },
+        "teaching_content_status": {
+          "enum": [
+            "available",
+            "outline_only",
+            "unavailable",
+            "not_reviewed"
+          ],
+          "title": "Teaching Content Status",
+          "type": "string"
+        },
+        "knowledge_current_level": {
+          "default": "unknown",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Knowledge Current Level",
+          "type": "string"
+        },
+        "knowledge_target_level": {
+          "default": "unknown",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Knowledge Target Level",
+          "type": "string"
+        },
+        "knowledge_query": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Knowledge Query"
+        },
+        "claims": {
+          "items": {
+            "$ref": "#/$defs/CitedClaim"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "evidence_chunk_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Evidence Chunk Ids",
+          "type": "array"
+        },
+        "foundation_skill_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Foundation Skill Ids",
+          "type": "array"
+        },
+        "dependency_coverage": {
+          "const": "unknown",
+          "default": "unknown",
+          "title": "Dependency Coverage",
+          "type": "string"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name",
+        "gap",
+        "proficiency_basis",
+        "market",
+        "priority",
+        "learning_recommendation",
+        "rag_status",
+        "teaching_content_status",
+        "claims",
+        "evidence_chunk_ids",
+        "foundation_skill_ids",
+        "warnings"
+      ],
+      "title": "RoadmapCandidate",
+      "type": "object"
+    },
+    "ScoreState": {
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "const": "pending_example_comparison",
+          "default": "pending_example_comparison",
+          "title": "Status",
+          "type": "string"
+        },
+        "policy_version": {
+          "default": null,
+          "title": "Policy Version",
+          "type": "null"
+        },
+        "metrics": {
+          "default": [],
+          "maxItems": 0,
+          "minItems": 0,
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "title": "ScoreState",
+      "type": "object"
+    },
+    "UnresolvedSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "raw_skill_name": {
+          "title": "Raw Skill Name",
+          "type": "string"
+        },
+        "match_status": {
+          "enum": [
+            "unmatched",
+            "needs_review"
+          ],
+          "title": "Match Status",
+          "type": "string"
+        },
+        "proficiency_level": {
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "expert",
+            "unknown"
+          ],
+          "title": "Proficiency Level",
+          "type": "string"
+        },
+        "evidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Evidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "raw_skill_name",
+        "match_status",
+        "proficiency_level"
+      ],
+      "title": "UnresolvedSkill",
+      "type": "object"
+    },
+    "UserContext": {
+      "additionalProperties": false,
+      "properties": {
+        "profile_id": {
+          "title": "Profile Id",
+          "type": "string"
+        },
+        "background": {
+          "$ref": "#/$defs/Background"
+        },
+        "career_goal": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Goal"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "confirmed_skills": {
+          "items": {
+            "$ref": "#/$defs/ConfirmedSkill"
+          },
+          "title": "Confirmed Skills",
+          "type": "array"
+        },
+        "unresolved_skills": {
+          "items": {
+            "$ref": "#/$defs/UnresolvedSkill"
+          },
+          "title": "Unresolved Skills",
+          "type": "array"
+        },
+        "evidence_excerpts_truncated": {
+          "default": false,
+          "title": "Evidence Excerpts Truncated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "profile_id",
+        "background",
+        "career_goal",
+        "confirmed_skills",
+        "unresolved_skills"
+      ],
+      "title": "UserContext",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "0.3",
+      "default": "0.3",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "context_id": {
+      "title": "Context Id",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "status": {
+      "const": "preview_pending_policies",
+      "default": "preview_pending_policies",
+      "title": "Status",
+      "type": "string"
+    },
+    "policy_versions": {
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "title": "Policy Versions",
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Provenance",
+      "type": "object"
+    },
+    "user_context": {
+      "$ref": "#/$defs/UserContext"
+    },
+    "career_context": {
+      "$ref": "#/$defs/CareerContext"
+    },
+    "skill_gap_summary": {
+      "$ref": "#/$defs/GapSummary"
+    },
+    "selected_skill_gap_summary": {
+      "$ref": "#/$defs/GapSummary"
+    },
+    "roadmap_candidates": {
+      "items": {
+        "$ref": "#/$defs/RoadmapCandidate"
+      },
+      "title": "Roadmap Candidates",
+      "type": "array"
+    },
+    "foundation_mentions": {
+      "items": {
+        "$ref": "#/$defs/FoundationMention"
+      },
+      "title": "Foundation Mentions",
+      "type": "array"
+    },
+    "evidence_registry": {
+      "items": {
+        "$ref": "#/$defs/EvidenceEntry"
+      },
+      "title": "Evidence Registry",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "policy_versions",
+    "provenance",
+    "user_context",
+    "career_context",
+    "skill_gap_summary",
+    "selected_skill_gap_summary",
+    "roadmap_candidates",
+    "foundation_mentions",
+    "evidence_registry",
+    "warnings"
+  ],
+  "title": "AgentContext",
+  "type": "object"
+}

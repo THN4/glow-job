@@ -22,6 +22,20 @@ both directories. Do not edit or renumber an already-applied migration.
 Pipeline migration `010` enables pgvector, `011` creates the MVP knowledge
 source and chunk tables, `012` normalizes the Apache Airflow skill label, and
 `013` adds many-to-many chunk-to-skill links for chunks covering multiple skills.
-Dependency and learning-module tables remain future
-migrations; `app.roadmap_steps.module_id` will receive its foreign key when
-`knowledge.learning_modules` is implemented.
+Pipeline migration `014` defines evidence-backed skill dependencies; it requires
+an explicit migration run before the table exists in a database. Dependency
+scope, chunk provenance and review metadata are added by pipeline
+migration `015`; scoped verified relationships are context only. Both files must
+be applied before writing through the current dependency workflow. Learning
+modules remain deferred; `app.roadmap_steps.module_id` will receive its foreign
+key when `knowledge.learning_modules` is implemented.
+
+## Development user data
+
+After the schema is ready, optionally run
+[`scripts/database/seeds/seed_demo_users.sql`](../scripts/database/seeds/seed_demo_users.sql).
+This is an explicit development seed, not a numbered migration. It adds three
+synthetic anonymous profiles and their related user data, preserving existing
+accounts and demo edits on reruns. It reads existing catalog IDs and does not
+create Market or Knowledge data. See the [seed guide](../docs/db/demo-user-seed.md)
+for pgAdmin/PowerShell commands and fixture details.
