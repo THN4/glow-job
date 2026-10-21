@@ -29,6 +29,16 @@
   --color-info: var(--info);
   --color-pink: var(--pink);
   --color-teal: var(--teal);
+  --color-skill-beginner: var(--skill-beginner);
+  --color-skill-beginner-border: var(--skill-beginner-border);
+  --color-skill-intermediate: var(--skill-intermediate);
+  --color-skill-intermediate-border: var(--skill-intermediate-border);
+  --color-skill-advanced: var(--skill-advanced);
+  --color-skill-advanced-border: var(--skill-advanced-border);
+  --color-skill-expert: var(--skill-expert);
+  --color-skill-expert-border: var(--skill-expert-border);
+  --color-skill-unknown: var(--skill-unknown);
+  --color-skill-unknown-border: var(--skill-unknown-border);
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', 'Noto Sans Thai', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -102,6 +112,16 @@
   --info: #7638ff;
   --pink: #ff278b;
   --teal: #00b3c5;
+  --skill-beginner: #e8f7ee;
+  --skill-beginner-border: #b4ddc2;
+  --skill-intermediate: #fff8db;
+  --skill-intermediate-border: #e8d99d;
+  --skill-advanced: #fff1e5;
+  --skill-advanced-border: #edc59f;
+  --skill-expert: #fff0ed;
+  --skill-expert-border: #efc1b9;
+  --skill-unknown: #f0f2f5;
+  --skill-unknown-border: #d7dce3;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -119,6 +139,16 @@
 }
 
 .dark {
+  --skill-beginner: #18362a;
+  --skill-beginner-border: #31684b;
+  --skill-intermediate: #39311d;
+  --skill-intermediate-border: #786734;
+  --skill-advanced: #3d2c20;
+  --skill-advanced-border: #8a5b34;
+  --skill-expert: #3d2525;
+  --skill-expert-border: #88514c;
+  --skill-unknown: #2c3038;
+  --skill-unknown-border: #555d6a;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
