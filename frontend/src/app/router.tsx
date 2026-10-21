@@ -10,8 +10,19 @@ import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
 import { SkillProfilePage } from '../features/skill-profile/pages/SkillProfilePage'
 import { ApplicationsPage } from '../features/applications/pages/ApplicationsPage'
 import { CvOnboardingPage } from '../features/resume/pages/CvOnboardingPage'
+import { OnboardingFlow } from '@/features/onboarding/state/OnboardingFlow'
+import { OnboardingProvider } from '@/features/onboarding/state/OnboardingProvider'
+
 
 const router = createBrowserRouter([
+  {
+  path: '/onboarding',
+  element: (
+    <OnboardingProvider>
+      <OnboardingFlow />
+    </OnboardingProvider>
+  ),
+},
   {
     path: '/onboarding/cv',
     element: <CvOnboardingPage />,

@@ -1,12 +1,8 @@
-import { OnboardingFlow } from './features/onboarding/state/OnboardingFlow'
-import { OnboardingProvider } from './features/onboarding/state/OnboardingProvider'
+import { RouterProvider } from 'react-router-dom'
+import router from './app/router'
 
 function App() {
-  return (
-    <OnboardingProvider>
-      <OnboardingFlow />
-    </OnboardingProvider>
-  )
+  return <RouterProvider router={router}/>
 }
 
 export default App
