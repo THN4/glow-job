@@ -24,7 +24,7 @@ export const uploadCopy = {
     : bytes >= 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${bytes} bytes`,
   find: {
     title: 'What we’ll find',
-    description: 'Our AI will extract and organize key information from your CV, including:',
+    description: 'Review and edit the information in your career profile, including:',
     items: [
       { category: 'education', color: 'green', title: 'Education', description: 'Degrees, schools, and fields of study' },
       { category: 'skills', color: 'purple', title: 'Technical skills', description: 'Programming languages, frameworks and more' },

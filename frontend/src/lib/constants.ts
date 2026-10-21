@@ -41,7 +41,7 @@ export const onboardingCopy = {
         { title: 'A clearer path forward', description: 'Set goals and discover new opportunities.' },
       ],
     },
-    analyzing: { description: 'We’re analyzing your CV and extracting key information to build your personalized career profile.' },
+    analyzing: { description: 'We’re checking your CV and preparing a sample career profile for you to review.' },
     goal: {
       description: 'Tell us where you want to go and we’ll show you how to get there with personalized insights and next steps.',
       features: [

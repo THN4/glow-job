@@ -12,16 +12,26 @@ export const skillsSchema = z.array(skillSchema).refine(
 const requiredText = z.string().trim().min(1, reviewCopy.required)
 const optionalText = z.string().trim()
 
+export const skillLevelSchema = z.enum(['beginner', 'intermediate', 'advanced', 'expert', 'unknown']).nullable()
+export const technicalSkillSchema = z.object({ name: skillSchema, level: skillLevelSchema })
+export const technicalSkillsSchema = z.array(technicalSkillSchema).refine(
+  (skills) => new Set(skills.map((skill) => skill.name.toLowerCase())).size === skills.length,
+  reviewCopy.uniqueSkills,
+)
+export type TechnicalSkill = z.infer<typeof technicalSkillSchema>
+
+export const PROFILE_SECTIONS = ['education', 'skills', 'projects', 'experience', 'certifications'] as const
+export type ProfileSection = typeof PROFILE_SECTIONS[number]
+
 export const profileSchema = z.object({
   education: z.object({ degree: requiredText, school: requiredText, period: optionalText, confirmed: z.boolean() }).nullable(),
-  skills: skillsSchema,
+  skills: technicalSkillsSchema,
   projects: z.array(z.object({ name: requiredText, description: optionalText, skills: skillsSchema })),
   experience: z.array(z.object({ role: requiredText, company: requiredText, period: optionalText, description: optionalText, skills: skillsSchema })),
   certifications: z.array(z.object({ name: requiredText, details: optionalText, outcome: optionalText })),
   user_confirmed: z.boolean(),
 })
 export type Profile = z.infer<typeof profileSchema>
-export type ProfileSection = 'education' | 'skills' | 'projects' | 'experience' | 'certifications'
 
 export type OnboardingStep = 1 | 2 | 3 | 4 | 5
 
