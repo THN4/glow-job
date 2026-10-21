@@ -7,7 +7,7 @@ import { RoleSearchBox } from '../../components/goal/RoleSearchBox'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { SectionCard } from '../../components/SectionCard'
 import { DeadlineSelector } from '../../components/goal/DeadlineSelector'
-import type { Deadline } from '../../types'
+import { careerGoalSchema, type Deadline } from '../../types'
 
 type CareerGoalStepProps = {
   targetRole: string
@@ -16,24 +16,30 @@ type CareerGoalStepProps = {
   onRoleChange: (role: string) => void
   onDeadlineChange: (deadline: Deadline) => void
   onCustomDeadlineDateChange: (date: string) => void
+  showValidation?: boolean
 }
 
-export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange }: CareerGoalStepProps) {
+export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false }: CareerGoalStepProps) {
+  const validation = careerGoalSchema.safeParse({ targetRole, deadline, customDeadlineDate })
+  const issues = showValidation && !validation.success ? validation.error.issues : []
+  const roleError = issues.find((issue) => issue.path[0] === 'targetRole')?.message
+  const dateError = issues.find((issue) => issue.path[0] === 'customDeadlineDate')?.message
   return (
     <div>
       <PageHeader {...onboardingCopy.headers[3]} />
       <div className="space-y-4">
-        <SectionCard icon={Search} layout="stacked" title={goalCopy.search.title} description={goalCopy.search.description}>
+        <SectionCard icon={Search} layout="stacked" title={goalCopy.search.title} description={goalCopy.search.description} invalid={Boolean(roleError)}>
           <div className="space-y-2">
-            <RoleSearchBox value={targetRole} onChange={onRoleChange} onSelect={onRoleChange} />
+            <RoleSearchBox value={targetRole} onChange={onRoleChange} onSelect={onRoleChange} error={roleError} />
             <PopularRoleChips selectedRole={targetRole} onSelect={onRoleChange} />
           </div>
         </SectionCard>
         <SectionCard icon={Sparkles} layout="stacked" title={goalCopy.recommendations.title} description={goalCopy.recommendations.description}>
           {({ titleId }) => <RoleRecommendations selectedRole={targetRole} onSelect={onRoleChange} labelledBy={titleId} />}
         </SectionCard>
-        <SectionCard icon={Clock3} layout="stacked" title={goalCopy.deadline.title} description={goalCopy.deadline.description}>
+        <SectionCard icon={Clock3} layout="stacked" title={goalCopy.deadline.title} description={goalCopy.deadline.description} invalid={Boolean(dateError)}>
           {({ titleId, descriptionId }) => <DeadlineSelector value={deadline} customDate={customDeadlineDate}
+            validationError={dateError}
             onChange={onDeadlineChange} onCustomDateChange={onCustomDeadlineDateChange}
             labelledBy={titleId} describedBy={descriptionId} />}
         </SectionCard>

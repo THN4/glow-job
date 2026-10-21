@@ -13,6 +13,7 @@ type SectionCardProps = {
   className?: string;
   contentClassName?: string;
   layout?: "row" | "stacked";
+  invalid?: boolean;
 };
 
 export function SectionCard({
@@ -24,14 +25,18 @@ export function SectionCard({
   className,
   contentClassName,
   layout = "row",
+  invalid = false,
 }: SectionCardProps) {
   const titleId = useId();
   const descriptionId = useId();
   return (
     <section
+      tabIndex={-1}
+      data-invalid={invalid || undefined}
       aria-labelledby={titleId}
       className={cn(
-        "grid min-h-28 items-center gap-4 rounded-lg border border-border bg-panel p-4 sm:p-5",
+        "grid min-h-28 scroll-mt-6 items-center gap-4 rounded-lg border border-border bg-panel p-4 outline-none sm:p-5",
+        invalid && "border-destructive ring-2 ring-destructive/20",
         layout === "row"
           ? "xl:grid-cols-[340px_minmax(0,1fr)]"
           : "min-h-0 gap-y-3",

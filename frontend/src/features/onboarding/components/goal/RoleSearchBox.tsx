@@ -7,11 +7,12 @@ import { goalCopy, ROLE_MAX_LENGTH } from '../../../../lib/goalConstants'
 import { cn } from '../../../../lib/utils'
 import type { RoleSearchResult } from '../../types'
 
-type RoleSearchBoxProps = { value: string; onChange: (value: string) => void; onSelect: (role: string) => void }
+type RoleSearchBoxProps = { value: string; onChange: (value: string) => void; onSelect: (role: string) => void; error?: string }
 type SearchState = { query: string; results: RoleSearchResult[]; error: boolean }
 
-export function RoleSearchBox({ value, onChange, onSelect }: RoleSearchBoxProps) {
+export function RoleSearchBox({ value, onChange, onSelect, error }: RoleSearchBoxProps) {
   const listId = useId()
+  const errorId = useId()
   const [open, setOpen] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [announcement, setAnnouncement] = useState('')
@@ -46,6 +47,8 @@ export function RoleSearchBox({ value, onChange, onSelect }: RoleSearchBoxProps)
         <Input value={value} onChange={(event) => { onChange(event.target.value); setOpen(true); setActiveIndex(-1) }}
           onFocus={() => setOpen(true)} onBlur={() => { setOpen(false); setActiveIndex(-1) }}
           role="combobox" aria-label={goalCopy.search.label} aria-expanded={showSuggestions}
+          data-onboarding-field="targetRole" aria-required="true" aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
           aria-controls={showSuggestions ? listId : undefined} aria-autocomplete="list"
           aria-activedescendant={showSuggestions && results[activeIndex] ? `${listId}-${activeIndex}` : undefined}
           placeholder={goalCopy.search.placeholder} maxLength={ROLE_MAX_LENGTH} autoComplete="off"
@@ -83,6 +86,7 @@ export function RoleSearchBox({ value, onChange, onSelect }: RoleSearchBoxProps)
           </ul>
         </div>}
       </div>
+      {error && <p id={errorId} role="alert" className="mt-2 text-sm text-destructive">{error}</p>}
       <span role="status" className="sr-only">{announcement}</span>
     </form>
   )

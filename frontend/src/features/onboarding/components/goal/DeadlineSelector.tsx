@@ -13,13 +13,14 @@ type DeadlineSelectorProps = {
   onCustomDateChange: (date: string) => void
   labelledBy: string
   describedBy: string
+  validationError?: string
 }
 
-export function DeadlineSelector({ value, customDate, onChange, onCustomDateChange, labelledBy, describedBy }: DeadlineSelectorProps) {
+export function DeadlineSelector({ value, customDate, onChange, onCustomDateChange, labelledBy, describedBy, validationError }: DeadlineSelectorProps) {
   const inputId = useId()
   const hintId = useId()
   const validation = customDeadlineDateSchema.safeParse(customDate)
-  const error = customDate && !validation.success ? validation.error.issues[0].message : null
+  const error = validationError ?? (customDate && !validation.success ? validation.error.issues[0].message : null)
 
   return <div className="space-y-3">
     <SelectGroup<Deadline> value={value} onChange={onChange} options={goalCopy.deadline.options}
@@ -28,6 +29,7 @@ export function DeadlineSelector({ value, customDate, onChange, onCustomDateChan
     {value === 'custom' && <div className="max-w-sm space-y-2">
       <Label htmlFor={inputId}>{goalCopy.deadline.dateLabel}</Label>
       <Input id={inputId} type="date" value={customDate} min={getMinimumDeadlineDate()} required
+        data-onboarding-field="customDeadlineDate"
         onChange={(event) => onCustomDateChange(event.target.value)} aria-invalid={Boolean(error)}
         aria-describedby={hintId} className="h-11 min-w-0 border-input bg-card text-base md:text-base" />
       <p id={hintId} role={error ? 'alert' : undefined} className={error ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'}>
