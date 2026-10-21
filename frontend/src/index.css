@@ -4,8 +4,41 @@
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant roomy-header {
+  @media (min-width: 40rem) and (min-height: 30rem) {
+    @slot;
+  }
+}
+/* Keep phones compact, including landscape; expand for landscape tablets and desktops. */
+@custom-variant sidebar-expanded {
+  @media (min-width: 80rem), (min-width: 48rem) and (min-height: 30rem) and (orientation: landscape) {
+    @slot;
+  }
+}
 
 @theme inline {
+  --color-panel: var(--panel);
+  --color-icon-blue: var(--icon-blue);
+  --color-icon-green: var(--icon-green);
+  --color-icon-purple: var(--icon-purple);
+  --color-icon-pink: var(--icon-pink);
+  --color-icon-amber: var(--icon-amber);
+  --color-icon-teal: var(--icon-teal);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-pink: var(--pink);
+  --color-teal: var(--teal);
+  --color-skill-beginner: var(--skill-beginner);
+  --color-skill-beginner-border: var(--skill-beginner-border);
+  --color-skill-intermediate: var(--skill-intermediate);
+  --color-skill-intermediate-border: var(--skill-intermediate-border);
+  --color-skill-advanced: var(--skill-advanced);
+  --color-skill-advanced-border: var(--skill-advanced-border);
+  --color-skill-expert: var(--skill-expert);
+  --color-skill-expert-border: var(--skill-expert-border);
+  --color-skill-unknown: var(--skill-unknown);
+  --color-skill-unknown-border: var(--skill-unknown-border);
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', 'Noto Sans Thai', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
@@ -49,24 +82,46 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: #f2f9ff;
+  --foreground: #0d1246;
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: var(--foreground);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: #0B5FFF;
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --secondary: #e4efff;
+  --secondary-foreground: var(--primary);
+  --muted: #eaf2fc;
+  --muted-foreground: #637fbd;
+  --accent: #e9f5ff;
+  --accent-foreground: var(--primary);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #d7e6ff;
+  --input: #c7dbff;
+  --ring: var(--primary);
+  --panel: #f4f9ff;
+  --icon-blue: #e4efff;
+  --icon-green: #e1f7f0;
+  --icon-purple: #efe6ff;
+  --icon-pink: #fde5f0;
+  --icon-amber: #fff4d9;
+  --icon-teal: #e0f7fa;
+  --success: #00b879;
+  --warning: #e28a00;
+  --info: #7638ff;
+  --pink: #ff278b;
+  --teal: #00b3c5;
+  --skill-beginner: #e8f7ee;
+  --skill-beginner-border: #b4ddc2;
+  --skill-intermediate: #fff8db;
+  --skill-intermediate-border: #e8d99d;
+  --skill-advanced: #fff1e5;
+  --skill-advanced-border: #edc59f;
+  --skill-expert: #fff0ed;
+  --skill-expert-border: #efc1b9;
+  --skill-unknown: #f0f2f5;
+  --skill-unknown-border: #d7dce3;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -84,6 +139,16 @@
 }
 
 .dark {
+  --skill-beginner: #18362a;
+  --skill-beginner-border: #31684b;
+  --skill-intermediate: #39311d;
+  --skill-intermediate-border: #786734;
+  --skill-advanced: #3d2c20;
+  --skill-advanced-border: #8a5b34;
+  --skill-expert: #3d2525;
+  --skill-expert-border: #88514c;
+  --skill-unknown: #2c3038;
+  --skill-unknown-border: #555d6a;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
