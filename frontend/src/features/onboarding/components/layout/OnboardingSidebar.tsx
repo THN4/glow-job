@@ -27,7 +27,7 @@ export function OnboardingSidebar({
   const { headline, description, features } =
     content ?? getSidebarContent(currentStep, analyzing);
   return (
-    <aside ref={sidebarRef} className="isolate hidden shrink-0 bg-accent sidebar-expanded:sticky sidebar-expanded:top-0 sidebar-expanded:block sidebar-expanded:h-dvh sidebar-expanded:w-[24%] sidebar-expanded:min-w-60 sidebar-expanded:max-w-[401px] sidebar-expanded:overflow-y-auto sidebar-expanded:px-7 sidebar-expanded:py-5 xl:px-10">
+    <aside ref={sidebarRef} className="isolate hidden shrink-0 bg-accent sidebar-expanded:sticky sidebar-expanded:top-0 sidebar-expanded:block sidebar-expanded:h-dvh sidebar-expanded:w-[24vw] sidebar-expanded:min-w-60 sidebar-expanded:max-w-[401px] sidebar-expanded:overflow-y-auto sidebar-expanded:[scrollbar-gutter:stable] sidebar-expanded:px-7 sidebar-expanded:py-5 xl:px-10">
       <img
         src={backgroundImage}
         alt=""

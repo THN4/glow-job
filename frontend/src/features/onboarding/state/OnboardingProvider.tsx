@@ -5,6 +5,7 @@ import { OnboardingContext } from './OnboardingContext'
 import { createEmptyProfile } from '../../../lib/api'
 import { careerGoalSchema } from '../types'
 import { onboardingCopy } from '../../../lib/constants'
+import { applyProfileChanges, hasRequiredSkillLevels, isProfileReviewComplete } from '../../../lib/profileReview'
 
 const initialData: OnboardingData = {
   cvFile: null,
@@ -26,13 +27,14 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { currentStep, lastCompletedStep } = navigation
   const completedSteps = onboardingCopy.steps.map(({ id }) => id).filter((step) => step <= lastCompletedStep)
   const availableSteps = completedSteps.filter((step) =>
-    (step <= 2 || data.profile.user_confirmed) &&
+    (step <= 2 || isProfileReviewComplete(data.profile)) &&
     (step <= 3 || careerGoalSchema.safeParse(data).success),
   )
 
   function nextStep() {
     setNavigation((current) => {
       if (current.currentStep === 5) return current
+      if (current.currentStep === 2 && !hasRequiredSkillLevels(data.profile)) return current
       return {
         currentStep: (current.currentStep + 1) as OnboardingStep,
         lastCompletedStep: Math.max(current.lastCompletedStep, current.currentStep) as OnboardingStep,
@@ -51,6 +53,9 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   }
 
   function updateData(updates: Partial<OnboardingData>) {
+    if ('cvFile' in updates && updates.cvFile !== data.cvFile) {
+      setNavigation((current) => ({ ...current, lastCompletedStep: 0 }))
+    }
     setData((currentData) => ({ ...currentData, ...updates }))
   }
 
@@ -68,7 +73,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
 
   function updateProfile(updates: Partial<Profile>) {
     setData((currentData) => ({ ...currentData,
-      profile: { ...currentData.profile, ...updates, user_confirmed: false },
+      profile: applyProfileChanges(currentData.profile, updates),
     }))
   }
 
