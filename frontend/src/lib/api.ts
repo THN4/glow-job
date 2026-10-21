@@ -3,16 +3,63 @@ import { goalCopy, MOCK_ROLE_RECOMMENDATIONS } from './goalConstants'
 import { profileSchema, type Profile } from '../features/onboarding/types'
 import { MOCK_PROFILE } from './profileConstants'
 import { validateCvFile } from './cv'
+import type { AnalysisProgress, AnalysisTask } from '../features/onboarding/analysisTypes'
+import { DEMO_ANALYSIS_STEP_MIN_MS } from './analysisConstants'
+
+function waitForDemoStep(duration: number, signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted()
+  if (duration <= 0) return Promise.resolve()
+  return new Promise((resolve, reject) => {
+    const onAbort = () => {
+      clearTimeout(timer)
+      reject(signal?.reason)
+    }
+    const timer = setTimeout(() => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, duration)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
+}
 
 export function createEmptyProfile(): Profile {
   return { education: null, skills: [], projects: [], experience: [], certifications: [], user_confirmed: false }
 }
 
-// Mock extraction deliberately returns the reference profile for every valid CV.
-export async function analyzeCv(file: File): Promise<Profile> {
-  const error = validateCvFile(file)
-  if (error) throw new Error(error)
-  return profileSchema.parse(structuredClone(MOCK_PROFILE))
+// Demo adapter: reads the real file, then prepares the reference profile.
+// Replace each operation with a backend task/event when the analysis API is ready.
+// Demo tasks remain visible briefly; success still requires the operation to finish.
+export async function analyzeCv(file: File, options: { onProgress?: AnalysisProgress; signal?: AbortSignal } = {}): Promise<Profile> {
+  const { onProgress, signal } = options
+  async function run<T>(task: AnalysisTask, action: () => T | Promise<T>): Promise<T> {
+    signal?.throwIfAborted()
+    const startedAt = performance.now()
+    onProgress?.(task, 'loading')
+    // Let React paint the current task before synchronous text processing.
+    await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+    try {
+      signal?.throwIfAborted()
+      const result = await action()
+      await waitForDemoStep(DEMO_ANALYSIS_STEP_MIN_MS - (performance.now() - startedAt), signal)
+      signal?.throwIfAborted()
+      onProgress?.(task, 'done')
+      return result
+    } catch (error) {
+      if (!signal?.aborted) onProgress?.(task, 'error')
+      throw error
+    }
+  }
+  await run('reading', async () => {
+    const error = validateCvFile(file)
+    if (error) throw new Error(error)
+    const buffer = await file.arrayBuffer()
+    if (buffer.byteLength !== file.size) throw new Error('Incomplete CV read')
+  })
+  const skills = await run('skills', () => profileSchema.shape.skills.parse(structuredClone(MOCK_PROFILE.skills)))
+  const education = await run('education', () => profileSchema.shape.education.parse(structuredClone(MOCK_PROFILE.education)))
+  const sections = await run('experience', () => profileSchema.pick({ projects: true, experience: true, certifications: true })
+    .parse(structuredClone({ projects: MOCK_PROFILE.projects, experience: MOCK_PROFILE.experience, certifications: MOCK_PROFILE.certifications })))
+  return run('profile', () => profileSchema.parse({ ...createEmptyProfile(), skills, education, ...sections }))
 }
 
 // Replace these mock functions with backend requests when the role API is ready.
