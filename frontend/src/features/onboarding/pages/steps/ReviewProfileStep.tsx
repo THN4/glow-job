@@ -1,5 +1,5 @@
 import { useRef, useState, type MouseEvent } from 'react'
-import { Award, BriefcaseBusiness, CircleAlert, CircleCheck, Code2, GraduationCap, NotebookText, Sparkles } from 'lucide-react'
+import { Award, BriefcaseBusiness, CircleAlert, Code2, GraduationCap, NotebookText, Sparkles } from 'lucide-react'
 import { Button } from '../../../../components/ui/button'
 import { SkillChip } from '../../../../components/shared/SkillChip'
 import { StatusTag } from '../../../../components/shared/StatusTag'
@@ -9,8 +9,11 @@ import { reviewCopy } from '../../../../lib/profileConstants'
 import { PageHeader } from '../../components/layout/PageHeader'
 import { EditSectionDialog } from '../../components/review/EditSectionDialog'
 import { InfoCard } from '../../components/review/InfoCard'
-import { SkillInput } from '../../components/review/SkillInput'
+import { TechnicalSkillsEditor } from '../../components/review/TechnicalSkillsEditor'
 import type { Profile, ProfileSection } from '../../types'
+import { analysisCopy } from '../../../../lib/analysisConstants'
+import { hasRequiredSkillLevels } from '../../../../lib/profileReview'
+import { focusField } from '../../../../lib/focusField'
 
 type ReviewProfileStepProps = {
   profile: Profile
@@ -26,14 +29,28 @@ function SkillChips({ skills }: { skills: string[] }) {
 
 export function ReviewProfileStep({ profile, source, onChange, onContinue, onBack }: ReviewProfileStepProps) {
   const [editing, setEditing] = useState<ProfileSection | 'all' | null>(null)
+  const [validationAttempted, setValidationAttempted] = useState(false)
+  const skillsBlock = useRef<HTMLElement>(null)
   const returnFocus = useRef<HTMLButtonElement | null>(null)
+  const skillLevelsComplete = hasRequiredSkillLevels(profile)
   function openEditor(section: ProfileSection | 'all', event: MouseEvent<HTMLButtonElement>) {
     returnFocus.current = event.currentTarget
     setEditing(section)
   }
+  function continueAfterReview() {
+    if (!skillLevelsComplete) {
+      setValidationAttempted(true)
+      requestAnimationFrame(() => focusField(skillsBlock.current, 'start'))
+      return
+    }
+    onContinue()
+  }
   return <div className="flex flex-1 flex-col">
-    <PageHeader {...(source === 'cv' ? onboardingCopy.headers[2] : reviewCopy.manualHeader)}
+    <PageHeader {...(source === 'cv' ? { ...onboardingCopy.headers[2], subtitle: analysisCopy.reviewNotice } : reviewCopy.manualHeader)}
       badge={source === 'cv' ? <StatusTag icon={Sparkles} variant="info">{reviewCopy.autofilled}</StatusTag> : undefined} />
+    <p className="mb-4 flex items-start gap-2 rounded-lg border border-warning/20 bg-icon-amber/50 p-3 text-sm leading-5 text-foreground">
+      <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />{reviewCopy.reviewWarning}
+    </p>
     <div className="grid gap-4 xl:grid-cols-2">
       <InfoCard title={reviewCopy.titles.education} icon={GraduationCap} color="green" className="xl:min-h-44"
         onEdit={(event) => openEditor('education', event)}>
@@ -42,17 +59,15 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
             <h3 className="break-words text-base font-semibold leading-6">{profile.education.degree}</h3>
             <p className="break-words text-sm leading-5 text-muted-foreground">{profile.education.school}</p>
             {profile.education.period && <p className="text-sm leading-5 text-muted-foreground">{profile.education.period}</p>}
-            <StatusTag variant={profile.education.confirmed ? 'success' : 'warning'} icon={profile.education.confirmed ? CircleCheck : CircleAlert}>
-              {profile.education.confirmed ? reviewCopy.confirmedEducation : reviewCopy.confirmEducation}
-            </StatusTag>
           </> : <p className="py-3 text-muted-foreground">{reviewCopy.empty.education}</p>}
         </div>
       </InfoCard>
       <InfoCard title={reviewCopy.titles.skills} icon={Code2} color="purple" className="xl:min-h-44"
+        ref={skillsBlock} invalid={validationAttempted && !skillLevelsComplete}
         onEdit={(event) => openEditor('skills', event)}>
         <div className="space-y-2 px-1">
-          {profile.skills.length ? <SkillChips skills={profile.skills} /> : <p className="text-muted-foreground">{reviewCopy.empty.skills}</p>}
-          <SkillInput skills={profile.skills} onChange={(skills) => onChange({ skills })} />
+          <TechnicalSkillsEditor skills={profile.skills} onChange={(skills) => onChange({ skills })} />
+          {!skillLevelsComplete && <p role={validationAttempted ? 'alert' : undefined} className="text-sm leading-5 text-warning">{reviewCopy.skillLevelsEditHint}</p>}
         </div>
       </InfoCard>
       <InfoCard title={reviewCopy.titles.projects} icon={NotebookText} color="pink" className="xl:min-h-49"
@@ -92,11 +107,15 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
       </InfoCard>
     </div>
     <div className="@container mt-auto pt-6">
-      <StepNavigation onBack={onBack} onContinue={onContinue} continueLabel={reviewCopy.continue}
+      {!skillLevelsComplete && <p role="status" aria-live="polite" className="mb-3 text-sm leading-5 text-muted-foreground">
+        {reviewCopy.skillLevelsBeforeContinue}
+      </p>}
+      <StepNavigation onBack={onBack} onContinue={continueAfterReview} continueLabel={reviewCopy.continue}
         extraActions={<Button type="button" variant="outline" onClick={(event) => openEditor('all', event)}
           className="h-12 border-input bg-card px-5 text-base text-primary">{reviewCopy.editProfile}</Button>} />
     </div>
     {editing && <EditSectionDialog key={editing} section={editing} profile={profile} onSave={onChange}
-      onClose={() => setEditing(null)} onRestoreFocus={() => returnFocus.current?.focus()} />}
+      showSkillValidation={validationAttempted}
+      onClose={() => setEditing(null)} onRestoreFocus={() => focusField(returnFocus.current)} />}
   </div>
 }

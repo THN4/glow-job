@@ -1,4 +1,4 @@
-import { useId, type MouseEvent, type ReactNode } from "react";
+import { useId, type MouseEvent, type ReactNode, type Ref } from "react";
 import { Pencil, type LucideIcon } from "lucide-react";
 import { IconBox, type IconColor } from "../../../../components/shared/IconBox";
 import { Button } from "../../../../components/ui/button";
@@ -12,6 +12,8 @@ type InfoCardProps = {
   children: ReactNode;
   onEdit: (event: MouseEvent<HTMLButtonElement>) => void;
   className?: string;
+  ref?: Ref<HTMLElement>;
+  invalid?: boolean;
 };
 
 export function InfoCard({
@@ -21,13 +23,19 @@ export function InfoCard({
   children,
   onEdit,
   className,
+  ref,
+  invalid = false,
 }: InfoCardProps) {
   const titleId = useId();
   return (
     <section
+      ref={ref}
+      tabIndex={-1}
+      data-invalid={invalid || undefined}
       aria-labelledby={titleId}
       className={cn(
-        "min-w-0 rounded-lg border border-border bg-panel p-4 sm:p-5",
+        "flex min-w-0 scroll-mt-6 flex-col rounded-lg border border-border bg-panel p-4 outline-none sm:p-5",
+        invalid && "border-destructive ring-2 ring-destructive/20",
         className,
       )}
     >
@@ -50,7 +58,7 @@ export function InfoCard({
           {reviewCopy.edit}
         </Button>
       </div>
-      {children}
+      <div className="flex-1">{children}</div>
     </section>
   );
 }
