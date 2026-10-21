@@ -1,0 +1,775 @@
+﻿Project glow_job {
+  database_type: 'PostgreSQL'
+  Note: 'Consolidated design view. Pipeline migrations 011/013 define knowledge sources/chunks/skill mappings; 014 defines dependencies and 015 adds scope, chunk provenance and review metadata. Explicit migration runs are required. Learning modules remain deferred. Domain views live in data-pipeline/docs/database/schemas; App schemas live in root docs/schemas. This artifact does not prove a migration has been applied.'
+}
+
+Enum requirement_type {
+  required
+  preferred
+  optional
+  unknown
+}
+
+Enum proficiency_level {
+  beginner
+  intermediate
+  advanced
+  expert
+  unknown
+}
+
+Enum importance_tier {
+  core
+  important
+  optional
+  unknown
+}
+
+Enum dependency_type {
+  prerequisite
+  recommended_before
+  related
+}
+
+Enum dependency_strength {
+  required
+  strong
+  recommended
+  weak
+}
+
+Enum dependency_scope {
+  general
+  document_specific
+  conditional
+  unknown
+}
+
+Enum extraction_status {
+  pending
+  processing
+  completed
+  failed
+}
+
+Enum review_status {
+  pending
+  confirmed
+  edited
+  rejected
+}
+
+Enum roadmap_status {
+  draft
+  active
+  completed
+  replaced
+  archived
+}
+
+Enum progress_status {
+  not_started
+  in_progress
+  completed
+  skipped
+}
+
+Enum ingestion_status {
+  pending
+  running
+  completed
+  failed
+}
+
+Enum experience_type {
+  work
+  internship
+  project
+  competition
+  course
+  other
+}
+
+Enum current_situation {
+  student
+  employed_full_time
+  employed_part_time
+  between_opportunities
+  other
+}
+
+Enum weekly_availability_band {
+  under_2_hours
+  hours_2_to_5
+  hours_5_to_10
+  hours_10_plus
+}
+
+Enum learning_preference {
+  structured_courses
+  hands_on_projects
+  reading_articles
+  videos_tutorials
+}
+
+Enum readiness_timeframe {
+  three_months
+  six_months
+  one_year
+  no_fixed_deadline
+}
+
+Enum user_skill_match_status {
+  matched
+  needs_review
+  unmatched
+}
+
+Enum certification_kind {
+  certification
+  award
+  competition
+  workshop
+  activity
+  license
+  other
+}
+
+Enum date_precision {
+  year
+  month
+  day
+}
+
+Enum application_status {
+  interested
+  applied
+  interviewing
+  offered
+  rejected
+  withdrawn
+}
+
+Enum interview_session_status {
+  in_progress
+  completed
+  abandoned
+}
+
+// CORE: shared canonical entities.
+Table core.companies {
+  company_id bigint [pk, increment]
+  company_name text [not null]
+  normalized_name text
+  company_website text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    normalized_name [name: 'ix_companies_normalized_name']
+  }
+}
+
+Table core.careers {
+  career_id bigint [pk, increment]
+  slug text [not null, unique]
+  career_name text [not null]
+  description text
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table core.career_profiles {
+  career_profile_id bigint [pk, increment]
+  career_id bigint [not null]
+  slug text [not null, unique]
+  profile_name text [not null]
+  seniority_level text [not null, note: 'junior, mid, senior, or general']
+  description text
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table core.skills {
+  skill_id bigint [pk, increment]
+  skill_name text [not null, unique]
+  skill_category text
+  description text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table core.skill_aliases {
+  alias_id bigint [pk, increment]
+  skill_id bigint [not null]
+  alias text [not null, unique]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// MARKET: job postings, provenance, extraction, and aggregates.
+Table market.job_postings {
+  job_id bigint [pk, increment]
+  provider_job_id text [note: 'May be absent; define fallback deduplication in implementation']
+  company_id bigint
+  career_profile_id bigint [not null]
+  job_title text [not null]
+  normalized_job_title text
+  job_description text
+  location text
+  city text
+  state text
+  country char(2)
+  employment_type text
+  provider text [not null]
+  publisher text
+  source_url text
+  posted_at timestamptz
+  collected_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (provider, provider_job_id) [unique, name: 'uq_job_postings_provider_job']
+    career_profile_id [name: 'ix_job_postings_career_profile']
+  }
+}
+
+Table market.job_search_matches {
+  job_id bigint [not null]
+  run_id bigint [not null]
+  career_profile_id bigint [not null]
+  search_query text [not null]
+  collected_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (job_id, run_id, search_query) [pk]
+  }
+
+  Note: 'A deduplicated job can match multiple searches and ingestion runs.'
+}
+
+Table market.job_skills {
+  job_id bigint [not null]
+  skill_id bigint [not null]
+  raw_skill_name text
+  requirement_type requirement_type [not null, default: 'unknown']
+  proficiency_level proficiency_level [not null, default: 'unknown']
+  importance_weight numeric(4, 3)
+  skill_confidence numeric(4, 3)
+  requirement_confidence numeric(4, 3)
+  proficiency_confidence numeric(4, 3)
+  overall_confidence numeric(4, 3)
+  evidence_text text
+  extraction_method text [note: 'llm, rule, hybrid, or manual']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (job_id, skill_id) [pk]
+  }
+}
+
+Table market.career_skill_stats {
+  career_profile_id bigint [not null]
+  skill_id bigint [not null]
+  analysis_start_date date [not null]
+  analysis_end_date date [not null]
+  demand_count integer [not null]
+  total_jobs integer [not null]
+  demand_percentage numeric(5, 2) [not null]
+  required_count integer [not null, default: 0]
+  preferred_count integer [not null, default: 0]
+  optional_count integer [not null, default: 0]
+  weighted_demand_score numeric(8, 4)
+  target_level proficiency_level
+  target_level_confidence numeric(4, 3)
+  level_observation_count integer [not null, default: 0]
+  importance_tier importance_tier [not null, default: 'unknown']
+  last_updated timestamptz [not null, default: `now()`]
+
+  indexes {
+    (career_profile_id, skill_id, analysis_start_date, analysis_end_date) [pk]
+  }
+}
+
+
+// KNOWLEDGE: sources, retrieval chunks, dependencies, and learning modules.
+Table knowledge.knowledge_sources {
+  source_id bigint [pk, increment]
+  skill_id bigint
+  source_type text [not null]
+  title text [not null]
+  source_url text
+  storage_key text [note: 'Original file key in S3, when applicable']
+  publisher text
+  is_active boolean [not null, default: true]
+  collected_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table knowledge.knowledge_chunks {
+  chunk_id bigint [pk, increment]
+  source_id bigint [not null]
+  topic text
+  chunk_index integer [not null]
+  content text [not null]
+  metadata jsonb
+  embedding_model text
+  embedding vector(768) [note: 'Requires pgvector; current corpus uses Gemini Embedding 2 with 768 output dimensions']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (source_id, chunk_index) [unique, name: 'uq_knowledge_chunks_source_index']
+    (chunk_id, source_id) [unique, name: 'uq_knowledge_chunks_chunk_source']
+  }
+}
+
+Table knowledge.knowledge_chunk_skills {
+  chunk_id bigint [not null]
+  skill_id bigint [not null]
+
+  indexes {
+    (chunk_id, skill_id) [pk]
+    (skill_id) [name: 'ix_knowledge_chunk_skills_skill_id']
+  }
+}
+
+Table knowledge.skill_dependencies {
+  dependency_id bigint [pk, increment]
+  prerequisite_skill_id bigint [not null]
+  target_skill_id bigint [not null]
+  dependency_type dependency_type [not null]
+  strength dependency_strength [not null]
+  confidence numeric(4, 3)
+  source_id bigint
+  evidence_text text
+  scope_type dependency_scope [not null, default: 'unknown']
+  scope_note varchar(500) [note: 'Required document/audience/learner condition for verified scoped rows. Text is not automatically evaluated against a user.']
+  chunk_id bigint
+  evidence_content_hash text [note: 'SHA-256 of the reviewed chunk content.']
+  reviewed_by varchar(100) [note: 'Local reviewer label, not an authentication identity.']
+  reviewed_at timestamptz
+  review_note text
+  is_verified boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (prerequisite_skill_id) [name: 'ix_skill_dependencies_prerequisite']
+  }
+
+  Note: 'Migrations 014/015 reject self-links and require evidence, known scope, exact chunk provenance and review metadata for new verified rows. SQL partial unique indexes enforce one general edge per pair/type, separate scoped contexts by scope/source/note, and retain unknown legacy rows. Partial indexes are not fully represented here. Only general ordering edges enter the global cycle check. Scoped rows are context only.'
+}
+
+Table knowledge.learning_modules [note: 'Deferred design; no current table migration.'] {
+  module_id bigint [pk, increment]
+  skill_id bigint [not null]
+  level proficiency_level [not null]
+  title text [not null]
+  description text
+  learning_outcome text
+  sequence_order integer [not null]
+  estimated_hours numeric(6, 2)
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+// APP: account, resume review, user state, goal, roadmap, and progress.
+Table app.users {
+  user_id bigint [pk, increment]
+  email text [unique, note: 'Nullable for anonymous users']
+  auth_provider text [not null, note: 'anonymous, cognito, google, or local']
+  auth_subject text [note: 'External identity subject or anonymous session ID; required and nonblank when auth_provider is anonymous']
+  password_hash text [note: 'Used only for local auth']
+  is_active boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (auth_provider, auth_subject) [unique, name: 'uq_users_auth_identity']
+  }
+}
+
+Table app.user_profiles {
+  user_id bigint [pk]
+  profile_id text [not null, unique]
+  profile_data jsonb [not null, note: 'Full confirmed Resume profile, including fields without dedicated relational columns']
+  display_name text
+  current_status current_situation
+  current_job_title text
+  years_experience numeric(5, 2)
+  location text
+  education_level text
+  field_of_study text
+  background_summary text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table app.resumes {
+  resume_id bigint [pk, increment]
+  user_id bigint [not null]
+  file_name text [not null]
+  storage_key text [not null, note: 'Resume file is stored in S3']
+  mime_type text
+  file_size_bytes bigint [note: 'Upload flow currently accepts files up to 10 MB; enforce size and PDF/DOC/DOCX allow-list in the upload service']
+  is_current boolean [not null, default: false]
+  uploaded_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+
+  Note: 'Enforce at most one current resume per user with a partial unique index in SQL.'
+}
+
+Table app.resume_extractions {
+  extraction_id bigint [pk, increment]
+  resume_id bigint [not null]
+  status extraction_status [not null, default: 'pending']
+  model_provider text
+  model_name text
+  extracted_text text
+  extracted_json jsonb
+  review_status review_status [not null, default: 'pending']
+  started_at timestamptz
+  completed_at timestamptz
+  error_message text
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table app.user_educations {
+  education_id bigint [pk, increment]
+  user_id bigint [not null]
+  institution_name text
+  degree text
+  field_of_study text
+  start_date date
+  start_date_precision date_precision [note: 'Preserves whether the source provided a year, month, or exact day']
+  end_date date
+  end_date_precision date_precision
+  description text
+  source text [note: 'resume or self_report']
+  source_resume_id bigint
+  extraction_confidence numeric(4, 3)
+  user_confirmed boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table app.user_experiences {
+  experience_id bigint [pk, increment]
+  user_id bigint [not null]
+  experience_type experience_type [not null]
+  title text [not null]
+  organization text
+  role text [note: 'Role on a project or position title when different from title']
+  location text
+  url text [note: 'Optional project or portfolio URL']
+  description text
+  highlights jsonb [note: 'Ordered achievement/highlight strings; application validates the JSON shape']
+  start_date date
+  start_date_precision date_precision
+  end_date date
+  end_date_precision date_precision
+  is_current boolean [not null, default: false]
+  source text [note: 'resume or self_report']
+  source_resume_id bigint
+  extraction_confidence numeric(4, 3)
+  user_confirmed boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table app.user_skills {
+  user_skill_id bigint [pk, increment]
+  user_id bigint [not null]
+  skill_id bigint [note: 'Nullable until a raw resume/self-reported skill is matched to core.skills; never create a catalog skill implicitly']
+  raw_skill_name text [not null, note: 'Original label shown to the user, including an unmatched skill']
+  normalized_skill_name text [note: 'Optional normalized comparison label; not a catalog identity']
+  match_status user_skill_match_status [not null, default: 'unmatched']
+  proficiency_level proficiency_level [not null, default: 'unknown']
+  proficiency_basis text [not null, default: 'unknown', note: 'explicit, inferred, or unknown']
+  source text [note: 'resume, self_report, assessment, or project']
+  confidence numeric(4, 3)
+  verification_type text
+  user_confirmed boolean [not null, default: false]
+  first_added_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, skill_id) [unique, name: 'uq_user_skills_catalog_skill']
+    (user_id, raw_skill_name) [name: 'ix_user_skills_raw_name']
+  }
+
+  Note: 'When skill_id is null, match_status must be unmatched or needs_review. When skill_id is set, match_status must be matched; enforce this consistency with a SQL CHECK constraint.'
+}
+
+Table app.user_skill_evidence {
+  evidence_id bigint [pk, increment]
+  user_skill_id bigint [not null]
+  resume_id bigint
+  experience_id bigint
+  evidence_type text [not null, note: 'resume_text, experience, or assessment']
+  evidence_text text
+  confidence numeric(4, 3)
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table app.user_career_goals {
+  goal_id bigint [pk, increment]
+  user_id bigint [not null]
+  target_role_title text [not null, note: 'Selected role label from search or recommendation; retained even when not yet mapped to the role catalog']
+  career_id bigint [note: 'Null only while the selected role is not mapped to the catalog']
+  career_profile_id bigint [note: 'Null only while the selected role is not mapped to the catalog']
+  is_primary boolean [not null, default: false]
+  readiness_timeframe readiness_timeframe [note: 'Wizard choice; no_fixed_deadline leaves target_date null']
+  target_date date
+  weekly_availability weekly_availability_band
+  available_hours_per_week numeric(5, 2) [note: 'Optional exact value; the selected availability band remains the input when the user only chooses a range']
+  preferred_learning_style learning_preference
+  additional_context varchar(500) [note: 'Optional onboarding context, limited to 500 characters']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  Note: 'Enforce at most one primary goal per user with a partial unique index in SQL. career_id and career_profile_id must either both be null (unmapped selected role) or both be set. Map custom roles before market comparison/roadmap generation. Role-match percentages and demand badges on onboarding recommendation cards are derived from the profile and market aggregates; they are not user input and are not persisted here.'
+}
+
+Table app.user_certifications {
+  certification_id bigint [pk, increment]
+  user_id bigint [not null]
+  kind certification_kind [not null, default: 'certification']
+  name text [not null]
+  issuer text
+  awarded_on date
+  awarded_on_precision date_precision
+  details text
+  source text [note: 'resume or self_report']
+  source_resume_id bigint
+  extraction_confidence numeric(4, 3)
+  user_confirmed boolean [not null, default: false]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+
+Table app.roadmaps {
+  roadmap_id bigint [pk, increment]
+  user_id bigint [not null]
+  goal_id bigint [not null]
+  career_id bigint [not null, note: 'Career at generation time']
+  career_profile_id bigint [not null, note: 'Profile at generation time']
+  version integer [not null]
+  title text [not null]
+  status roadmap_status [not null, default: 'draft']
+  generation_reason text [not null, note: 'initial, progress_update, goal_change, market_update, feedback, or manual_replan']
+  previous_roadmap_id bigint
+  generated_at timestamptz [not null, default: `now()`]
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (goal_id, version) [unique, name: 'uq_roadmaps_goal_version']
+  }
+}
+
+Table app.roadmap_steps {
+  roadmap_step_id bigint [pk, increment]
+  roadmap_id bigint [not null]
+  step_number integer [not null]
+  skill_id bigint
+  module_id bigint
+  title text [not null]
+  description text
+  current_level proficiency_level
+  target_level proficiency_level
+  reason text
+  estimated_hours numeric(6, 2)
+  is_required boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (roadmap_id, step_number) [unique, name: 'uq_roadmap_steps_number']
+  }
+}
+
+Table app.roadmap_tasks {
+  task_id bigint [pk, increment]
+  roadmap_step_id bigint [not null]
+  task_number integer [not null]
+  title text [not null]
+  description text
+  is_required boolean [not null, default: true]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (roadmap_step_id, task_number) [unique, name: 'uq_roadmap_tasks_number']
+  }
+}
+
+Table app.user_roadmap_progress {
+  user_id bigint [not null]
+  roadmap_step_id bigint [not null]
+  status progress_status [not null, default: 'not_started']
+  progress_percentage numeric(5, 2) [not null, default: 0]
+  user_note text
+  started_at timestamptz
+  completed_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, roadmap_step_id) [pk]
+  }
+}
+
+Table app.user_task_progress {
+  user_id bigint [not null]
+  task_id bigint [not null]
+  status progress_status [not null, default: 'not_started']
+  completed_at timestamptz
+  updated_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, task_id) [pk]
+  }
+}
+
+// PHASE 2: job applications and interviews are outside the MVP.
+Table app.job_applications {
+  application_id bigint [pk, increment]
+  user_id bigint [not null]
+  job_id bigint
+  company_id bigint
+  job_title text [not null]
+  status application_status [not null, default: 'interested']
+  applied_at timestamptz
+  notes text
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
+Table app.application_feedback {
+  feedback_id bigint [pk, increment]
+  application_id bigint [not null]
+  feedback_type text
+  feedback_text text
+  extracted_reason text
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table app.interview_sessions {
+  interview_session_id bigint [pk, increment]
+  user_id bigint [not null]
+  job_id bigint
+  career_id bigint
+  status interview_session_status [not null, default: 'in_progress']
+  started_at timestamptz [not null, default: `now()`]
+  completed_at timestamptz
+}
+
+Table app.interview_feedback {
+  feedback_id bigint [pk, increment]
+  interview_session_id bigint [not null]
+  question text [not null]
+  user_response text
+  score numeric(5, 2)
+  feedback text
+  created_at timestamptz [not null, default: `now()`]
+}
+
+// SYSTEM: operational run tracking in the same PostgreSQL database.
+Table system.ingestion_runs {
+  run_id bigint [pk, increment]
+  run_key text [unique, note: 'External pipeline run identifier']
+  source text [not null]
+  career_profile_id bigint
+  raw_storage_key text
+  started_at timestamptz [not null, default: `now()`]
+  finished_at timestamptz
+  jobs_fetched integer [not null, default: 0]
+  jobs_inserted integer [not null, default: 0]
+  jobs_updated integer [not null, default: 0]
+  jobs_failed integer [not null, default: 0]
+  status ingestion_status [not null, default: 'pending']
+  error_message text
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table system.ai_runs {
+  ai_run_id bigint [pk, increment]
+  user_id bigint
+  operation_type text [not null]
+  model_provider text
+  model_name text
+  status text [not null]
+  started_at timestamptz [not null, default: `now()`]
+  finished_at timestamptz
+  error_message text
+}
+
+// Foreign keys across PostgreSQL schemas are part of this single-database design.
+Ref: core.career_profiles.career_id > core.careers.career_id
+Ref: core.skill_aliases.skill_id > core.skills.skill_id
+
+Ref: market.job_postings.company_id > core.companies.company_id
+Ref: market.job_postings.career_profile_id > core.career_profiles.career_profile_id
+Ref: market.job_search_matches.job_id > market.job_postings.job_id
+Ref: market.job_search_matches.run_id > system.ingestion_runs.run_id
+Ref: market.job_search_matches.career_profile_id > core.career_profiles.career_profile_id
+Ref: market.job_skills.job_id > market.job_postings.job_id
+Ref: market.job_skills.skill_id > core.skills.skill_id
+Ref: market.career_skill_stats.career_profile_id > core.career_profiles.career_profile_id
+Ref: market.career_skill_stats.skill_id > core.skills.skill_id
+
+Ref: knowledge.knowledge_sources.skill_id > core.skills.skill_id
+Ref: knowledge.knowledge_chunks.source_id > knowledge.knowledge_sources.source_id
+Ref: knowledge.knowledge_chunk_skills.chunk_id > knowledge.knowledge_chunks.chunk_id
+Ref: knowledge.knowledge_chunk_skills.skill_id > core.skills.skill_id
+Ref: knowledge.skill_dependencies.prerequisite_skill_id > core.skills.skill_id
+Ref: knowledge.skill_dependencies.target_skill_id > core.skills.skill_id
+Ref: knowledge.skill_dependencies.source_id > knowledge.knowledge_sources.source_id
+Ref: knowledge.skill_dependencies.(chunk_id, source_id) > knowledge.knowledge_chunks.(chunk_id, source_id)
+Ref: knowledge.learning_modules.skill_id > core.skills.skill_id
+
+Ref: app.user_profiles.user_id - app.users.user_id
+Ref: app.resumes.user_id > app.users.user_id
+Ref: app.resume_extractions.resume_id > app.resumes.resume_id
+Ref: app.user_educations.user_id > app.users.user_id
+Ref: app.user_educations.source_resume_id > app.resumes.resume_id
+Ref: app.user_experiences.user_id > app.users.user_id
+Ref: app.user_experiences.source_resume_id > app.resumes.resume_id
+Ref: app.user_skills.user_id > app.users.user_id
+Ref: app.user_skills.skill_id > core.skills.skill_id
+Ref: app.user_skill_evidence.user_skill_id > app.user_skills.user_skill_id
+Ref: app.user_skill_evidence.resume_id > app.resumes.resume_id
+Ref: app.user_skill_evidence.experience_id > app.user_experiences.experience_id
+Ref: app.user_career_goals.user_id > app.users.user_id
+Ref: app.user_career_goals.career_id > core.careers.career_id
+Ref: app.user_career_goals.career_profile_id > core.career_profiles.career_profile_id
+Ref: app.user_certifications.user_id > app.users.user_id
+Ref: app.user_certifications.source_resume_id > app.resumes.resume_id
+Ref: app.roadmaps.user_id > app.users.user_id
+Ref: app.roadmaps.goal_id > app.user_career_goals.goal_id
+Ref: app.roadmaps.career_id > core.careers.career_id
+Ref: app.roadmaps.career_profile_id > core.career_profiles.career_profile_id
+Ref: app.roadmaps.previous_roadmap_id > app.roadmaps.roadmap_id
+Ref: app.roadmap_steps.roadmap_id > app.roadmaps.roadmap_id
+Ref: app.roadmap_steps.skill_id > core.skills.skill_id
+Ref: app.roadmap_steps.module_id > knowledge.learning_modules.module_id
+Ref: app.roadmap_tasks.roadmap_step_id > app.roadmap_steps.roadmap_step_id
+Ref: app.user_roadmap_progress.user_id > app.users.user_id
+Ref: app.user_roadmap_progress.roadmap_step_id > app.roadmap_steps.roadmap_step_id
+Ref: app.user_task_progress.user_id > app.users.user_id
+Ref: app.user_task_progress.task_id > app.roadmap_tasks.task_id
+Ref: app.job_applications.user_id > app.users.user_id
+Ref: app.job_applications.job_id > market.job_postings.job_id
+Ref: app.job_applications.company_id > core.companies.company_id
+Ref: app.application_feedback.application_id > app.job_applications.application_id
+Ref: app.interview_sessions.user_id > app.users.user_id
+Ref: app.interview_sessions.job_id > market.job_postings.job_id
+Ref: app.interview_sessions.career_id > core.careers.career_id
+Ref: app.interview_feedback.interview_session_id > app.interview_sessions.interview_session_id
+
+Ref: system.ingestion_runs.career_profile_id > core.career_profiles.career_profile_id
+Ref: system.ai_runs.user_id > app.users.user_id
+
+
