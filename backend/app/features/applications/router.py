@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Query
 from pydantic import Field, field_validator
 
 from app.features.applications.service import ApplicationsService
@@ -64,6 +64,10 @@ class ApplicationBody(Camel):
         return normalized or None
 
 
+class SaveJobPostingBody(Camel):
+    job_id: int = Field(gt=0)
+
+
 def _values(body: ApplicationBody) -> dict[str, Any]:
     data = body.model_dump(by_alias=False)
     application_date = data["application_date"]
@@ -83,6 +87,18 @@ def _values(body: ApplicationBody) -> dict[str, Any]:
 async def list_applications(profile_id: str, session_id: str = SessionId,
                             svc: ApplicationsService = Depends(get_applications_service)) -> dict[str, Any]:
     return await svc.list(profile_id, session_id)
+
+
+@router.get("/job-postings")
+async def list_job_postings(limit: int = Query(default=60, gt=0, le=100),
+                            svc: ApplicationsService = Depends(get_applications_service)) -> dict[str, Any]:
+    return await svc.list_job_postings(limit)
+
+
+@router.post("/profiles/{profile_id}/applications/from-job", status_code=201)
+async def save_job_posting(profile_id: str, body: SaveJobPostingBody, session_id: str = SessionId,
+                           svc: ApplicationsService = Depends(get_applications_service)) -> dict[str, Any]:
+    return await svc.save_job_posting(profile_id, session_id, body.job_id)
 
 
 @router.post("/profiles/{profile_id}/applications", status_code=201)

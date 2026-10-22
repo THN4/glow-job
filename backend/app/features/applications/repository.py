@@ -24,7 +24,7 @@ _SELECT_APPLICATION = """
            a.status::text, a.created_at, a.updated_at, a.applied_at, a.notes,
            COALESCE(a.job_url, j.source_url),
            COALESCE(a.job_description, j.job_description),
-           COALESCE(a.location, j.location), a.rejection_category, a.rejection_reason
+           COALESCE(a.location, j.location), a.rejection_category, a.rejection_reason, a.job_id
     FROM app.job_applications AS a
     LEFT JOIN market.job_postings AS j ON j.job_id = a.job_id
     LEFT JOIN core.companies AS c ON c.company_id = COALESCE(a.company_id, j.company_id)
@@ -70,6 +70,89 @@ class ApplicationsRepository:
                 return []
             histories = self._histories(connection, [row[0] for row in rows])
         return [self._view(row, histories.get(row[0], [])) for row in rows]
+
+    def list_job_postings(self, limit: int = 60) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT j.job_id, c.company_name, j.job_title, j.job_description, j.location,
+                       j.employment_type, j.publisher, j.source_url, j.posted_at,
+                       COALESCE(skills.required_skills, ARRAY[]::text[]),
+                       COALESCE(skills.preferred_skills, ARRAY[]::text[])
+                FROM market.job_postings AS j
+                LEFT JOIN core.companies AS c ON c.company_id = j.company_id
+                LEFT JOIN LATERAL (
+                    SELECT
+                        array_agg(DISTINCT s.skill_name) FILTER (WHERE js.requirement_type = 'required') AS required_skills,
+                        array_agg(DISTINCT s.skill_name) FILTER (WHERE js.requirement_type = 'preferred') AS preferred_skills
+                    FROM market.job_skills AS js
+                    JOIN core.skills AS s USING (skill_id)
+                    WHERE js.job_id = j.job_id
+                ) AS skills ON true
+                ORDER BY COALESCE(j.posted_at, j.first_seen_at, j.collected_at) DESC, j.job_id DESC
+                LIMIT %s
+                """,
+                (limit,),
+            ).fetchall()
+        return [
+            {
+                "id": str(row[0]),
+                "jobId": row[0],
+                "company": row[1] or "Company not specified",
+                "role": row[2],
+                "jobDescription": row[3] or "",
+                "description": ((row[3] or "").strip()[:260] + ("…" if row[3] and len(row[3].strip()) > 260 else "")),
+                "location": row[4] or "Not specified",
+                "workStyle": "Not specified",
+                "experience": row[5] or "Not specified",
+                "publisher": row[6] or "Source not specified",
+                "sourceUrl": row[7] or "",
+                "postedAt": row[8].isoformat() if row[8] else None,
+                "requiredSkills": row[9] or [],
+                "preferredSkills": row[10] or [],
+            }
+            for row in rows
+        ]
+
+    def save_job_posting(self, user_id: int, job_id: int) -> dict[str, Any] | None:
+        with self._connect() as connection, connection.transaction():
+            existing = connection.execute(
+                "SELECT application_id FROM app.job_applications WHERE user_id = %s AND job_id = %s",
+                (user_id, job_id),
+            ).fetchone()
+            if existing:
+                application_id = existing[0]
+            else:
+                inserted = connection.execute(
+                    """
+                    INSERT INTO app.job_applications (
+                        user_id, job_id, company_id, company_name, job_title, status
+                    )
+                    SELECT %s, j.job_id, j.company_id, c.company_name, j.job_title,
+                           'interested'::app.application_status
+                    FROM market.job_postings AS j
+                    LEFT JOIN core.companies AS c ON c.company_id = j.company_id
+                    WHERE j.job_id = %s
+                    RETURNING application_id
+                    """,
+                    (user_id, job_id),
+                ).fetchone()
+                if inserted is None:
+                    return None
+                application_id = inserted[0]
+                connection.execute(
+                    """
+                    INSERT INTO app.application_status_events (application_id, previous_status, status)
+                    VALUES (%s, NULL, 'interested'::app.application_status)
+                    """,
+                    (application_id,),
+                )
+            row = connection.execute(
+                _SELECT_APPLICATION + " WHERE a.user_id = %s AND a.application_id = %s",
+                (user_id, application_id),
+            ).fetchone()
+            history = self._histories(connection, [application_id]).get(application_id, [])
+        return self._view(row, history)
 
     def get_for_user(self, user_id: int, application_id: int) -> dict[str, Any] | None:
         with self._connect() as connection:
@@ -178,7 +261,7 @@ class ApplicationsRepository:
     @staticmethod
     def _view(row: tuple, history: list[dict[str, str]]) -> dict[str, Any]:
         (application_id, company_name, related_company, job_title, db_status, created_at, updated_at, applied_at,
-         notes, job_url, job_description, location, rejection_category, rejection_reason) = row
+         notes, job_url, job_description, location, rejection_category, rejection_reason, job_id) = row
         status = DB_TO_UI_STATUS.get(db_status, db_status)
         relevant_date = updated_at or created_at
         label = {"wishlist": "Added", "applied": "Applied", "interview": "Interview"}.get(status, "Updated")
@@ -197,6 +280,7 @@ class ApplicationsRepository:
             "statusHistory": history,
             "rejectionCategory": rejection_category,
             "rejectionReason": rejection_reason or "",
+            "jobId": str(job_id) if job_id is not None else None,
         }
 
 

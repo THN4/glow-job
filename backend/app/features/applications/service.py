@@ -23,6 +23,17 @@ class ApplicationsService:
         applications = await asyncio.to_thread(self.repository.list_for_user, user_id)
         return {"applications": applications}
 
+    async def list_job_postings(self, limit: int = 60) -> dict[str, Any]:
+        jobs = await asyncio.to_thread(self.repository.list_job_postings, limit)
+        return {"jobPostings": jobs}
+
+    async def save_job_posting(self, profile_id: str, session_id: str, job_id: int) -> dict[str, Any]:
+        user_id = await self._owner(profile_id, session_id)
+        application = await asyncio.to_thread(self.repository.save_job_posting, user_id, job_id)
+        if application is None:
+            raise AppError("JOB_POSTING_NOT_FOUND", "The job posting was not found.")
+        return application
+
     async def get(self, profile_id: str, session_id: str, application_id: int) -> dict[str, Any]:
         user_id = await self._owner(profile_id, session_id)
         application = await asyncio.to_thread(self.repository.get_for_user, user_id, application_id)
