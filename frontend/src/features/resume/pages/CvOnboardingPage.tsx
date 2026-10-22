@@ -169,6 +169,17 @@ export function CvOnboardingPage() {
     return labels[status] ?? status
   }
 
+  const displayedMatchSkills = match ? [...match.skills].sort((a, b) => {
+    if (a.isCoreSkill !== b.isCoreSkill) return a.isCoreSkill ? -1 : 1
+    if (a.isCoreSkill && b.isCoreSkill) {
+      const aPriority = a.priorityRank ?? Number.MAX_SAFE_INTEGER
+      const bPriority = b.priorityRank ?? Number.MAX_SAFE_INTEGER
+      if (aPriority !== bPriority) return aPriority - bPriority
+      return (a.coreRank ?? Number.MAX_SAFE_INTEGER) - (b.coreRank ?? Number.MAX_SAFE_INTEGER)
+    }
+    return a.skillName.localeCompare(b.skillName)
+  }) : []
+
   const activeStep = step === 'upload' || step === 'processing' ? 1 : step === 'review' ? 2 : 5
   return (
     <main className="min-h-screen bg-sky-50 p-4 sm:p-8">
@@ -230,12 +241,14 @@ export function CvOnboardingPage() {
             {matchError && <p role="alert" className="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{matchError}</p>}
             {careerProfiles.length === 0 && !matchError && <p className="mt-3 text-sm text-slate-500">ยังไม่มีอาชีพที่มีข้อมูลตลาดให้เปรียบเทียบ</p>}
             {match && <div className="mt-6 space-y-5">
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[["ความครอบคลุมทักษะตลาด", match.scores.marketSkillCoveragePct], ["ความสอดคล้องของระดับ", match.scores.proficiencyAlignmentPct], ["ทักษะที่ประเมินระดับได้", match.scores.assessmentCoveragePct]].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-blue-100 bg-white p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold text-blue-700">{percentage(value as number | null)}</p></div>)}
+              <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">คะแนนหลักคำนวณจาก Top {match.coreSkillPolicy.nominalLimit} ทักษะตามน้ำหนักความต้องการของตลาด รวมทักษะที่น้ำหนักเสมอกับอันดับสุดท้ายด้วย คะแนนนี้แสดงการครอบคลุมทักษะในโปรไฟล์ ไม่ใช่คะแนนความพร้อมทำงาน</p>
+              <p className="text-xs text-slate-500">Gap score แสดงขนาดช่องว่างโดยประมาณ ส่วน Priority score คูณ Gap score กับน้ำหนักตลาดของทักษะนั้น รายการ “ยังไม่พบในโปรไฟล์” เป็นเพียงข้อเสนอให้ตรวจยืนยัน</p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {[[`Core ${match.coreSkillPolicy.nominalLimit} ครอบคลุม`, match.scores.coreSkillMatchPct], ["ความครอบคลุมทักษะตลาดทั้งหมด", match.scores.marketSkillCoveragePct], ["ความสอดคล้องของระดับ", match.scores.proficiencyAlignmentPct], ["ทักษะที่ประเมินระดับได้", match.scores.assessmentCoveragePct]].map(([label, value]) => <div key={String(label)} className="rounded-xl border border-blue-100 bg-white p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold text-blue-700">{percentage(value as number | null)}</p></div>)}
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600"><span>สถานะ: <strong className="text-slate-900">{match.status === 'ready' ? 'พร้อมใช้งาน' : match.status === 'estimated' ? 'ผลประเมินเบื้องต้น' : 'ข้อมูลไม่เพียงพอ'}</strong></span><span>ตลาดอ้างอิง {match.marketSample.totalJobs} ประกาศงาน</span>{match.marketWindow && <span>ช่วงข้อมูล {match.marketWindow.startDate} ถึง {match.marketWindow.endDate}</span>}</div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600"><span>Core skills ที่พบในโปรไฟล์: <strong className="text-slate-900">{match.skillSummary.coreCovered}/{match.coreSkillPolicy.includedCount}</strong></span><span>สถานะข้อมูล: <strong className="text-slate-900">{match.status === 'ready' ? 'เพียงพอ' : match.status === 'estimated' ? 'ประเมินเบื้องต้น' : 'ไม่เพียงพอ'}</strong></span><span>ตลาดอ้างอิง {match.marketSample.totalJobs} ประกาศงาน</span>{match.marketWindow && <span>ช่วงข้อมูล {match.marketWindow.startDate} ถึง {match.marketWindow.endDate}</span>}</div>
               {match.warnings.length > 0 && <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{match.warnings.join(' ')}</div>}
-              <div className="overflow-x-auto rounded-xl border border-blue-100 bg-white"><table className="w-full min-w-[620px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="px-4 py-3">ทักษะที่ตลาดต้องการ</th><th className="px-4 py-3">ระดับในตลาด</th><th className="px-4 py-3">ระดับจาก CV</th><th className="px-4 py-3">ผล</th></tr></thead><tbody className="divide-y divide-slate-100">{match.skills.map((skill) => <tr key={skill.skillName}><td className="px-4 py-3 font-medium text-slate-900">{skill.skillName}<span className="ml-2 text-xs font-normal text-slate-500">ความต้องการ {skill.demandPercentage.toFixed(1)}%</span></td><td className="px-4 py-3">{skill.marketTargetLevel ?? 'ไม่ระบุ'}</td><td className="px-4 py-3">{skill.userProficiencyLevel ?? 'ไม่พบ/ไม่ระบุ'}</td><td className="px-4 py-3">{matchStatusLabel(skill.status)}</td></tr>)}</tbody></table></div>
+              <div className="overflow-x-auto rounded-xl border border-blue-100 bg-white"><table className="w-full min-w-[980px] text-left text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="px-4 py-3">ลำดับ / ทักษะ</th><th className="px-4 py-3">ระดับตลาด / CV</th><th className="px-4 py-3">สถานะ</th><th className="px-4 py-3">Gap score</th><th className="px-4 py-3">Priority score</th><th className="px-4 py-3">ยืนยันเพิ่ม</th></tr></thead><tbody className="divide-y divide-slate-100">{displayedMatchSkills.map((skill) => <tr key={skill.skillId}><td className="px-4 py-3 font-medium text-slate-900">{skill.isCoreSkill ? <span className="mr-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs text-blue-800">Core #{skill.coreRank}</span> : <span className="mr-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">นอก Core</span>}{skill.priorityRank != null && <span className="mr-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-900">Gap #{skill.priorityRank}</span>}{skill.skillName}<span className="ml-2 block text-xs font-normal text-slate-500">ตลาดต้องการ {skill.demandPercentage.toFixed(1)}%</span></td><td className="px-4 py-3">{skill.marketTargetLevel ?? 'ไม่ระบุ'} / {skill.userProficiencyLevel ?? 'ไม่พบ/ไม่ระบุ'}</td><td className="px-4 py-3">{matchStatusLabel(skill.status)}</td><td className="px-4 py-3">{skill.gapScore == null ? '—' : `${(skill.gapScore * 100).toFixed(1)}%`}</td><td className="px-4 py-3">{skill.priorityScore == null ? '—' : skill.priorityScore.toFixed(2)}</td><td className="px-4 py-3">{skill.requiresConfirmation ? 'ควรตรวจยืนยัน' : 'ไม่ต้องยืนยันเพิ่ม'}</td></tr>)}</tbody></table></div>
               {match.unmatchedUserSkills.length > 0 && <p className="text-xs text-slate-500">ทักษะจาก CV ที่ยังจับคู่กับ catalog ไม่ได้: {match.unmatchedUserSkills.map((skill) => skill.rawSkillName).join(', ')}</p>}
             </div>}
           </div>

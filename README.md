@@ -10,6 +10,7 @@ NTT DATA Digital Innovation Challenge 2026
 - [Prepared-document dependencies](data-pipeline/docs/documents/skill-dependency-review-guide.md) — read the prepared corpus, review cited proposals with a/r, export accepted guidance for the AI team. Quick review in CMD: `scripts\rag\review_dependencies.cmd`.
 - [Skill Knowledge Context](docs/rag/skill-knowledge-context-guide.md) — skill-filtered retrieval, Gemini text review, cited learning context and foundation mentions without inventing missing lessons.
 - [Agent Context assembly](docs/rag/agent-context-guide.md) — combine saved profile/goal, Market gaps, cited knowledge and grouped foundations locally; includes the AI handoff schema.
+- [Roadmap generation](docs/roadmap/roadmap-generation.md) — Claude (Opus 5.5) turns Agent Context into a saved, cited roadmap; mock provider by default, Bedrock-ready, with spend guards. [API contract](docs/roadmap/api-contract.md) and [frontend handoff (Thai)](docs/roadmap/frontend-handoff.md).
 - [Local RAG data layout](rag/data/README.md) — output folders, file origins, current examples, archived runs, and generated-file handling.
 
 ## `data-pipeline` submodule

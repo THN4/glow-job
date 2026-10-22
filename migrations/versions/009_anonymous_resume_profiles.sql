@@ -1,5 +1,5 @@
 -- Allow the Resume onboarding flow to persist profiles before account login exists.
--- session_id is stored as the anonymous auth subject; the profile ID remains a
+-- session_id is stored as the anonymous auth subject, and the profile ID remains a
 -- separate opaque API identifier.
 ALTER TABLE app.users
     ALTER COLUMN email DROP NOT NULL;

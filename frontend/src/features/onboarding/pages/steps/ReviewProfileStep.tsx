@@ -21,13 +21,15 @@ type ReviewProfileStepProps = {
   onChange: (updates: Partial<Profile>) => void
   onContinue: () => void
   onBack: () => void
+  isSaving?: boolean
+  saveError?: string | null
 }
 
 function SkillChips({ skills }: { skills: string[] }) {
   return <div className="flex flex-wrap gap-2">{skills.map((skill) => <SkillChip key={skill}>{skill}</SkillChip>)}</div>
 }
 
-export function ReviewProfileStep({ profile, source, onChange, onContinue, onBack }: ReviewProfileStepProps) {
+export function ReviewProfileStep({ profile, source, onChange, onContinue, onBack, isSaving = false, saveError }: ReviewProfileStepProps) {
   const [editing, setEditing] = useState<ProfileSection | 'all' | null>(null)
   const [validationAttempted, setValidationAttempted] = useState(false)
   const skillsBlock = useRef<HTMLElement>(null)
@@ -51,7 +53,7 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
     <p className="mb-4 flex items-start gap-2 rounded-lg border border-warning/20 bg-icon-amber/50 p-3 text-sm leading-5 text-foreground">
       <CircleAlert className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden="true" />{reviewCopy.reviewWarning}
     </p>
-    <div className="grid gap-4 xl:grid-cols-2">
+    <fieldset disabled={isSaving} className="grid min-w-0 gap-4 xl:grid-cols-2">
       <InfoCard title={reviewCopy.titles.education} icon={GraduationCap} color="green" className="xl:min-h-44"
         onEdit={(event) => openEditor('education', event)}>
         <div className="space-y-1 px-1">
@@ -105,13 +107,16 @@ export function ReviewProfileStep({ profile, source, onChange, onContinue, onBac
           </article>)}
         </div> : <p className="px-1 py-3 text-muted-foreground">{reviewCopy.empty.certifications}</p>}
       </InfoCard>
-    </div>
+    </fieldset>
     <div className="@container mt-auto pt-6">
+      {saveError && <p role="alert" className="mb-3 text-sm text-destructive">{saveError}</p>}
       {!skillLevelsComplete && <p role="status" aria-live="polite" className="mb-3 text-sm leading-5 text-muted-foreground">
         {reviewCopy.skillLevelsBeforeContinue}
       </p>}
       <StepNavigation onBack={onBack} onContinue={continueAfterReview} continueLabel={reviewCopy.continue}
+        isLoading={isSaving}
         extraActions={<Button type="button" variant="outline" onClick={(event) => openEditor('all', event)}
+          disabled={isSaving}
           className="h-12 border-input bg-card px-5 text-base text-primary">{reviewCopy.editProfile}</Button>} />
     </div>
     {editing && <EditSectionDialog key={editing} section={editing} profile={profile} onSave={onChange}

@@ -7,7 +7,8 @@ import { onboardingCopy } from '../../../lib/constants'
 import { PreferencesStep } from '../pages/steps/PreferencesStep'
 import { CareerGoalStep } from '../pages/steps/CareerGoalStep'
 import { careerGoalSchema } from '../types'
-import { analyzeCv, createEmptyProfile } from '../../../lib/api'
+import { createEmptyProfile } from '../../../lib/api'
+import { analyzeOnboardingCv } from '../api/cvAnalysisApi'
 import { ReviewProfileStep } from '../pages/steps/ReviewProfileStep'
 import { Sparkles } from 'lucide-react'
 import { preferencesCopy } from '../../../lib/preferencesConstants'
@@ -18,6 +19,8 @@ import { AnalysisNavigation } from '../components/analysis/AnalysisNavigation'
 import { hasRequiredSkillLevels, markProfileReviewed } from '../../../lib/profileReview'
 import { focusField } from '../../../lib/focusField'
 import { hasProfileInformation } from '../profileFromCv'
+import { saveCareerGoal, saveProfile, type CvProfile } from '../../resume/api'
+import { toSavedCvProfile } from '../api/profilePersistence'
 
 export function OnboardingFlow() {
   const {
@@ -36,6 +39,11 @@ export function OnboardingFlow() {
   const [analysis, setAnalysis] = useState<{ steps: AnalysisStep[]; error: string | null; ready: boolean } | null>(null)
   const analysisController = useRef<AbortController | null>(null)
   const [goalValidationAttempted, setGoalValidationAttempted] = useState(false)
+  const extractedProfile = useRef<CvProfile | undefined>(undefined)
+  const saving = useRef(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [goalSaved, setGoalSaved] = useState(false)
 
   useEffect(() => () => analysisController.current?.abort(), [])
 
@@ -48,6 +56,8 @@ export function OnboardingFlow() {
 
   function continueWithoutCv() {
     cancelAnalysis()
+    extractedProfile.current = undefined
+    setSaveError(null)
     updateData({ cvFile: null, profileSource: 'manual',
       profile: data.profileSource === 'cv' ? createEmptyProfile() : data.profile,
     })
@@ -65,22 +75,31 @@ export function OnboardingFlow() {
     setIsUploading(true)
     setAnalysis({ steps: analysisCopy.steps.map(({ id }) => ({ id, status: 'pending' })), error: null, ready: false })
     try {
-      const profile = await analyzeCv(data.cvFile, {
+      const result = await analyzeOnboardingCv(data.cvFile, {
         signal: controller.signal,
         onProgress: (id, status) => {
           if (controller.signal.aborted) return
+          const activeIndex = analysisCopy.steps.findIndex((step) => step.id === id)
           setAnalysis((current) => current && ({ ...current,
-            steps: current.steps.map((step) => step.id === id ? { ...step, status } : step),
+            steps: current.steps.map((step, index) => ({
+              ...step,
+              status: index < activeIndex ? 'done' : index === activeIndex ? status : 'pending',
+            })),
           }))
         },
       })
       if (controller.signal.aborted) return
-      updateData({ profile, profileSource: 'cv' })
-      setAnalysis((current) => current && ({ ...current, ready: true }))
-    } catch {
+      extractedProfile.current = result.cvProfile
+      updateData({ profile: result.profile, profileSource: 'cv' })
+      setAnalysis((current) => current && ({
+        ...current,
+        steps: current.steps.map((step) => ({ ...step, status: 'done' })),
+        ready: true,
+      }))
+    } catch (caught) {
       if (controller.signal.aborted) return
       setAnalysis((current) => current && ({ ...current,
-        error: analysisCopy.errors.generic,
+        error: caught instanceof Error ? caught.message : analysisCopy.errors.generic,
       }))
     } finally {
       if (analysisController.current === controller) {
@@ -101,7 +120,8 @@ export function OnboardingFlow() {
       : currentStep === 2 ? hasRequiredSkillLevels(data.profile)
         : currentStep === 3 ? careerGoalSchema.safeParse(data).success : true
 
-  function handleContinue() {
+  async function handleContinue() {
+    if (saving.current) return
     if (!canContinue) {
       if (currentStep === 3) {
         setGoalValidationAttempted(true)
@@ -110,12 +130,44 @@ export function OnboardingFlow() {
       return
     }
     if (currentStep === 5) {
-      console.log('Onboarding data:', data)
+      saving.current = true
+      setIsSaving(true)
+      setGoalSaved(false)
+      setSaveError(null)
+      try {
+        await saveCareerGoal({
+          targetRole: data.targetRole.trim(),
+          deadline: data.deadline,
+          customDeadlineDate: data.deadline === 'custom' ? data.customDeadlineDate : null,
+          ...data.preferences,
+        })
+        setGoalSaved(true)
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'บันทึกเป้าหมายและ Preferences ไม่สำเร็จ กรุณาลองอีกครั้ง')
+      } finally {
+        saving.current = false
+        setIsSaving(false)
+      }
       return
     }
 
     if (currentStep === 3) updateData({ targetRole: data.targetRole.trim() })
-    if (currentStep === 2) updateData({ profile: markProfileReviewed(data.profile) })
+    if (currentStep === 2) {
+      saving.current = true
+      setIsSaving(true)
+      setSaveError(null)
+      try {
+        const reviewed = markProfileReviewed(data.profile)
+        await saveProfile(toSavedCvProfile(reviewed, extractedProfile.current))
+        updateData({ profile: reviewed })
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'บันทึกโปรไฟล์ไม่สำเร็จ กรุณาลองอีกครั้ง')
+        return
+      } finally {
+        saving.current = false
+        setIsSaving(false)
+      }
+    }
     nextStep()
   }
 
@@ -124,10 +176,10 @@ export function OnboardingFlow() {
       currentStep={currentStep}
       completedSteps={completedSteps}
       availableSteps={availableSteps}
-      onStepChange={analysis ? undefined : goToStep}
-      onBack={currentStep > 1 ? previousStep : undefined}
+      onStepChange={analysis || isSaving ? undefined : goToStep}
+      onBack={currentStep > 1 && !isSaving ? previousStep : undefined}
       onContinue={currentStep === 1 || currentStep === 2 ? undefined : handleContinue}
-      continueLabel={currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
+      continueLabel={isSaving ? 'Saving...' : currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
       continueIcon={currentStep === 4 ? Sparkles : undefined}
       analyzing={Boolean(analysis)}
       footer={analysis && (analysis.ready || analysis.error) ? <AnalysisNavigation failed={Boolean(analysis.error)} ready={analysis.ready} onCancel={cancelAnalysis}
@@ -136,13 +188,14 @@ export function OnboardingFlow() {
       {analysis ? <AnalyzingCvStep steps={analysis.steps} error={analysis.error} ready={analysis.ready} /> : currentStep === 1 ? (
         <UploadCvStep
           file={data.cvFile}
-          onFileSelected={(cvFile) => { updateData({ cvFile, profile: createEmptyProfile(), profileSource: 'manual' }) }}
+          onFileSelected={(cvFile) => { extractedProfile.current = undefined; setSaveError(null); updateData({ cvFile, profile: createEmptyProfile(), profileSource: 'manual' }) }}
           onUpload={handleUpload}
           isUploading={isUploading}
           onContinueWithoutCv={continueWithoutCv}
         />
       ) : currentStep === 2 ? (
         <ReviewProfileStep profile={data.profile} source={data.profileSource} onChange={updateProfile}
+          isSaving={isSaving} saveError={saveError}
           onContinue={handleContinue} onBack={previousStep} />
       ) : currentStep === 3 ? (
         <CareerGoalStep targetRole={data.targetRole} deadline={data.deadline}
@@ -158,6 +211,8 @@ export function OnboardingFlow() {
         <section>
           <PageHeader {...onboardingCopy.headers[currentStep]} />
           <p className="mt-2 text-sm text-muted-foreground">{onboardingCopy.placeholder}</p>
+          {goalSaved && <p className="mt-4 text-sm font-medium text-emerald-700" role="status">Career goal and preferences saved.</p>}
+          {saveError && <p className="mt-4 text-sm text-destructive" role="alert">{saveError}</p>}
         </section>
       )}
     </OnboardingLayout>

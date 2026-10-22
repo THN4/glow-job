@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "KNOWLEDGE_NOT_READY",
+    "message": "Learning content for this career is not ready yet.",
+    "retryable": false
+  }
+}

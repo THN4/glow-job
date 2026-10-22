@@ -1,0 +1,15 @@
+{
+  "goal": {
+    "goalId": 2,
+    "careerId": 1,
+    "careerProfileId": 1,
+    "targetRoleTitle": "Data Engineer",
+    "readinessTimeframe": "three_months",
+    "targetDate": "2027-01-18",
+    "weeklyAvailability": "hours_2_to_5",
+    "availableHoursPerWeek": null,
+    "preferredLearningStyle": "hands_on_projects",
+    "additionalContext": "Preparing for a data engineering internship.",
+    "updatedAt": "2026-10-19T08:55:00+00:00"
+  }
+}

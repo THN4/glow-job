@@ -94,14 +94,17 @@ Returns an empty `CvProfile` (all lists `[]`, scalars `null`), for **"Continue w
 
 ## 3.6 `PUT /api/profiles`
 
-Saves the profile after the user has reviewed and edited it ("Looks good, continue").
+Saves the profile after the user has reviewed and edited it ("Confirm and save profile").
 
 **Request**
 ```json
 { "sessionId": "f93efc05-e67b-47a7-a81a-c9834d6d8b85", "profileId": null, "profile": { "schemaVersion": 1, "…": "…" } }
 ```
 
-- `profileId: null` creates a new profile. Passing an existing id updates it.
+- `profileId: null` creates a new profile. Passing the current profile id updates it.
+  If the same anonymous session already owns a profile but a different or null
+  `profileId` is sent, the API returns `409 PROFILE_ALREADY_EXISTS` instead of
+  replacing the existing profile.
 - The body is validated against `CvProfile`. Invalid input returns `400 INVALID_PROFILE` with field paths in `error.details`.
 - The backend ignores any client-supplied `catalogMatch` and recomputes it from
   the current catalog before saving. It never trusts a client-provided `skillId`.
@@ -111,15 +114,38 @@ Saves the profile after the user has reviewed and edited it ("Looks good, contin
 
 **Response `200`**: `{ "profileId": "prf_51aa…", "updatedAt": "2026-10-05T10:00:00Z" }`
 
-## 3.7 `GET /api/profiles/{profileId}`
+## 3.7 `PUT /api/profiles/{profileId}/career-goal`
+
+Saves the onboarding Career Goal and Preferences for the profile owner. The
+required `X-Session-Id` header must match the anonymous session that saved the
+profile. The API upserts the user's primary row in `app.user_career_goals` and
+updates `app.user_profiles.current_status` in one transaction. This endpoint
+requires the database-backed profile store.
+
+```json
+{
+  "targetRole": "Data Analyst",
+  "deadline": "custom",
+  "customDeadlineDate": "2027-01-15",
+  "hoursPerWeek": "5_to_10",
+  "learningStyle": "projects",
+  "situation": "student",
+  "notes": "Interested in healthcare data"
+}
+```
+
+**Response `200`**: `{ "saved": true }`. Repeating the request updates the
+primary goal rather than creating another one.
+
+## 3.8 `GET /api/profiles/{profileId}`
 
 Returns `{ "profileId", "updatedAt", "profile": CvProfile }`, or `404 PROFILE_NOT_FOUND`.
 
-## 3.8 `GET /api/health`
+## 3.9 `GET /api/health`
 
 Returns `{ "status": "ok", "extractor": "mock" }` (the extractor value depends on backend configuration).
 
-## 3.9 Errors
+## 3.10 Errors
 
 One envelope everywhere (for job failures it appears under `error` in the poll response):
 
@@ -135,6 +161,7 @@ One envelope everywhere (for job failures it appears under `error` in the poll r
 | 415 | `UNSUPPORTED_FILE_TYPE` | Not a PDF/JPG/PNG/WEBP (declared, or detected by the worker) | "We support PDF, JPG and PNG." |
 | 404 | `UPLOAD_NOT_FOUND` | Unknown/expired `uploadId`, or the file was never uploaded | "Upload expired. Please choose your file again." |
 | 404 | `JOB_NOT_FOUND` / `PROFILE_NOT_FOUND` | Unknown id (or the job expired) | Restart the flow |
+| 409 | `PROFILE_ALREADY_EXISTS` | The session already has a profile but the request didn't identify it for an intentional update | Start a fresh profile session or use the existing profile ID |
 | 429 | `DAILY_LIMIT_REACHED` | The daily extraction cap (credit protection) is used up | "We've reached today's limit. Please try again tomorrow or fill in your profile manually." (`retryable: false`) |
 | 503 | `SKILL_CATALOG_UNAVAILABLE` | Catalog access is configured but the DB is unreachable, empty, or invalid | Retry later; do not treat skills as unmatched |
 | 503 | `PROFILE_STORE_UNAVAILABLE` | The configured DB could not save or load the confirmed profile | Retry later; the profile was not saved |
@@ -146,7 +173,7 @@ One envelope everywhere (for job failures it appears under `error` in the poll r
 | — (job) | `EXTRACTION_FAILED` | Provider error after retries, or invalid output | "Something went wrong. Please try again." (`retryable: true`) |
 | — (job) | `EXTRACTION_TIMEOUT` | Worker exceeded the configured extraction timeout | Same as above (`retryable: true`) |
 
-## 3.10 Client integration notes
+## 3.11 Client integration notes
 
 The current `/onboarding/cv` page is a temporary demo for inspecting extraction
 and match results. These steps describe how a client can use the API; they do
@@ -164,7 +191,7 @@ types aligned with them.
 8. **Types:** the demo's TypeScript API types live in `frontend/src/features/resume/api.ts`. A replacement client should derive or maintain its own types against `/openapi.json`, the API source of truth.
 9. **CORS:** local Compose allows `http://localhost:5173`; configure any additional frontend origin through `CORS_ORIGINS`.
 
-## 3.11 `GET /api/career-profiles`
+## 3.12 `GET /api/career-profiles`
 
 Lists active career profiles that have at least one market-statistics row. The existing CV onboarding page uses this endpoint to populate the career selector before calculating a match. This endpoint requires the shared database.
 
@@ -184,7 +211,7 @@ Lists active career profiles that have at least one market-statistics row. The e
 
 If the shared database is unavailable, it returns `503 CAREER_MATCH_UNAVAILABLE`.
 
-## 3.12 `GET /api/profiles/{profileId}/career-match`
+## 3.13 `GET /api/profiles/{profileId}/career-match`
 
 Compares a saved, user-confirmed profile with the latest available market-statistics window for one canonical career profile. This endpoint requires the shared database and does not use RAG; it calculates market coverage and level alignment deterministically from `app.user_skills` and `market.career_skill_stats`.
 
@@ -198,17 +225,25 @@ Compares a saved, user-confirmed profile with the latest available market-statis
   "marketSample": { "totalJobs": 120, "lastUpdated": "2026-07-01T00:00:00Z" },
   "status": "estimated",
   "scores": {
+    "coreSkillMatchPct": 76.5,
     "marketSkillCoveragePct": 72.4,
     "proficiencyAlignmentPct": 66.67,
     "assessmentCoveragePct": 54.0
   },
   "skillSummary": {
     "considered": 10,
+    "coreConsidered": 10,
+    "coreCovered": 6,
     "covered": 6,
     "missingFromProfile": 4,
     "notAssessed": 2,
     "marketDataInsufficient": 2,
     "excludedMarketSkills": 0
+  },
+  "coreSkillPolicy": {
+    "version": "weighted-top-20-with-cutoff-ties-v1",
+    "nominalLimit": 20,
+    "includedCount": 20
   },
   "skills": [
     {
@@ -229,6 +264,12 @@ Compares a saved, user-confirmed profile with the latest available market-statis
       "reasonCode": "USER_LEVEL_BELOW_MARKET_TARGET",
       "levelGap": 1,
       "levelFit": 0.6667,
+      "isCoreSkill": true,
+      "coreRank": 1,
+      "gapScore": 0.3333,
+      "priorityScore": 2.67,
+      "priorityRank": 2,
+      "requiresConfirmation": true,
       "evidence": [
         { "type": "project", "excerpt": "Built a data pipeline using Python...", "confidence": 0.9 }
       ]
@@ -243,7 +284,7 @@ Compares a saved, user-confirmed profile with the latest available market-statis
 }
 ```
 
-The percentages are derived scores, not the probability of being hired. `marketSkillCoveragePct` uses confirmed canonical skill presence weighted by `weighted_demand_score`. `proficiencyAlignmentPct` includes only confirmed skills with known user levels and sufficiently reliable market target levels. `assessmentCoveragePct` is the share of usable market weight included in proficiency alignment. User level `unknown` is `not_assessed`, never `beginner`. A null/zero market weight is excluded and disclosed rather than treated as zero demand. Small sample sizes, stale market statistics and incomplete level evidence produce an `estimated` status and warnings; provisional defaults are configurable with `MATCH_MIN_TOTAL_JOBS` (10), `MATCH_MAX_MARKET_AGE_DAYS` (180), `MATCH_MIN_LEVEL_OBSERVATIONS` (3), and `MATCH_MIN_TARGET_LEVEL_CONFIDENCE` (0.6). Each user's evidence is limited to at most three 320-character excerpts per skill, and unresolved catalog labels are returned separately in `unmatchedUserSkills`; neither is added to the score.
+The percentages are derived scores, not the probability of being hired. `coreSkillMatchPct` uses the top 20 skills by `weightedDemandScore` (including ties at the cutoff) and represents confirmed skill presence in that core set. `marketSkillCoveragePct` retains the all-usable-market coverage view. `proficiencyAlignmentPct` includes only confirmed skills with known user levels and sufficiently reliable market target levels. `assessmentCoveragePct` is the share of usable market weight included in proficiency alignment. Per-skill `gapScore` and `priorityScore` are populated only for Core skill gaps; a missing profile skill is a potential gap, so `requiresConfirmation` signals that the user should verify it. User level `unknown` is `not_assessed`, never `beginner`. A null/zero market weight is excluded and disclosed rather than treated as zero demand. Small sample sizes, stale market statistics and incomplete level evidence produce an `estimated` status and warnings; provisional defaults are configurable with `MATCH_MIN_TOTAL_JOBS` (10), `MATCH_MAX_MARKET_AGE_DAYS` (180), `MATCH_MIN_LEVEL_OBSERVATIONS` (3), and `MATCH_MIN_TARGET_LEVEL_CONFIDENCE` (0.6). Each user's evidence is limited to at most three 320-character excerpts per skill, and unresolved catalog labels are returned separately in `unmatchedUserSkills`; neither is added to the score.
 
 If no market stats are available, the endpoint returns `200` with `status: "insufficient_market_data"` and null scores rather than fabricated zero scores. If the profile is unknown it returns `404 PROFILE_NOT_FOUND`. If the backend is using local JSON profile storage or its database is unavailable it returns `503 CAREER_MATCH_UNAVAILABLE`.
 

@@ -15,7 +15,9 @@ The runner applies both directories in filename order and skips versions
 already recorded in `system.schema_migrations`. Migration `008` creates the
 application schema used by onboarding, resume review, career goals, and
 roadmaps. Migration `009` adds anonymous Resume profile persistence. These
-migrations are not applied to any database until the command is run.
+migrations are not applied to any database until the command is run. Migration
+`016` adds profile snapshots so a previous saved profile can be restored after
+an accidental update.
 
 Add a new migration with the next unused, zero-padded version number across
 both directories. Do not edit or renumber an already-applied migration.
@@ -29,6 +31,10 @@ migration `015`; scoped verified relationships are context only. Both files must
 be applied before writing through the current dependency workflow. Learning
 modules remain deferred; `app.roadmap_steps.module_id` will receive its foreign
 key when `knowledge.learning_modules` is implemented.
+
+Host migration `016` adds roadmap generation: step/task plan fields, the
+`app.roadmap_generations` snapshot table and token/cost columns on
+`system.ai_runs` (see [roadmap generation](../docs/roadmap/roadmap-generation.md)).
 
 ## Development user data
 
