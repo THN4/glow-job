@@ -21,17 +21,20 @@ Current functionality:
 - Prepare explicitly selected main skills' cited document Context through the
   pipeline retrieval service: skill-filtered embeddings, text-model review,
   source/quote validation and foundation/related mentions with coverage gaps.
-- Assemble saved User/Goal/Market inputs with cited knowledge into a typed Agent
-  Context preview, with disjoint gap counts, grouped foundations and a deduplicated
-  evidence registry. Numeric policy scores stay null and assembly makes no model calls.
+- Assemble saved User/Goal/Market inputs with cited knowledge into typed Agent
+  Context v0.4, with full-market and Core Top-20 match scores, all-market skill
+  assessments, per-skill gap/priority scores, grouped foundations and a deduplicated
+  evidence registry. Assembly makes no model calls or database writes.
 
 Use the [Skill Knowledge Context guide](../docs/rag/skill-knowledge-context-guide.md)
 for the phase-four CLI and output contract. It is a knowledge preview, not final
 personalized Agent Context or a generated Roadmap.
 
-The [Agent Context guide](../docs/rag/agent-context-guide.md) documents the next
-assembly layer and [JSON contract](../docs/rag/agent-context.schema.json). Its status
-remains `preview_pending_policies` until product scoring/selection policies are chosen.
+The [Agent Context guide](../docs/rag/agent-context-guide.md) documents the scored
+assembly layer and [JSON contract](../docs/rag/agent-context.schema.json). It uses
+versioned matching/gap policies shared with the Resume Career Match implementation.
+RAG main-skill selection remains an explicit upstream choice; score quality and
+document coverage are reported separately.
 
 Use the [stage-one guide](../docs/rag/context-data-guide.md) for commands and
 the [implementation progress](../docs/rag/implementation-progress.md) for the

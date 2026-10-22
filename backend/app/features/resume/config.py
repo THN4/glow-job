@@ -5,6 +5,12 @@ from __future__ import annotations
 from functools import lru_cache
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
+from rag.context.match_policy import (
+    MATCH_MAX_MARKET_AGE_DAYS,
+    MATCH_MIN_LEVEL_OBSERVATIONS,
+    MATCH_MIN_TARGET_LEVEL_CONFIDENCE,
+    MATCH_MIN_TOTAL_JOBS,
+)
 
 from src.resume.config import ResumeModelSettings
 
@@ -31,10 +37,12 @@ class CvSettings(ResumeModelSettings):
 
     # Initial, configurable quality gates for the demo career match. Coverage
     # remains available with small samples; low-quality inputs are disclosed.
-    MATCH_MIN_TOTAL_JOBS: int = Field(default=10, ge=0)
-    MATCH_MAX_MARKET_AGE_DAYS: int = Field(default=180, ge=0)
-    MATCH_MIN_LEVEL_OBSERVATIONS: int = Field(default=3, ge=0)
-    MATCH_MIN_TARGET_LEVEL_CONFIDENCE: float = Field(default=0.6, ge=0, le=1)
+    MATCH_MIN_TOTAL_JOBS: int = Field(default=MATCH_MIN_TOTAL_JOBS, ge=0)
+    MATCH_MAX_MARKET_AGE_DAYS: int = Field(default=MATCH_MAX_MARKET_AGE_DAYS, ge=0)
+    MATCH_MIN_LEVEL_OBSERVATIONS: int = Field(default=MATCH_MIN_LEVEL_OBSERVATIONS, ge=0)
+    MATCH_MIN_TARGET_LEVEL_CONFIDENCE: float = Field(
+        default=float(MATCH_MIN_TARGET_LEVEL_CONFIDENCE), ge=0, le=1
+    )
 
     @property
     def database_configured(self) -> bool:

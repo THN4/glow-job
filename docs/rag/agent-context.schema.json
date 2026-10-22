@@ -144,7 +144,8 @@
         "seniority_level",
         "market_window",
         "total_jobs",
-        "market_skill_count"
+        "market_skill_count",
+        "scores"
       ],
       "title": "CareerContext",
       "type": "object"
@@ -270,6 +271,45 @@
         "proficiency_basis"
       ],
       "title": "ConfirmedSkill",
+      "type": "object"
+    },
+    "CoreSkillPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "weighted-top-20-with-cutoff-ties-v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "nominal_limit": {
+          "exclusiveMinimum": 0,
+          "title": "Nominal Limit",
+          "type": "integer"
+        },
+        "included_count": {
+          "minimum": 0,
+          "title": "Included Count",
+          "type": "integer"
+        },
+        "eligible_skill_count": {
+          "minimum": 0,
+          "title": "Eligible Skill Count",
+          "type": "integer"
+        },
+        "excluded_skill_count": {
+          "minimum": 0,
+          "title": "Excluded Skill Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "version",
+        "nominal_limit",
+        "included_count",
+        "eligible_skill_count",
+        "excluded_skill_count"
+      ],
+      "title": "CoreSkillPolicy",
       "type": "object"
     },
     "DependencyLink": {
@@ -642,9 +682,23 @@
           "title": "Observed Level Gap"
         },
         "gap_score": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
-          "title": "Gap Score",
-          "type": "null"
+          "title": "Gap Score"
+        },
+        "requires_confirmation": {
+          "default": false,
+          "title": "Requires Confirmation",
+          "type": "boolean"
         },
         "reason_code": {
           "title": "Reason Code",
@@ -958,6 +1012,68 @@
       "title": "MarketSkill",
       "type": "object"
     },
+    "MarketSkillAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "market": {
+          "$ref": "#/$defs/MarketSkill"
+        },
+        "gap": {
+          "$ref": "#/$defs/GapAssessment"
+        },
+        "is_core_skill": {
+          "title": "Is Core Skill",
+          "type": "boolean"
+        },
+        "core_rank": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Core Rank"
+        },
+        "priority_score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority Score"
+        },
+        "priority_rank": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Priority Rank"
+        }
+      },
+      "required": [
+        "market",
+        "gap",
+        "is_core_skill"
+      ],
+      "title": "MarketSkillAssessment",
+      "type": "object"
+    },
     "MarketWindow": {
       "additionalProperties": false,
       "properties": {
@@ -992,18 +1108,35 @@
       "additionalProperties": false,
       "properties": {
         "rank": {
-          "exclusiveMinimum": 0,
-          "title": "Rank",
-          "type": "integer"
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rank"
         },
         "priority_score": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
           "default": null,
-          "title": "Priority Score",
-          "type": "null"
+          "title": "Priority Score"
         },
         "policy_version": {
-          "const": "explicit-caller-selection-v1",
-          "default": "explicit-caller-selection-v1",
+          "const": "core-weighted-gap-share-v1",
+          "default": "core-weighted-gap-share-v1",
           "title": "Policy Version",
           "type": "string"
         },
@@ -1016,7 +1149,6 @@
         }
       },
       "required": [
-        "rank",
         "reasons"
       ],
       "title": "Priority",
@@ -1191,28 +1323,145 @@
       "title": "RoadmapCandidate",
       "type": "object"
     },
+    "ScoreMetrics": {
+      "additionalProperties": false,
+      "properties": {
+        "core_skill_match_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Core Skill Match Pct"
+        },
+        "market_skill_coverage_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Market Skill Coverage Pct"
+        },
+        "proficiency_alignment_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Proficiency Alignment Pct"
+        },
+        "assessment_coverage_pct": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Assessment Coverage Pct"
+        }
+      },
+      "title": "ScoreMetrics",
+      "type": "object"
+    },
+    "ScoreQualityGates": {
+      "additionalProperties": false,
+      "properties": {
+        "min_total_jobs": {
+          "minimum": 0,
+          "title": "Min Total Jobs",
+          "type": "integer"
+        },
+        "max_market_age_days": {
+          "minimum": 0,
+          "title": "Max Market Age Days",
+          "type": "integer"
+        },
+        "min_level_observations": {
+          "minimum": 0,
+          "title": "Min Level Observations",
+          "type": "integer"
+        },
+        "min_target_level_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Min Target Level Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min_total_jobs",
+        "max_market_age_days",
+        "min_level_observations",
+        "min_target_level_confidence"
+      ],
+      "title": "ScoreQualityGates",
+      "type": "object"
+    },
     "ScoreState": {
       "additionalProperties": false,
       "properties": {
         "status": {
-          "const": "pending_example_comparison",
-          "default": "pending_example_comparison",
+          "enum": [
+            "ready",
+            "estimated",
+            "insufficient_market_data"
+          ],
           "title": "Status",
           "type": "string"
         },
         "policy_version": {
-          "default": null,
+          "const": "career-match-weighted-core-v1",
+          "default": "career-match-weighted-core-v1",
           "title": "Policy Version",
-          "type": "null"
+          "type": "string"
         },
         "metrics": {
+          "$ref": "#/$defs/ScoreMetrics"
+        },
+        "core_skill_policy": {
+          "$ref": "#/$defs/CoreSkillPolicy"
+        },
+        "quality_gates": {
+          "$ref": "#/$defs/ScoreQualityGates"
+        },
+        "warnings": {
           "default": [],
-          "maxItems": 0,
-          "minItems": 0,
-          "title": "Metrics",
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
           "type": "array"
         }
       },
+      "required": [
+        "status",
+        "metrics",
+        "core_skill_policy",
+        "quality_gates"
+      ],
       "title": "ScoreState",
       "type": "object"
     },
@@ -1313,8 +1562,8 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": "0.3",
-      "default": "0.3",
+      "const": "0.4",
+      "default": "0.4",
       "title": "Schema Version",
       "type": "string"
     },
@@ -1328,8 +1577,11 @@
       "type": "string"
     },
     "status": {
-      "const": "preview_pending_policies",
-      "default": "preview_pending_policies",
+      "enum": [
+        "ready",
+        "estimated",
+        "insufficient_market_data"
+      ],
       "title": "Status",
       "type": "string"
     },
@@ -1366,6 +1618,13 @@
     "selected_skill_gap_summary": {
       "$ref": "#/$defs/GapSummary"
     },
+    "market_skill_assessments": {
+      "items": {
+        "$ref": "#/$defs/MarketSkillAssessment"
+      },
+      "title": "Market Skill Assessments",
+      "type": "array"
+    },
     "roadmap_candidates": {
       "items": {
         "$ref": "#/$defs/RoadmapCandidate"
@@ -1396,12 +1655,14 @@
     }
   },
   "required": [
+    "status",
     "policy_versions",
     "provenance",
     "user_context",
     "career_context",
     "skill_gap_summary",
     "selected_skill_gap_summary",
+    "market_skill_assessments",
     "roadmap_candidates",
     "foundation_mentions",
     "evidence_registry",

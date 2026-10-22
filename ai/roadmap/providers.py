@@ -219,6 +219,14 @@ class MockRoadmapModel:
         skill_keys: list[str] = []
 
         for main in sorted(compact["main_skills"], key=lambda m: m["rank"]):
+            if main["recommendation"] == "needs_confirmation" or main["rag_status"] in {
+                "error", "not_reviewed", "insufficient_evidence",
+            }:
+                deferred.append(_defer(
+                    main, "NEEDS_CONFIRMATION",
+                    "Reviewed learning content is not available yet. Add or review sources before planning this skill.",
+                ))
+                continue
             if main["recommendation"] != "candidate":
                 continue
             low, high = self.HOURS.get(main["teaching_content"], (10, 16))

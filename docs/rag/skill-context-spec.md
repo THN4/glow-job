@@ -1,17 +1,17 @@
 # Glow-Job RAG & Skill Context Specification
 
-**Version:** Draft v0.3 — สำหรับตรวจทาน<br>
-**Updated:** 2026-10-16<br>
+**Version:** v0.4 — scoring policy และ Agent Context contract<br>
+**Updated:** 2026-10-22<br>
 **Scope:** Skill Gap, Career Match, Roadmap Skill Selection, Document-grounded Dependencies, RAG และ Agent Context<br>
 **Language:** Thai
 
-ปรับจาก `glow_job_rag_skill_context_spec_v0_2_th.md` ของผู้ใช้ โดยคงลำดับหัวข้อ 1–41 และปรับตามข้อสรุปในการสนทนา เอกสารนี้เป็นข้อกำหนดสำหรับงานที่จะพัฒนา ไม่ได้ยืนยันว่าฟังก์ชันใหม่หรือ migration ถูกนำไปใช้งานแล้ว
+เอกสารนี้ต่อยอดจาก draft v0.3 และระบุ scoring policy กับ Agent Context contract v0.4 ที่ implement แล้ว Backend มี roadmap-generation job ที่ประกอบและบันทึก Context ไปกับ generation แล้ว แต่ยังไม่ trigger อัตโนมัติหลัง onboarding และยังต้องเตรียม Knowledge Context ที่ครอบคลุม gap กับเชื่อม UI ก่อน production rollout
 
 คำว่า **ข้อกำหนด** หมายถึงแนวทางที่ตกลงกันแล้ว ส่วน **ข้อเสนอรอตรวจ** และ **TBD** หมายถึงรายละเอียดที่ยังต้องเลือกหรือวัดผลก่อน implementation ค่าตัวอย่างใน JSON เป็นข้อมูลสมมติ ไม่ใช่ผล query จาก DB หรือหลักฐาน prerequisite จริง
 
-เริ่ม implementation เป็นช่วงแล้ว ดู [สถานะงานและผลตรวจ](implementation-progress.md), [คู่มือ input preview](context-data-guide.md) และ [ผลทดลองคะแนนชุดแรก](market-score-comparison.md) ผลทดลองยังไม่ใช่นโยบายคะแนนที่เลือกใช้จริง
+ดู [สถานะงานและผลตรวจ](implementation-progress.md), [Agent Context v0.4](agent-context-guide.md), [คู่มือ input preview](context-data-guide.md) และ [ผลทดลองคะแนนชุดแรก](market-score-comparison.md) รายงานเปรียบเทียบเป็นประวัติการทดลอง; policy ที่เลือกใช้ปัจจุบันระบุในหัวข้อ 18–21 และ versioned Agent Context contract
 
-ข้อสรุปที่ผู้ใช้ยืนยันหลังตรวจซ้ำ: R1 งานรอบนี้จบที่การเตรียมข้อมูล/RAG/Agent Context และ contract ส่งต่อทีม AI/Backend; R2 เลื่อน reusable learning modules กลางออกไป; R3 เลือกสูตรและรูปแบบคะแนน Career Match หลังเทียบผลจากโปรไฟล์ตัวอย่าง ส่วน Roadmap Agent, หน้าจอ และการบันทึกแผนใน Backend อธิบายเป็นข้อกำหนดการเชื่อมต่อสำหรับทีมปลายทาง
+ข้อสรุปที่ผู้ใช้ยืนยันหลังตรวจซ้ำ: R1 งานรอบนี้จบที่การเตรียมข้อมูล/RAG/Agent Context และ contract ส่งต่อทีม AI/Backend; R2 เลื่อน reusable learning modules กลางออกไป; R3 ใช้ weighted Core Top 20, full-market coverage แยกต่างหาก และ versioned gap/priority scores ตามผลทบทวนในหัวข้อ 18–21 ส่วน Roadmap Agent, หน้าจอ และการบันทึกแผนใน Backend อยู่ใน repo แล้ว แต่การ trigger จาก onboarding และการเชื่อม UI เป็นงานต่อ
 
 ## เอกสารอ้างอิงและสถานะปัจจุบัน
 
@@ -345,7 +345,7 @@ Summary ของ Context ใหม่ต้องนับจาก final gap s
 
 ## 18. Gap Score
 
-**ข้อเสนอรอตรวจ:** สำหรับ known user/target levels ให้ใช้ความต่างของดัชนีเป็นข้อมูลหลัก และทดลอง normalizing แบบเดียวกับช่วงสี่ระดับของโค้ดเดิม:
+**นโยบายที่ implement ใน Agent Context v0.4:** สำหรับ known user/target levels ใช้ความต่างของดัชนีและ normalize ตามช่วงสี่ระดับ:
 
 ```text
 level_gap = max(0, target_index - user_index)
@@ -354,7 +354,9 @@ gap_score = level_gap / 3
 
 กำหนด `missing_from_profile` เป็น gap priority signal 1.0 ได้โดยระบุเหตุผลว่าไม่มีหลักฐานในโปรไฟล์ ส่วน `not_assessed` และ target ที่ประเมินไม่ได้ให้เป็น null ไม่ใช้ 0 แทนข้อมูลที่หาย
 
-สูตรนี้ยังไม่ final และไม่ใช่ estimated learning hours ไม่ใช้สูตรหารด้วย target index เพราะ beginner มีดัชนี 0
+ใช้เฉพาะ Core skills ตาม policy Top 20 (รวม cutoff ties); `missing_from_profile=1.0`, `covered=0.0`,
+และ status `not_assessed`, `market_data_insufficient` รวมถึง skill นอก Core เป็น null.
+สูตรนี้ไม่ใช่ estimated learning hours และไม่ใช่ calibrated measure of ability.
 
 ## 19. Career Match และเหตุผลที่ปรับสูตรใหม่
 
@@ -362,24 +364,27 @@ gap_score = level_gap / 3
 
 ปัจจุบันโค้ดใช้ `weighted_demand_score` ไม่ได้นับทุก skill เท่ากัน แต่ยังพิจารณา market skills ที่มีน้ำหนักบวกทั้งหมด จึงต้องมี eligibility policy เพิ่ม ไม่เปลี่ยนเพียงชื่อคะแนน
 
-**สถานะที่ยืนยัน:** ต้องเทียบผลจากโปรไฟล์ตัวอย่างก่อนเลือกสูตรและการแสดงผล ยังไม่กำหนดว่าผลลัพธ์จริงต้องมีคะแนนเดียวหรือสองคะแนน
-
-**หนึ่งในนโยบายที่จะนำไปเปรียบเทียบ:** Core fit สำหรับชุดทักษะหลักที่ผ่านเกณฑ์ตลาด และ Overall coverage สำหรับภาพรวม โดยกำหนด:
+**นโยบายที่ implement ใน Agent Context v0.4:** รายงาน Core skill match และ full-market coverage แยกกัน:
 
 ```text
-eligible_market_skills = ทักษะที่ผ่านเกณฑ์ sample, freshness และน้ำหนักข้อมูล
-core_market_skills = ชุดหลักที่คัดด้วย market policy จาก eligible_market_skills
+eligible_market_skills = ทักษะที่มี weighted_demand_score > 0
+core_market_skills = Top 20 eligible skills โดย weighted_demand_score รวม ties ที่ cutoff
 
 coverage(S) = 100 × sum(weight_i × user_has_confirmed_skill_i) / sum(weight_i)
 ```
 
-ใช้ `weighted_demand_score` เป็น candidate weight และเก็บ policy version เกณฑ์เลือก core ยังต้องทดลอง ห้ามใช้ tier ที่ว่าง/unknown แล้วตัด skill เกือบทั้งหมดโดยไม่รายงาน
+เกณฑ์ Top 20 ใช้ `weighted-top-20-with-cutoff-ties-v1`; ข้อมูล sample/freshness ไม่ตัดตัวหาร coverage
+เงียบ ๆ แต่ทำให้ status เป็น `estimated` พร้อม warning. Profile score ใช้เฉพาะ matched และ
+user-confirmed canonical IDs; unresolved names ไม่เข้า numerator.
 
 Coverage สูตรนี้วัดการมี skill ส่วน proficiency alignment ต้องรายงานแยกพร้อม assessment coverage เพราะระดับบางส่วนอาจ unknown เมื่อ denominator เป็นศูนย์ให้คืน null พร้อมเหตุผล
 
 ห้ามคำนวณ Career Match จาก Top-N Roadmap candidates เพราะจำนวน skill ที่เลือกและเวลาของผู้ใช้จะเปลี่ยนตัวหารของคะแนน ควรส่ง window, sample size, จำนวน skills ที่ใช้/ตัดออก และ warnings พร้อมคะแนนเสมอ
 
-การเปรียบเทียบต้องใช้ market snapshot เดียวกันและแสดงผลสูตรเดิมเทียบกับสูตรที่เสนอ โดยมีตัวอย่างอย่างน้อย: ผู้ใช้มีทักษะหลักครบแต่ขาดทักษะรองจำนวนมาก, ผู้ใช้มีทักษะรองแต่ขาดทักษะหลัก, ผู้ใช้มีหลายระดับที่ยัง unknown และผู้ใช้เปลี่ยนเวลา/จำนวน skill ใน Roadmap โดยทักษะเดิมไม่เปลี่ยน รายงานชุด skill ที่เป็นตัวหาร เหตุผลที่ตัดออก คะแนน และข้อจำกัดให้ผู้ใช้ตรวจ ก่อนบันทึกนโยบายที่เลือกเป็น version สำหรับใช้งานจริง
+ระบบรายงาน `proficiency_alignment_pct` และ `assessment_coverage_pct` แยกจาก presence score.
+ระดับ unknown ไม่ถูกแปลงเป็น beginner; หากระดับตลาดมี observation < 3 หรือ confidence < 0.6
+จะไม่นำคู่นั้นมาคำนวณ proficiency. ค่าเริ่มต้น quality gates คือ sample 10 jobs, อายุ Market
+สูงสุด 180 วัน, observations 3 และ target confidence 0.6; ตั้งค่าได้จาก Backend configuration.
 
 ## 20. Roadmap Skill Candidate Filtering
 
@@ -399,13 +404,11 @@ Roadmap selection ใช้ gap และข้อมูลตลาดชุด
 
 ## 21. Skill Priority Score
 
-**ยังไม่ยืนยันสูตรและ weight** สูตร 0.40/0.35/0.15/0.10 ใน v0.2 เป็นแนวคิดเดิม ไม่ใช่ค่าที่อนุมัติสำหรับ production
-
-Input หลักคือ gap, `weighted_demand_score`, requirement counts/shares ที่นิยามแล้ว และความน่าเชื่อถือของข้อมูล ระดับ confidence ที่หายต้องไม่ถูกแทนด้วยค่ามั่นใจสูง
-
-เริ่มเปรียบเทียบสูตรง่าย เช่น `gap_score × weighted_demand_score` กับวิธีจัดอันดับอื่นบนตัวอย่างจริง ตรวจด้วยคนว่าทักษะสำคัญขึ้นมาในลำดับที่เหมาะสม ก่อนเลือก scoring policy
-
-ผล ranking ต้องเก็บ policy version, input ที่ใช้, rank, score เมื่อคำนวณได้ และเหตุผล Tie-break ต้อง deterministic เช่น canonical `skill_id` เมื่อข้อมูลอื่นเท่ากัน
+สูตรที่ใช้อยู่คือ `100 × gap_score × (skill_weight / total_core_weight)` สำหรับ Core skill;
+version `core-weighted-gap-share-v1`. คำนวณเฉพาะ positive gap ที่มีข้อมูลพอ:
+missing profile evidence ใช้ gap 1.0, known proficiency gap ใช้ `level_gap/3`, ส่วน unknown
+คงเป็น null และไม่มี priority rank. Tie-break ใช้น้ำหนักตลาด, ชื่อ skill แบบ case-insensitive,
+แล้ว canonical `skill_id`. นโยบายนี้จัดลำดับสัญญาณตลาดและ gap เท่านั้น ไม่ประเมินเวลาเรียนหรือความยาก.
 
 ## 22. จำนวน Skill ที่ส่งเข้า Roadmap
 
@@ -650,13 +653,20 @@ User Context บอกเป้าหมาย พื้นฐาน รูป�
 
 มี implementation สำหรับประกอบ contract และตัวอย่างแล้วที่
 [Agent Context guide](agent-context-guide.md) / [JSON Schema](agent-context.schema.json)
-ใช้สถานะ `preview_pending_policies` ระหว่างรอเลือก production scoring/selection
-รวม User/Goal/Market/cited knowledge ในเครื่องโดยไม่เรียกโมเดลเพิ่ม
+ใช้ schema `0.4` และสถานะ score-quality `ready`, `estimated` หรือ `insufficient_market_data`.
+รวม User/Goal/Market/cited knowledge ในเครื่องโดยไม่เรียกโมเดลเพิ่ม และคำนวณ policy versions
+สำหรับ Career Match, gap, priority และ retrieval
 มี registry ที่รวม chunks ซ้ำและ foundation mentions ที่รวม canonical IDs แต่คง scope
 คำอธิบายแหล่งข้อมูลและข้อจำกัดไว้ ครอบคลุมทั้ง cohort และ selected gap summaries แยกกัน
-numeric scores ยังเป็น null และ rank เป็นลำดับที่ caller เลือก ไม่ใช่สูตร priority ใหม่
+มีคะแนน coverage/proficiency และ assessment coverage รวมถึง gap/priority ต่อทักษะใน Core.
+`market_skill_assessments` มีทุกแถวใน Market snapshot; `roadmap_candidates` ยังคงเป็น RAG subset
+ที่ caller เลือก ไม่ได้เปลี่ยนตัวหาร Career Match.
 
 Contract ตัวอย่างใช้ snake_case ภายใน Context; API เดิมของ Resume ใช้ camelCase จึงต้องมี adapter ที่ทดสอบแยก ไม่เปลี่ยน public API โดยอัตโนมัติ JSON contract ที่ตรวจด้วย schema ต้องสร้างใน implementation
+
+ตัวอย่าง JSON ต่อไปนี้เป็น draft schema v0.3 เพื่ออธิบายแนวคิดเท่านั้น และไม่ได้แสดง
+คะแนนที่ implement ภายหลัง; ใช้ [schema v0.4 ปัจจุบัน](agent-context.schema.json)
+และ [Agent Context guide](agent-context-guide.md) เป็น contract จริง
 
 ```json
 {
@@ -777,11 +787,12 @@ Contract ตัวอย่างใช้ snake_case ภายใน Context; A
 }
 ```
 
-แยก preview ที่ยังไม่เลือก policy ออกจาก Context ที่พร้อมใช้งานจริง Context สำหรับ production ต้องมี policy/model versions ที่กำหนดชัดและสถานะพร้อมใช้งานหรือข้อจำกัดที่ตรวจสอบได้
+ตัวอย่าง v0.3 ด้านบนถูกเก็บไว้เป็นประวัติการออกแบบ ไม่ใช่ payload ที่ validate กับ contract ปัจจุบัน
 
 Final Agent Context ต้องรักษาข้อมูล gap, market และ priority จาก Skill Context ไม่ย่อจนเหตุผลการเลือก skill หายไป กรณีผู้ใช้มี skill ให้แนบ `proficiency_basis` และ evidence excerpts ที่เกี่ยวข้อง; ตัวอย่างนี้ไม่มีหลักฐาน Airflow ในโปรไฟล์จึงเป็น null/รายการว่าง
 
-`scores.metrics` ยังว่างในตัวอย่างเพื่อแสดงว่ายังไม่เลือกนโยบายคะแนน หลังผู้ใช้ตรวจผลเปรียบเทียบในหัวข้อ 19 จึงกำหนด metric keys/สูตร/หน่วยและตรวจด้วย schema โดยไม่ล็อกให้ client ต้องรับ Core fit และ Overall coverage ตั้งแต่ร่างนี้
+Contract v0.4 กำหนด metric keys, สูตร, หน่วยและ versions แล้ว ส่วนคะแนน null หมายถึงตัวหาร
+หรือหลักฐานไม่เพียงพอ ไม่ได้หมายถึงรอนโยบายที่ยังไม่ได้เลือก
 
 ## 35. สิ่งที่ทีม AI ควรได้รับ
 
@@ -864,11 +875,11 @@ Dependency ที่ตรวจแล้วใช้ร่วมกันได
 
 ### 39.2 ผลลัพธ์เฉพาะผู้ใช้
 
-งานรอบนี้ส่ง Context พร้อมข้อมูล provenance/citations ให้ทีม AI/Backend ข้อกำหนดการเก็บข้อมูลต่อไปนี้เป็น contract สำหรับทีม Backend พัฒนา ไม่ใช่การเพิ่ม App persistence ในรอบนี้
+Agent Context ถูกสร้างใน roadmap-generation background job และบันทึกเป็น `agent_context` JSONB ใน `app.roadmap_generations` พร้อม generation/model metadata
 
 ทีม Backend เก็บแผน ลำดับเนื้อหา กิจกรรม เวลาโดยประมาณ และเหตุผลไว้กับ Roadmap ของผู้ใช้ผ่าน `app.roadmaps`, `app.roadmap_steps`, `app.roadmap_tasks` และ progress tables ที่มีอยู่
 
-บันทึก Agent Context ที่ใช้จริงพร้อมการตั้งค่า/model versions, market snapshot identity, selected skill IDs, retrieval queries/ผลที่เลือก, citations และเวลา generation การจัดเก็บ snapshot เป็น schema extension ที่ต้องเพิ่ม ยังไม่มีคอลัมน์ดังกล่าวครบในตารางปัจจุบัน
+ข้อมูลที่ยังต้องเติมให้ครบสำหรับ audit ระยะยาวคือ market snapshot identity และ retrieval selection/query provenance ใน generation snapshot; schema ปัจจุบันเก็บ Agent Context และ model/generation data แล้ว
 
 ไม่ต้องคัดลอกเอกสารทั้ง corpus ต่อผู้ใช้ แต่ควรเก็บ cited excerpts กับ source URL/heading/content hash ใน generation snapshot เพื่อรักษาหลักฐานเดิมเมื่อ chunks ถูกแทนที่ภายหลัง การอ้าง chunk ID อย่างเดียวไม่พอสำหรับประวัติระยะยาว
 
@@ -899,10 +910,10 @@ Dependency ที่ตรวจแล้วใช้ร่วมกันได
 - R2: เลื่อน reusable learning modules กลางออกไป ใช้ RAG เตรียมเนื้อหาที่เหมาะกับผู้เรียนและเก็บผลเฉพาะบุคคลกับ Roadmap ผ่านทีมปลายทาง
 - R3: เลือกสูตรและจำนวนคะแนนหลังเทียบผลจากโปรไฟล์ตัวอย่างตามหัวข้อ 19
 
-### 40.3 รายละเอียดที่ยังต้องทดลองหรือออกแบบ
+### 40.3 รายละเอียด draft v0.3 ที่ยังเปิดอยู่
 
-1. Market eligibility/core-skill criteria และสูตรคะแนนใหม่; ทดสอบและให้ผู้ใช้ตรวจผลก่อนเลือก
-2. Gap score, priority formula/weights และ target-level reliability policy
+1. Market eligibility/core-skill criteria และสูตรคะแนน: เลือกใช้ weighted Top 20 รวม ties ที่ cutoff และ full-market coverage แยกกันใน policy v0.4
+2. Gap score, priority formula/weights และ target-level reliability: implement ตามหัวข้อ 18–21; ยังต้องทบทวนผลเมื่อมีข้อมูล level ที่ยืนยันเพิ่ม
 3. Top-N main skills, time assumptions ของ availability bands และวิธีแจ้งแผนที่ไม่ทัน deadline
 4. Dependency depth/node budget, เกณฑ์ satisfied และการเก็บ minimum level/role scope ถ้าจำเป็น
 5. Retrieval intents, candidate/final Top-K, threshold และ token budgets

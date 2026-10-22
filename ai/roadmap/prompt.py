@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-PROMPT_VERSION = "roadmap-prompt-v2"
+PROMPT_VERSION = "roadmap-prompt-v3"
 
 SYSTEM_PROMPT = """\
 You plan personal learning roadmaps for Glow Job, a career-readiness app. You receive one
@@ -23,6 +23,9 @@ Scope
 - A main skill with recommendation "reference_only" or "needs_confirmation" does not get
   a "skill" step.
 - Every main skill must appear exactly once: as a "skill" step or in deferred.
+- When recommendation is "needs_confirmation", or rag_status is "insufficient_evidence",
+  "error" or "not_reviewed", defer it with reason NEEDS_CONFIRMATION. Explain that
+  reviewed learning content or a user confirmation is needed; do not invent lessons.
 - Defer a main skill when it does not fit planning_budget.total_hours (reason
   OUTSIDE_TIME_BUDGET), or when its teaching_content is "outline_only" and the budget is
   tight (reason CONTENT_OUTLINE_ONLY). A focused plan that fits the time is better than a

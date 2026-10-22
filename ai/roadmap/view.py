@@ -24,7 +24,7 @@ NOT_READY_NOTICE = "Related foundation found, but learning content is not ready 
 KIND = {"skill": "skill", "foundation_check": "foundation-check", "project": "project",
         "career_activity": "career-activity"}
 BASE_LIMITATIONS = [
-    "Readiness scores are not calculated yet. Progress only counts the tasks you complete.",
+    "Roadmap progress counts completed tasks only; it is not a career-readiness percentage.",
     "\"Not in your profile yet\" means your CV did not show it, not that you cannot do it.",
     "Hours are rough planning estimates, not measured learning time.",
 ]

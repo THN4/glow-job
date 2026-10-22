@@ -72,8 +72,27 @@ class RoadmapRepository:
         with self._connect() as connection:
             row = connection.execute(
                 f"""
-                SELECT {GOAL_COLUMNS} FROM app.user_career_goals AS g
-                WHERE g.user_id = %s AND g.career_profile_id IS NOT NULL
+                SELECT g.goal_id,
+                       coalesce(g.career_id, exact_match.career_id) AS career_id,
+                       coalesce(g.career_profile_id, exact_match.career_profile_id) AS career_profile_id,
+                       g.target_role_title, g.readiness_timeframe::text, g.target_date,
+                       g.weekly_availability::text, g.available_hours_per_week,
+                       g.preferred_learning_style::text, g.additional_context, g.updated_at
+                FROM app.user_career_goals AS g
+                LEFT JOIN LATERAL (
+                    SELECT min(candidate.career_id) AS career_id,
+                           min(candidate.career_profile_id) AS career_profile_id
+                    FROM (
+                        SELECT p.career_id, p.career_profile_id
+                        FROM core.career_profiles AS p
+                        JOIN core.careers AS c USING (career_id)
+                        WHERE p.is_active AND c.is_active
+                          AND lower(btrim(p.profile_name)) = lower(btrim(g.target_role_title))
+                    ) AS candidate
+                    HAVING count(*) = 1
+                ) AS exact_match ON g.career_profile_id IS NULL
+                WHERE g.user_id = %s
+                  AND coalesce(g.career_profile_id, exact_match.career_profile_id) IS NOT NULL
                 ORDER BY g.is_primary DESC, g.updated_at DESC, g.goal_id DESC LIMIT 1
                 """,
                 (user_id,),
@@ -149,7 +168,13 @@ class RoadmapRepository:
         with self._connect() as connection:
             inputs = load_inputs(connection, career_profile_id=career_profile_id, profile_id=profile_id,
                                  date_basis=date_basis)
-            return assemble_context(connection, inputs, knowledge, knowledge_sha256=sha256(raw).hexdigest())
+            return assemble_context(
+                connection, inputs, knowledge, knowledge_sha256=sha256(raw).hexdigest(),
+                min_total_jobs=self._settings.MATCH_MIN_TOTAL_JOBS,
+                max_market_age_days=self._settings.MATCH_MAX_MARKET_AGE_DAYS,
+                min_level_observations=self._settings.MATCH_MIN_LEVEL_OBSERVATIONS,
+                min_target_level_confidence=self._settings.MATCH_MIN_TARGET_LEVEL_CONFIDENCE,
+            )
 
     # ------------------------------------------------------------------ cost guards
 

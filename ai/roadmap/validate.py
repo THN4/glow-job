@@ -127,6 +127,12 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
         else:
             deferred.setdefault(item.skill_id, item)
     for skill_id, candidate in mains.items():
+        if (skill_id not in scheduled and skill_id not in deferred
+                and candidate.learning_recommendation == "needs_confirmation"):
+            deferred[skill_id] = DraftDeferred(
+                skill_id=skill_id, reason_code="NEEDS_CONFIRMATION",
+                note="Reviewed learning content or learner confirmation is needed before planning this skill.",
+            )
         if skill_id not in scheduled and skill_id not in deferred and candidate.learning_recommendation == "candidate":
             warnings.append(f"{candidate.skill_name} was not planned; it was added to deferred.")
             deferred[skill_id] = DraftDeferred(

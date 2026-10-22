@@ -16,7 +16,10 @@ Examples for every state: [shared/contracts/api/roadmap/examples/](../../shared/
 
 `careerProfileId` comes from `GET /career-profiles`. `targetRoleTitle` defaults to the
 career name. `targetDate` must be in the future. Each user has one primary goal, and PUT
-updates it.
+updates it. For a legacy saved goal with no `careerProfileId`, the backend resolves the
+career only when `targetRoleTitle` exactly matches one active career profile name after
+trimming whitespace and ignoring case. Custom or ambiguous titles remain unresolved; save
+the goal again with an explicit `careerProfileId` to link them.
 
 ## Generate a roadmap
 

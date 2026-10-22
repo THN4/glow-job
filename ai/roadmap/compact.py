@@ -118,11 +118,16 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
             {
                 "skill_id": c.skill_id,
                 "name": c.skill_name,
-                "rank": c.priority.rank,
+                # Selection order is controlled by the caller. Priority rank is a
+                # separate signal and may be null for zero/unknown gaps.
+                "rank": rank,
+                "priority_rank": c.priority.rank,
+                "priority_score": c.priority.priority_score,
                 "gap_status": c.gap.status,
                 "current_level": c.gap.current_level,
                 "target_level": c.gap.target_level,
                 "recommendation": c.learning_recommendation,
+                "rag_status": c.rag_status,
                 "teaching_content": c.teaching_content_status,
                 "market": None if c.market is None else {
                     "jobs_mentioning": c.market.demand_count,
@@ -136,7 +141,7 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 ],
                 "foundation_skill_ids": list(c.foundation_skill_ids),
             }
-            for c in context.roadmap_candidates
+            for rank, c in enumerate(context.roadmap_candidates, 1)
         ],
         "foundations": [
             {

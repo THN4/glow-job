@@ -86,13 +86,28 @@ def _load_user(connection: Any, profile_id: str, career_profile_id: int) -> User
     profile = profiles[0]
     user_id = profile.pop("user_id")
     goals = _dicts(connection, """
-        SELECT goal_id, career_id, career_profile_id, target_role_title,
+        SELECT g.goal_id, coalesce(g.career_id, exact_match.career_id) AS career_id,
+               coalesce(g.career_profile_id, exact_match.career_profile_id) AS career_profile_id,
+               g.target_role_title,
                readiness_timeframe::text, target_date, weekly_availability::text,
                available_hours_per_week, preferred_learning_style::text,
                additional_context
-        FROM app.user_career_goals
-        WHERE user_id = %s AND career_profile_id = %s
-        ORDER BY is_primary DESC, updated_at DESC, goal_id DESC LIMIT 1
+        FROM app.user_career_goals AS g
+        LEFT JOIN LATERAL (
+            SELECT min(candidate.career_id) AS career_id,
+                   min(candidate.career_profile_id) AS career_profile_id
+            FROM (
+                SELECT p.career_id, p.career_profile_id
+                FROM core.career_profiles AS p
+                JOIN core.careers AS c USING (career_id)
+                WHERE p.is_active AND c.is_active
+                  AND lower(btrim(p.profile_name)) = lower(btrim(g.target_role_title))
+            ) AS candidate
+            HAVING count(*) = 1
+        ) AS exact_match ON g.career_profile_id IS NULL
+        WHERE g.user_id = %s
+          AND coalesce(g.career_profile_id, exact_match.career_profile_id) = %s
+        ORDER BY g.is_primary DESC, g.updated_at DESC, g.goal_id DESC LIMIT 1
     """, (user_id, career_profile_id))
     rows = _dicts(connection, """
         SELECT u.user_skill_id, u.skill_id, s.skill_name, u.raw_skill_name,
