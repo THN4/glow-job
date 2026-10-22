@@ -198,17 +198,25 @@ Compares a saved, user-confirmed profile with the latest available market-statis
   "marketSample": { "totalJobs": 120, "lastUpdated": "2026-07-01T00:00:00Z" },
   "status": "estimated",
   "scores": {
+    "coreSkillMatchPct": 76.5,
     "marketSkillCoveragePct": 72.4,
     "proficiencyAlignmentPct": 66.67,
     "assessmentCoveragePct": 54.0
   },
   "skillSummary": {
     "considered": 10,
+    "coreConsidered": 10,
+    "coreCovered": 6,
     "covered": 6,
     "missingFromProfile": 4,
     "notAssessed": 2,
     "marketDataInsufficient": 2,
     "excludedMarketSkills": 0
+  },
+  "coreSkillPolicy": {
+    "version": "weighted-top-20-with-cutoff-ties-v1",
+    "nominalLimit": 20,
+    "includedCount": 20
   },
   "skills": [
     {
@@ -229,6 +237,12 @@ Compares a saved, user-confirmed profile with the latest available market-statis
       "reasonCode": "USER_LEVEL_BELOW_MARKET_TARGET",
       "levelGap": 1,
       "levelFit": 0.6667,
+      "isCoreSkill": true,
+      "coreRank": 1,
+      "gapScore": 0.3333,
+      "priorityScore": 2.67,
+      "priorityRank": 2,
+      "requiresConfirmation": true,
       "evidence": [
         { "type": "project", "excerpt": "Built a data pipeline using Python...", "confidence": 0.9 }
       ]
@@ -243,7 +257,7 @@ Compares a saved, user-confirmed profile with the latest available market-statis
 }
 ```
 
-The percentages are derived scores, not the probability of being hired. `marketSkillCoveragePct` uses confirmed canonical skill presence weighted by `weighted_demand_score`. `proficiencyAlignmentPct` includes only confirmed skills with known user levels and sufficiently reliable market target levels. `assessmentCoveragePct` is the share of usable market weight included in proficiency alignment. User level `unknown` is `not_assessed`, never `beginner`. A null/zero market weight is excluded and disclosed rather than treated as zero demand. Small sample sizes, stale market statistics and incomplete level evidence produce an `estimated` status and warnings; provisional defaults are configurable with `MATCH_MIN_TOTAL_JOBS` (10), `MATCH_MAX_MARKET_AGE_DAYS` (180), `MATCH_MIN_LEVEL_OBSERVATIONS` (3), and `MATCH_MIN_TARGET_LEVEL_CONFIDENCE` (0.6). Each user's evidence is limited to at most three 320-character excerpts per skill, and unresolved catalog labels are returned separately in `unmatchedUserSkills`; neither is added to the score.
+The percentages are derived scores, not the probability of being hired. `coreSkillMatchPct` uses the top 20 skills by `weightedDemandScore` (including ties at the cutoff) and represents confirmed skill presence in that core set. `marketSkillCoveragePct` retains the all-usable-market coverage view. `proficiencyAlignmentPct` includes only confirmed skills with known user levels and sufficiently reliable market target levels. `assessmentCoveragePct` is the share of usable market weight included in proficiency alignment. Per-skill `gapScore` and `priorityScore` are populated only for Core skill gaps; a missing profile skill is a potential gap, so `requiresConfirmation` signals that the user should verify it. User level `unknown` is `not_assessed`, never `beginner`. A null/zero market weight is excluded and disclosed rather than treated as zero demand. Small sample sizes, stale market statistics and incomplete level evidence produce an `estimated` status and warnings; provisional defaults are configurable with `MATCH_MIN_TOTAL_JOBS` (10), `MATCH_MAX_MARKET_AGE_DAYS` (180), `MATCH_MIN_LEVEL_OBSERVATIONS` (3), and `MATCH_MIN_TARGET_LEVEL_CONFIDENCE` (0.6). Each user's evidence is limited to at most three 320-character excerpts per skill, and unresolved catalog labels are returned separately in `unmatchedUserSkills`; neither is added to the score.
 
 If no market stats are available, the endpoint returns `200` with `status: "insufficient_market_data"` and null scores rather than fabricated zero scores. If the profile is unknown it returns `404 PROFILE_NOT_FOUND`. If the backend is using local JSON profile storage or its database is unavailable it returns `503 CAREER_MATCH_UNAVAILABLE`.
 

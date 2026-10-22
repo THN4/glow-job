@@ -63,18 +63,29 @@ export type CareerMatchResult = {
   marketSample: { totalJobs: number; lastUpdated: string | null }
   status: string
   scores: {
+    coreSkillMatchPct: number | null
     marketSkillCoveragePct: number | null
     proficiencyAlignmentPct: number | null
     assessmentCoveragePct: number | null
   }
-  skillSummary: { considered: number; covered: number; missingFromProfile: number; notAssessed: number; marketDataInsufficient: number; excludedMarketSkills: number }
+  skillSummary: { considered: number; coreConsidered: number; coreCovered: number; covered: number; missingFromProfile: number; notAssessed: number; marketDataInsufficient: number; excludedMarketSkills: number }
+  coreSkillPolicy: { version: string; nominalLimit: number; includedCount: number }
   skills: Array<{
+    skillId: number
     skillName: string
+    weightedDemandScore: number | null
     marketTargetLevel: string | null
     userProficiencyLevel: string | null
+    proficiencyBasis: string | null
     demandPercentage: number
     status: string
     reasonCode: string
+    isCoreSkill: boolean
+    coreRank: number | null
+    gapScore: number | null
+    priorityScore: number | null
+    priorityRank: number | null
+    requiresConfirmation: boolean
     evidence: Array<{ text?: string; source?: string; [key: string]: unknown }>
   }>
   unmatchedUserSkills: Array<{ rawSkillName: string; matchStatus: string }>
