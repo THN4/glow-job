@@ -23,6 +23,25 @@ export type ApplicationEntry = {
   statusHistory?: ApplicationHistoryEntry[]
   rejectionCategory?: string
   rejectionReason?: string
+  jobId?: string | null
+}
+
+export type CompanyOpening = {
+  id: string
+  jobId: number
+  company: string
+  role: string
+  location: string
+  workStyle: string
+  experience: string
+  description: string
+  accent: 'blue'
+  jobDescription: string
+  requiredSkills: string[]
+  preferredSkills: string[]
+  publisher: string
+  sourceUrl: string
+  postedAt: string | null
 }
 
 export type ApplicationHistoryEntry = {
@@ -36,8 +55,14 @@ export type ApplicationDateFilter = 'all' | '30-days' | 'this-year'
 
 export type CareerPathRecommendation = {
   id: string
+  careerProfileId: number
+  careerName: string
   title: string
+  seniorityLevel: string
   summary: string
+  scorePct: number | null
+  totalJobs: number
+  marketStatus: string
   transferableSkills: string[]
   developmentAreas: string[]
   iconTone: 'blue' | 'violet' | 'emerald'
