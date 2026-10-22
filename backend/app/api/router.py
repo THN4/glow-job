@@ -3,6 +3,8 @@
 from fastapi import APIRouter
 
 from app.features.resume.router import router as resume_router
+from app.features.roadmap.router import router as roadmap_router
 
 router = APIRouter()
 router.include_router(resume_router)
+router.include_router(roadmap_router)

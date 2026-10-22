@@ -39,10 +39,23 @@ services:
       DB_NAME: ${DB_NAME:-glowjob}
       DB_USER: ${DB_USER:-glowjob}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the root .env file}
+      # Roadmap generation. mock makes no model call and costs nothing.
+      ROADMAP_PROVIDER: ${ROADMAP_PROVIDER:-mock}
+      ROADMAP_MODEL_ID: ${ROADMAP_MODEL_ID:-}
+      ROADMAP_AWS_REGION: ${ROADMAP_AWS_REGION:-}
+      ROADMAP_EFFORT: ${ROADMAP_EFFORT:-medium}
+      ROADMAP_MONTHLY_BUDGET_USD: ${ROADMAP_MONTHLY_BUDGET_USD:-50}
+      ROADMAP_DAILY_LIMIT: ${ROADMAP_DAILY_LIMIT:-30}
+      ROADMAP_DAILY_LIMIT_PER_PROFILE: ${ROADMAP_DAILY_LIMIT_PER_PROFILE:-3}
+      ROADMAP_KNOWLEDGE_DIR: /app/rag/data/knowledge
+      ROADMAP_CONTEXT_FIXTURE: ${ROADMAP_CONTEXT_FIXTURE:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "${BACKEND_PORT:-8787}:8787"
     volumes:
       - backend_data:/app/backend/.data
+      # Prepared knowledge files are local and Git-ignored; read them without a rebuild.
+      - ./rag/data:/app/rag/data:ro
     depends_on:
       postgres:
         condition: service_healthy

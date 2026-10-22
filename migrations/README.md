@@ -30,6 +30,10 @@ be applied before writing through the current dependency workflow. Learning
 modules remain deferred; `app.roadmap_steps.module_id` will receive its foreign
 key when `knowledge.learning_modules` is implemented.
 
+Host migration `016` adds roadmap generation: step/task plan fields, the
+`app.roadmap_generations` snapshot table and token/cost columns on
+`system.ai_runs` (see [roadmap generation](../docs/roadmap/roadmap-generation.md)).
+
 ## Development user data
 
 After the schema is ready, optionally run
