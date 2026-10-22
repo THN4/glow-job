@@ -1,5 +1,5 @@
 -- Persist the full personal-application tracker state used by the Applications UI.
--- Existing rows keep their current status and notes; this migration does not synthesize history.
+-- Existing rows keep their current status and notes. This migration does not synthesize history.
 
 ALTER TYPE app.application_status ADD VALUE IF NOT EXISTS 'screening';
 
