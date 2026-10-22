@@ -16,6 +16,7 @@ import { RoadmapNodeIcon } from './RoadmapNodeIcon'
 import { nodeIconColors } from '../nodeAppearance'
 import type { LearningSourcesLoader } from '../learningSources'
 import { canCompleteNode } from '../progress'
+import { SkillLevelLine, StepCheckSection } from '../../assessments/components/RoadmapStepChecks'
 
 type NodeDetailPanelProps = {
   node: RoadmapNodeData
@@ -31,9 +32,10 @@ type NodeDetailPanelProps = {
   evidenceItems: RoadmapEvidence[]
   onAddEvidence: (evidence: RoadmapEvidence) => void
   onRemoveEvidence: (id: string) => void
+  onStepCheckApplied: (verifiedTaskIds: string[], reviewTaskIds: string[]) => void
 }
 
-export function NodeDetailPanel({ node, nodes, onClose, loadSources, onComplete, canStart, onStart, canUncomplete, onUncomplete, onChecklistChange, evidenceItems, onAddEvidence, onRemoveEvidence }: NodeDetailPanelProps) {
+export function NodeDetailPanel({ node, nodes, onClose, loadSources, onComplete, canStart, onStart, canUncomplete, onUncomplete, onChecklistChange, evidenceItems, onAddEvidence, onRemoveEvidence, onStepCheckApplied }: NodeDetailPanelProps) {
   const nodeById = new Map(nodes.map((item) => [item.id, item]))
   const unlockedNodes = (node.unlockIds ?? [])
     .map((id) => nodeById.get(id))
@@ -80,7 +82,7 @@ export function NodeDetailPanel({ node, nodes, onClose, loadSources, onComplete,
             <span className="font-medium text-slate-600">Current confidence</span>
             <span className="text-[10px] text-slate-400">Separate from completion</span>
           </div>
-          <p className="mt-0.5 text-[11px] text-blue-700">Not assessed</p>
+          <SkillLevelLine node={node} />
           <p className="mt-1.5 text-[11px] leading-[1.45] text-slate-600">{node.description}</p>
         </section>
 
@@ -142,6 +144,8 @@ export function NodeDetailPanel({ node, nodes, onClose, loadSources, onComplete,
                     <span>
                       {item.label}
                       {item.kind && <span className="ml-1 rounded border border-border px-1 text-[9px] uppercase tracking-wide text-muted-foreground">{item.kind}</span>}
+                      {item.verified && item.completed && <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-emerald-50 px-1.5 text-[9px] font-semibold text-emerald-700">Verified by check</span>}
+                      {item.needsReview && !item.verified && <span className="ml-1 inline-block whitespace-nowrap rounded-full bg-amber-50 px-1.5 text-[9px] font-semibold text-amber-800">Review this</span>}
                     </span>
                   </label>
                   {item.sourceId && sources.some((source) => source.id === item.sourceId) && !(loadSources && node.skillId) && (
@@ -154,6 +158,8 @@ export function NodeDetailPanel({ node, nodes, onClose, loadSources, onComplete,
             <p className="mt-1 text-[10px] text-slate-500">Checklist will appear as this step is planned.</p>
           )}
         </section>
+
+        <StepCheckSection node={node} onApplied={onStepCheckApplied} />
 
         <LearningSources
           topic={node.title}

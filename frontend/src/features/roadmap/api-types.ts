@@ -33,6 +33,12 @@ export type ChecklistItem = {
   taskKind: TaskKind
   completed: boolean
   citations: Citation[]
+  /** Ticked by a step check (the learner answered its questions correctly). */
+  verified: boolean
+  /** A step check found this task worth reviewing. */
+  needsReview: boolean
+  /** Reviewed questions available for this task in a step check (0 = no check). */
+  questionCount: number
 }
 
 export type NodeSkill = {

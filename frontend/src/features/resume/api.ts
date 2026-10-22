@@ -112,6 +112,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
+/** The saved anonymous profile ID, or null before the profile is saved. */
+export function getSavedProfileId(): string | null {
+  try { return localStorage.getItem(PROFILE_ID_KEY) }
+  catch { return null }
+}
+
 export function getSessionId(): string {
   let sessionId = localStorage.getItem(SESSION_ID_KEY)
   if (!sessionId) {

@@ -38,6 +38,11 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "ROADMAP_UNAVAILABLE": (503, True, "Roadmaps need the shared database."),
     "MODEL_REFUSAL": (422, False, "The AI could not create a roadmap for this request."),
     "ROADMAP_GENERATION_FAILED": (502, True, "The roadmap could not be generated. Please try again."),
+    "ASSESSMENT_NOT_FOUND": (404, False, "The skill check was not found."),
+    "ASSESSMENT_STATE_INVALID": (409, False, "This skill check is not at that step."),
+    "ASSESSMENT_UNAVAILABLE": (503, True, "Skill checks need the shared database."),
+    "SKILL_NOT_FOUND": (404, False, "The skill was not found."),
+    "NO_CHECK_QUESTIONS": (409, False, "There are no questions for these tasks yet."),
     "INTERNAL_ERROR": (500, True, "Something went wrong."),
 }
 

@@ -43,6 +43,9 @@ TEST_FILES = {
     "tests/test_roadmap_core.py": "Core logic",
     "tests/test_roadmap_api.py": "API, in-memory repository",
     "tests/test_roadmap_db.py": "API + SQL, real PostgreSQL",
+    "tests/test_assessments_core.py": "Assessments: scoring and question bank",
+    "tests/test_assessments_api.py": "Assessments: API, in-memory repository",
+    "tests/test_assessments_db.py": "Assessments: API + SQL, real PostgreSQL",
 }
 PLAN_DATE = date(2026, 10, 19)
 CONTAINER, DB_PORT, DB_PASSWORD = "glowjob-roadmap-test", 55432, "roadmap-test"

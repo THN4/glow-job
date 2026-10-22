@@ -156,7 +156,9 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
 
 
 def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_steps: set[str],
-                   started_steps: set[str] | None = None, today: date | None = None) -> RoadmapView:
+                   started_steps: set[str] | None = None, today: date | None = None,
+                   verified_tasks: set[str] | None = None, review_tasks: set[str] | None = None,
+                   question_counts: dict[int, int] | None = None) -> RoadmapView:
     """Recalculate everything that depends on progress or on today's date.
 
     The goal node is not counted in progress. ``started_steps`` are steps the learner marked
@@ -171,6 +173,10 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
             continue
         for item in node.checklist:
             item.completed = item.id in completed_tasks
+            item.verified = item.completed and item.id in (verified_tasks or set())
+            item.needs_review = not item.completed and item.id in (review_tasks or set())
+            item.question_count = (min(2, sum((question_counts or {}).get(c.chunk_id, 0) for c in item.citations))
+                                   if item.task_kind == "learn" else 0)
         finished = sum(item.completed for item in node.checklist)
         if node.key in skipped_steps:
             node.status = "skipped"

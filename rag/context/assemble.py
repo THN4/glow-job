@@ -20,7 +20,9 @@ def assess_gap(market, user_skill):
     if target in {None, "unknown"}:
         limitations.append("MARKET_TARGET_LEVEL_UNKNOWN")
     if user_skill and user_skill.proficiency_basis != "explicit":
-        limitations.append("USER_LEVEL_NOT_EXPLICIT")
+        limitations.append({"assessed": "USER_LEVEL_FROM_QUIZ",
+                            "self_reported": "USER_LEVEL_SELF_REPORTED"}.get(user_skill.proficiency_basis,
+                                                                             "USER_LEVEL_NOT_EXPLICIT"))
     if market is None:
         status, reason = "market_data_insufficient", "SKILL_OUTSIDE_SELECTED_MARKET_COHORT"
     elif user_skill is None:
