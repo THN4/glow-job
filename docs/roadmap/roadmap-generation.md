@@ -119,7 +119,8 @@ GROUP BY model_provider;
 ## Moving to Amazon Bedrock
 
 The code is ready (`ROADMAP_PROVIDER=bedrock`, `AnthropicBedrockMantle` from the
-`anthropic[bedrock]` SDK). Remaining decisions and setup:
+`anthropic[bedrock]` SDK). The step-by-step plan, IAM policy, smoke test, cost controls and
+rollback are in [aws-setup.md](aws-setup.md) (Thai). Summary of what remains:
 
 1. Choose a region where Claude Opus 5.5 is offered, and enable model access in the
    Bedrock console for that account and region.
