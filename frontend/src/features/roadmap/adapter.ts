@@ -81,6 +81,7 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
   const weekly = view.summary.weeklyHours
   const nodes: RoadmapNodeData[] = view.nodes.map((node) => ({
     id: node.key,
+    skillId: node.skill?.skillId,
     title: node.kind === 'skill' && node.skill ? node.skill.name : node.title,
     kind: KIND[node.kind],
     status: STATUS[node.status],

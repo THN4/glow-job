@@ -9,6 +9,7 @@ import { getSavedProfileId } from '../../resume/api'
 import { SkillProfileHeader } from '../components/SkillProfileHeader'
 import { SkillProfileStats } from '../components/SkillProfileStats'
 import { LearningChecklist } from '../components/LearningChecklist'
+import { LevelCheckDialog } from '../../assessments/components/LevelCheckDialog'
 
 type SkillFilter = 'all' | 'completed' | 'in-progress' | 'upcoming'
 
@@ -36,6 +37,7 @@ export function SkillProfilePage() {
   const [working, setWorking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
+  const [levelCheckTarget, setLevelCheckTarget] = useState<{ skillId: number; name: string } | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -99,6 +101,14 @@ export function SkillProfilePage() {
       setExpandedSkillIds((current) => new Set(current).add(nodeId))
     } finally {
       setWorking(false)
+    }
+  }
+
+  async function refreshRoadmap() {
+    try {
+      setView(await loadCurrentRoadmap())
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not refresh your saved skill level.')
     }
   }
 
@@ -195,6 +205,12 @@ export function SkillProfilePage() {
                             if (item) void updateTask(node.id, taskId, !item.completed)
                           }}
                         />
+                        {node.skillId && (
+                          <button type="button" onClick={() => setLevelCheckTarget({ skillId: node.skillId!, name: node.title })}
+                            className="mt-3 min-h-9 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-50">
+                            Assess skill level
+                          </button>
+                        )}
                       </div>
                       <div className="border-t border-slate-100 pt-3 md:border-l md:border-t-0 md:pl-4 md:pt-0">
                         <p className="text-[11px] font-semibold text-slate-500">Related project</p>
@@ -214,6 +230,15 @@ export function SkillProfilePage() {
           <p className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500">No {visibleLabel.toLowerCase()} are available in this roadmap.</p>
         )}
       </section>
+      {levelCheckTarget && (
+        <LevelCheckDialog
+          onClose={() => setLevelCheckTarget(null)}
+          onDecision={(kept) => { if (kept) void refreshRoadmap() }}
+          skillId={levelCheckTarget.skillId}
+          skillName={levelCheckTarget.name}
+          entryPoint="skill_profile"
+        />
+      )}
     </section>
   )
 }
