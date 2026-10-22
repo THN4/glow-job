@@ -9,6 +9,7 @@ import { RoadmapNode } from './RoadmapNode'
 import { RoadmapProgressBadge } from './RoadmapProgressBadge'
 
 type RoadmapCanvasProps = {
+  targetRole: string
   nodes: RoadmapNodeData[]
   connections: RoadmapConnection[]
   selectedNodeId: string | null
@@ -68,6 +69,7 @@ function getConnectionPath(
 }
 
 export function RoadmapCanvas({
+  targetRole,
   nodes,
   connections,
   selectedNodeId,
@@ -107,7 +109,7 @@ export function RoadmapCanvas({
       <div className="shrink-0 border-b border-[#E4ECF8] bg-white px-4 py-3 sm:px-5 [@media(max-height:760px)]:py-2">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-800">Your path to data engineering</h2>
+            <h2 className="text-sm font-semibold text-slate-800">Your path to {targetRole}</h2>
             <p className="mt-0.5 text-[10px] text-slate-500">Follow the recommended route or explore upcoming branches.</p>
           </div>
           {progressSummary && (

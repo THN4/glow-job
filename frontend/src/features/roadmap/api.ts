@@ -1,6 +1,6 @@
 import { getSavedProfileId, getSessionId, loadCareerProfiles, saveCareerGoal } from '../resume/api'
 import type { CareerGoalPreferences } from '../resume/api'
-import type { CareerGoalInput, ProgressStatus, RoadmapJob, RoadmapView } from './api-types'
+import type { CareerGoal, CareerGoalInput, ProgressStatus, RoadmapJob, RoadmapView } from './api-types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
 
@@ -28,6 +28,12 @@ function profileId(): string {
   const id = getSavedProfileId()
   if (!id) throw new Error('ไม่พบโปรไฟล์ที่บันทึกไว้ กรุณากลับไปยืนยันโปรไฟล์ก่อน')
   return encodeURIComponent(id)
+}
+
+export async function loadRoadmapGoal(signal?: AbortSignal): Promise<CareerGoal | null> {
+  if (!getSavedProfileId()) return null
+  const result = await request<{ goal: CareerGoal | null }>(`/profiles/${profileId()}/goal`, { signal })
+  return result.goal
 }
 
 export async function saveRoadmapGoal(goal: CareerGoalPreferences): Promise<void> {

@@ -2,7 +2,8 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { PanelLeftOpen } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
-import { useRoadmapCounts } from '../../features/roadmap/useRoadmapCounts'
+import { useCurrentRoadmap } from '../../features/roadmap/useCurrentRoadmap'
+import { toRoadmapScreen } from '../../features/roadmap/adapter'
 import type {
   CurrentGoalSummary,
   MarketUpdate,
@@ -10,7 +11,6 @@ import type {
 } from '../../features/workspace/type'
 
 type WorkspaceLayoutProps = {
-  goal: CurrentGoalSummary
   marketUpdate: MarketUpdate
   user: WorkspaceUser
   onHelpClick: () => void
@@ -18,7 +18,6 @@ type WorkspaceLayoutProps = {
 }
 
 export function WorkspaceLayout({
-  goal,
   marketUpdate,
   user,
   onHelpClick,
@@ -27,17 +26,20 @@ export function WorkspaceLayout({
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const roadmap = useRoadmapCounts()
+  const roadmap = useCurrentRoadmap()
   const isRoadmapPage = pathname.startsWith('/app/roadmap')
   const scrollRef = useRef<HTMLDivElement>(null)
   // Every page shares this scroll box, so start each page at the top. Without this the roadmap page,
   // which cannot scroll, keeps the previous page's offset and shows up cut off.
   useLayoutEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [pathname])
-  const currentGoal = {
-    ...goal,
-    progress: roadmap.completionPercent,
-    statusText: roadmap.completionPercent === 100 ? 'Completed' : roadmap.completionPercent === 0 ? 'Ready to start' : 'On track',
-  }
+  const currentGoal: CurrentGoalSummary = roadmap.data
+    ? toRoadmapScreen(roadmap.data).goal
+    : {
+      title: roadmap.isPending ? 'Loading your goal…' : roadmap.isError ? 'Goal unavailable' : 'No roadmap yet',
+      progress: 0,
+      statusText: roadmap.isPending ? 'Loading progress…' : roadmap.isError ? 'Could not load progress' : 'Create your roadmap to track progress',
+      timeRemaining: '',
+    }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">

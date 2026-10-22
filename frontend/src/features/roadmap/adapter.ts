@@ -79,6 +79,10 @@ export function timeText(node: ApiNode, weekly: HoursRange | null): string | nul
 
 export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
   const weekly = view.summary.weeklyHours
+  const completedNodes = view.nodes.filter((node) => node.status === 'completed').length
+  const totalNodes = view.nodes.length
+  const completion = totalNodes ? Math.round((completedNodes / totalNodes) * 100) : 0
+  const statusText = `${completedNodes} of ${totalNodes} tasks completed`
   const nodes: RoadmapNodeData[] = view.nodes.map((node) => ({
     id: node.key,
     title: node.kind === 'skill' && node.skill ? node.skill.name : node.title,
@@ -117,13 +121,13 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
       goalTitle: view.summary.careerName,
       targetRole: view.summary.targetRole,
       duration: view.summary.durationLabel,
-      completion: view.progress.percent,
-      statusText: view.progress.label,
+      completion,
+      statusText,
     },
     goal: {
       title: view.summary.targetRole,
-      progress: view.progress.percent,
-      statusText: view.progress.label,
+      progress: completion,
+      statusText,
       timeRemaining: view.summary.timeRemainingLabel,
     },
     currentNodeId: view.currentNodeKey,

@@ -1,7 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { WorkspaceLayout } from './layouts/workspaceLayout'
 import {
-  workspaceGoal,
   workspaceMarketUpdate,
   workspaceUser,
 } from '../features/workspace/data/workspaceMockData'
@@ -39,7 +38,6 @@ const router = createBrowserRouter([
     path: '/app',
     element: (
       <WorkspaceLayout
-        goal={workspaceGoal}
         marketUpdate={workspaceMarketUpdate}
         user={workspaceUser}
         onHelpClick={() => {}}

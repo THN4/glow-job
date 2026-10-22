@@ -1,10 +1,8 @@
 import { ArrowRight, CheckCircle2, ClipboardList, Compass, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RoadmapNodeIcon } from '../components/RoadmapNodeIcon'
-import { RecentActivity } from '../components/RecentActivity'
-import { UpdateReplanCard } from '../components/UpdateReplanCard'
-import { roadmapSummary } from '../data/roadmapMockData'
-import { useRoadmapCounts } from '../useRoadmapCounts'
+import { useCurrentRoadmap } from '../useCurrentRoadmap'
+import { toRoadmapScreen } from '../adapter'
 import type { RoadmapNodeKind } from '../type'
 
 const categories: { kind: RoadmapNodeKind; label: string; color: string }[] = [
@@ -17,34 +15,45 @@ const categories: { kind: RoadmapNodeKind; label: string; color: string }[] = [
 const roadmapLink = (nodeId: string) => `/app/roadmap?node=${encodeURIComponent(nodeId)}`
 
 export function ProgressPage() {
-  const { nodes, completionPercent, evidenceByNode } = useRoadmapCounts()
-  const evidenceCount = Object.values(evidenceByNode).reduce((total, items) => total + items.length, 0)
+  const roadmap = useCurrentRoadmap()
+  if (roadmap.isPending) return <p role="status" className="p-6 text-sm text-slate-600">Loading your progress…</p>
+  if (roadmap.isError) return <section className="p-6"><p role="alert">{roadmap.error.message}</p><button type="button" onClick={() => void roadmap.refetch()} className="mt-3 text-blue-700">Try again</button></section>
+  if (!roadmap.data) return <section className="p-6"><h1 className="text-2xl font-bold">Progress</h1><p className="mt-3">Create your roadmap to start tracking progress.</p><Link to="/app/roadmap" className="mt-3 inline-block text-blue-700">Open My Roadmap</Link></section>
+  const screen = toRoadmapScreen(roadmap.data)
+  const { nodes } = screen
+  const completionPercent = screen.summary.completion
+  const statusById = new Map(roadmap.data.nodes.map((node) => [node.key, node.status]))
   const completed = nodes.filter((node) => node.status === 'completed').length
   const inProgress = nodes.filter((node) => node.status === 'in-progress').length
-  const upcoming = nodes.filter((node) => node.status === 'upcoming').length
+  const upcoming = nodes.filter((node) => statusById.get(node.id) === 'not_started').length
+  const skipped = roadmap.data.nodes.filter((node) => node.status === 'skipped').length
   const checklistItems = nodes.flatMap((node) => node.checklist ?? [])
   const checkedItems = checklistItems.filter((item) => item.completed).length
-  const currentStep = nodes.find((node) => node.status === 'in-progress')
-  const focusStep = currentStep ?? nodes.find((node) => node.status === 'upcoming')
+  const currentStep = nodes.find((node) => node.id === roadmap.data.currentNodeKey && node.status === 'in-progress')
+    ?? nodes.find((node) => node.status === 'in-progress')
+  const focusStep = currentStep ?? nodes.find((node) => node.id === roadmap.data.nextAction.nodeKey && statusById.get(node.id) === 'not_started')
   const focusChecklist = focusStep?.checklist ?? []
   const focusChecked = focusChecklist.filter((item) => item.completed).length
-  const nextSteps = nodes.filter((node) => node.status === 'upcoming' && node.id !== focusStep?.id).slice(0, 4)
+  const nextSteps = nodes.filter((node) => statusById.get(node.id) === 'not_started' && node.id !== focusStep?.id).slice(0, 4)
 
   return (
     <section aria-label="Progress" className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-4">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{roadmapSummary.targetRole}</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{screen.summary.targetRole}</p>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Progress</h1>
         <p className="mt-2 text-sm text-slate-600">Your saved roadmap progress, current learning step, and upcoming work.</p>
       </header>
 
-      <UpdateReplanCard nodes={nodes} evidenceCount={evidenceCount} />
+      <div className="flex flex-wrap gap-4 text-sm text-blue-700">
+        <Link to="/app/roadmap">Review or regenerate your roadmap →</Link>
+        <Link to="/app/market-insights">View market insights →</Link>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Target size={16} className="text-blue-600" aria-hidden="true" />Roadmap completion</p>
           <p className="mt-2 text-3xl font-bold text-blue-700">{completionPercent}%</p>
-          <p className="mt-1 text-xs text-slate-500">{completed} of {nodes.length} steps completed</p>
+          <p className="mt-1 text-xs text-slate-500">{screen.summary.statusText}</p>
           <div role="progressbar" aria-label="Roadmap completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
             <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${completionPercent}%` }} />
           </div>
@@ -57,7 +66,7 @@ export function ProgressPage() {
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Compass size={16} className="text-blue-600" aria-hidden="true" />In progress</p>
           <p className="mt-2 text-3xl font-bold text-blue-700">{inProgress}</p>
-          <p className="mt-1 text-xs text-slate-500">{upcoming} steps are still upcoming</p>
+          <p className="mt-1 text-xs text-slate-500">{upcoming} upcoming · {skipped} skipped</p>
         </section>
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><ClipboardList size={16} className="text-violet-600" aria-hidden="true" />Checklist items</p>
@@ -68,7 +77,7 @@ export function ProgressPage() {
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-base font-bold text-slate-900">{currentStep ? 'Your current step' : focusStep ? 'Your next step' : 'Roadmap complete'}</h2>
+          <h2 className="text-base font-bold text-slate-900">{currentStep ? 'Your current step' : focusStep ? 'Your next step' : completionPercent === 100 ? 'Roadmap complete' : 'Review your roadmap'}</h2>
           {focusStep ? (
             <>
               <div className="mt-3 flex items-start gap-3">
@@ -82,7 +91,7 @@ export function ProgressPage() {
               <Link to={roadmapLink(focusStep.id)} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700">Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">Every step on your roadmap is complete. You can review your skills and evidence at any time.</p>
+            <p className="mt-3 text-sm text-slate-600">{completionPercent === 100 ? 'Every task on your roadmap is complete.' : roadmap.data.nextAction.text}</p>
           )}
         </section>
 
@@ -125,7 +134,7 @@ export function ProgressPage() {
           })}
         </div>
       </section>
-      <RecentActivity nodes={nodes} />
+      <p className="text-xs text-slate-500">Roadmap generated: <time dateTime={roadmap.data.generatedAt}>{new Date(roadmap.data.generatedAt).toLocaleString()}</time></p>
     </section>
   )
 }
