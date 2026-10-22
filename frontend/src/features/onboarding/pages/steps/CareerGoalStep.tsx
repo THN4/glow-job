@@ -16,9 +16,10 @@ type CareerGoalStepProps = {
   onDeadlineChange: (deadline: Deadline) => void
   onCustomDeadlineDateChange: (date: string) => void
   showValidation?: boolean
+  hasProfileInformation: boolean
 }
 
-export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false }: CareerGoalStepProps) {
+export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false, hasProfileInformation }: CareerGoalStepProps) {
   const titleId = useId()
   const recommendationsId = useId()
   const searchTitleId = useId()
@@ -50,7 +51,9 @@ export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRol
             <Sparkles className="size-4" aria-hidden="true" /> AI Powered
           </span>
         </div>
-        <RoleRecommendations selectedRole={targetRole} onSelect={onRoleChange} labelledBy={recommendationsId} />
+        {hasProfileInformation
+          ? <RoleRecommendations selectedRole={targetRole} onSelect={onRoleChange} labelledBy={recommendationsId} />
+          : <p className="rounded-lg border border-dashed border-blue-200 bg-white/70 p-4 text-sm text-muted-foreground">No profile information is available for career recommendations. Add your details or choose a career goal manually.</p>}
 
         <div className="my-6 flex items-center gap-4 text-xs font-medium uppercase tracking-wide text-muted-foreground" aria-hidden="true">
           <span className="h-px flex-1 bg-border" />

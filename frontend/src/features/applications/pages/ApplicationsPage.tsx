@@ -1,24 +1,32 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AddApplicationForm, type NewApplicationInput } from '../components/shared/AddApplicationForm'
 import { ApplicationDetailsPanel } from '../components/shared/ApplicationDetailsPanel'
 import { ApplicationsHeader } from '../components/shared/ApplicationsHeader'
 import { ApplicationsTabs } from '../components/shared/ApplicationsTabs'
-import { CompaniesTab, type CompanyOpening } from '../components/companies/CompaniesTab'
+import { CompaniesTab } from '../components/companies/CompaniesTab'
+import type { CompanyOpening } from '../data/companyOpenings'
 import { MyApplicationsTab } from '../components/my-applications/MyApplicationsTab'
 import { CareerRecommendationsTab } from '../components/recommendations/CareerRecommendationsTab'
 import { applicationsMockData } from '../data/applicationsMockData'
+import { useRoadmapCounts } from '../../roadmap/useRoadmapCounts'
+import { roadmapSummary } from '../../roadmap/data/roadmapMockData'
 import { useApplicationFilters } from '../hooks/useApplicationFilters'
 import type { ApplicationEntry, ApplicationTabKey, CareerPathRecommendation } from '../type'
 
 export function ApplicationsPage() {
   const [applications, setApplications] = useState(applicationsMockData)
-  const [activeTab, setActiveTab] = useState<ApplicationTabKey>('my-applications')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedTab = searchParams.get('tab')
+  const activeTab: ApplicationTabKey = requestedTab === 'companies' || requestedTab === 'recommendations' ? requestedTab : 'my-applications'
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingApplication, setEditingApplication] = useState(false)
   const [selectedApplication, setSelectedApplication] = useState<ApplicationEntry | null>(null)
   const [selectedCompanyOpening, setSelectedCompanyOpening] = useState<CompanyOpening | null>(null)
   const [selectedCareerPath, setSelectedCareerPath] = useState<CareerPathRecommendation | null>(null)
+  const roadmap = useRoadmapCounts()
   const filters = useApplicationFilters(applications)
+  const showRecommendationList = activeTab === 'recommendations' && !selectedCareerPath
 
   function addApplication(input: NewApplicationInput) {
     const today = new Date()
@@ -42,7 +50,7 @@ export function ApplicationsPage() {
       setSelectedApplication(null)
     }
     setShowAddForm(false)
-    setActiveTab('my-applications')
+    setSearchParams({}, { replace: true })
   }
 
   function updateApplication(updatedApplication: ApplicationEntry) {
@@ -52,7 +60,7 @@ export function ApplicationsPage() {
 
   function addCompanyOpening(opening: CompanyOpening) {
     if (applications.some((application) => application.company === opening.company && application.role === opening.role)) {
-      setActiveTab('my-applications')
+      setSearchParams({}, { replace: true })
       return
     }
     addApplication({
@@ -67,34 +75,29 @@ export function ApplicationsPage() {
   }
 
   return (
-    <section aria-label="Applications" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4">
+    <section aria-label="Applications" className={`mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 ${showRecommendationList ? 'lg:min-h-[calc(100dvh-3rem)]' : ''}`}>
       <ApplicationsHeader
-        onAddApplication={() => { setSelectedApplication(null); setEditingApplication(false); setShowAddForm(true) }}
         formOpen={showAddForm}
         detailOpen={Boolean(selectedApplication)}
         detailLabel={selectedApplication ? `${selectedApplication.company} / ${selectedApplication.role}` : undefined}
-        onBack={() => {
-          if (activeTab === 'companies') setSelectedCompanyOpening(null)
-          else if (activeTab === 'recommendations') setSelectedCareerPath(null)
-          else setSelectedApplication(null)
-        }}
+        onBack={() => setSelectedApplication(null)}
         activeTab={activeTab}
+        targetRole={roadmapSummary.targetRole}
+        duration={roadmapSummary.duration}
         titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' ? selectedCareerPath?.title : undefined}
         subtitleOverride={activeTab === 'companies' && selectedCompanyOpening
           ? `${selectedCompanyOpening.company} · ${selectedCompanyOpening.location} · ${selectedCompanyOpening.workStyle} · ${selectedCompanyOpening.experience}`
           : activeTab === 'recommendations' && selectedCareerPath
             ? `Career path · ${selectedCareerPath.summary}`
             : undefined}
-        backLabel={activeTab === 'companies' && selectedCompanyOpening
-          ? 'Back to Companies'
-          : activeTab === 'recommendations' && selectedCareerPath
-            ? 'Back to Recommendations'
-            : selectedApplication ? 'Back to Applications' : undefined}
+        backLabel={selectedApplication ? 'Back to Applications' : undefined}
       />
       <ApplicationsTabs
         activeTab={activeTab}
+        showAddApplication={!showAddForm && activeTab === 'my-applications'}
+        onAddApplication={() => { setSelectedApplication(null); setEditingApplication(false); setShowAddForm(true) }}
         onChange={(tab) => {
-          setActiveTab(tab)
+          setSearchParams(tab === 'my-applications' ? {} : { tab })
           setShowAddForm(false)
           setEditingApplication(false)
           setSelectedApplication(null)
@@ -107,7 +110,7 @@ export function ApplicationsPage() {
         id="applications-tabpanel"
         role="tabpanel"
         aria-labelledby={`applications-tab-${activeTab}`}
-        className="min-w-0"
+        className={`min-w-0 ${showRecommendationList ? 'flex flex-1 flex-col' : ''}`}
       >
         {showAddForm && activeTab === 'my-applications' && (
           <AddApplicationForm
@@ -139,8 +142,8 @@ export function ApplicationsPage() {
             onEdit={() => { setEditingApplication(true); setShowAddForm(true) }}
           />
         )}
-        {activeTab === 'recommendations' && <CareerRecommendationsTab selectedPath={selectedCareerPath} onSelectPath={setSelectedCareerPath} />}
-        {activeTab === 'companies' && <CompaniesTab applications={applications} selectedOpening={selectedCompanyOpening} onSelectedOpeningChange={setSelectedCompanyOpening} onAddOpening={addCompanyOpening} />}
+        {activeTab === 'recommendations' && <CareerRecommendationsTab selectedPath={selectedCareerPath} onSelectPath={setSelectedCareerPath} roadmapNodes={roadmap.nodes} />}
+        {activeTab === 'companies' && <CompaniesTab applications={applications} selectedOpening={selectedCompanyOpening} onSelectedOpeningChange={setSelectedCompanyOpening} onAddOpening={addCompanyOpening} roadmapNodes={roadmap.nodes} />}
       </div>
 
     </section>

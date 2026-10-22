@@ -3,7 +3,75 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+.application-form-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.application-form-description {
+  border-top: 1px solid #bfdbfe;
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .application-form-layout {
+    grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);
+    gap: 0;
+  }
+
+  .application-form-info {
+    padding-right: 1.5rem;
+  }
+
+  .application-form-description {
+    border-top: 0;
+    border-left: 1px solid #bfdbfe;
+    padding-top: 0;
+    padding-left: 1.5rem;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
+
+@keyframes roadmap-flow {
+  to { stroke-dashoffset: -30; }
+}
+
+@keyframes roadmap-current-flow {
+  to { stroke-dashoffset: -28; }
+}
+
+.roadmap-current-flow {
+  animation: roadmap-current-flow 1.4s linear infinite;
+}
+
+.roadmap-connection-flow {
+  opacity: 0;
+}
+
+.roadmap-connection-line {
+  transition: stroke 150ms, stroke-width 150ms;
+}
+
+.roadmap-connection:is(:hover, :focus-visible) .roadmap-connection-line {
+  stroke: currentColor;
+  stroke-width: 3;
+  opacity: 0.3;
+}
+
+.roadmap-connection:is(:hover, :focus-visible) .roadmap-connection-flow {
+  opacity: 1;
+  animation: roadmap-flow 900ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-current-flow {
+    animation: none;
+  }
+  .roadmap-connection:is(:hover, :focus-visible) .roadmap-connection-flow {
+    animation: none;
+  }
+}
 @custom-variant roomy-header {
   @media (min-width: 40rem) and (min-height: 30rem) {
     @slot;

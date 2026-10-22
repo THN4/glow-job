@@ -1,0 +1,131 @@
+import { ArrowRight, CheckCircle2, ClipboardList, Compass, Target } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { RoadmapNodeIcon } from '../components/RoadmapNodeIcon'
+import { RecentActivity } from '../components/RecentActivity'
+import { UpdateReplanCard } from '../components/UpdateReplanCard'
+import { roadmapSummary } from '../data/roadmapMockData'
+import { useRoadmapCounts } from '../useRoadmapCounts'
+import type { RoadmapNodeKind } from '../type'
+
+const categories: { kind: RoadmapNodeKind; label: string; color: string }[] = [
+  { kind: 'skill', label: 'Skills', color: 'bg-blue-600' },
+  { kind: 'project', label: 'Projects', color: 'bg-violet-600' },
+  { kind: 'career-activity', label: 'Career activities', color: 'bg-emerald-600' },
+  { kind: 'goal', label: 'Career goal', color: 'bg-slate-600' },
+]
+
+const roadmapLink = (nodeId: string) => `/app/roadmap?node=${encodeURIComponent(nodeId)}`
+
+export function ProgressPage() {
+  const { nodes, completionPercent, evidenceByNode } = useRoadmapCounts()
+  const evidenceCount = Object.values(evidenceByNode).reduce((total, items) => total + items.length, 0)
+  const completed = nodes.filter((node) => node.status === 'completed').length
+  const inProgress = nodes.filter((node) => node.status === 'in-progress').length
+  const upcoming = nodes.filter((node) => node.status === 'upcoming').length
+  const checklistItems = nodes.flatMap((node) => node.checklist ?? [])
+  const checkedItems = checklistItems.filter((item) => item.completed).length
+  const currentStep = nodes.find((node) => node.status === 'in-progress')
+  const focusStep = currentStep ?? nodes.find((node) => node.status === 'upcoming')
+  const focusChecklist = focusStep?.checklist ?? []
+  const focusChecked = focusChecklist.filter((item) => item.completed).length
+  const nextSteps = nodes.filter((node) => node.status === 'upcoming' && node.id !== focusStep?.id).slice(0, 4)
+
+  return (
+    <section aria-label="Progress" className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-4">
+      <header>
+        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{roadmapSummary.targetRole}</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Progress</h1>
+        <p className="mt-2 text-sm text-slate-600">Your saved roadmap progress, current learning step, and upcoming work.</p>
+      </header>
+
+      <UpdateReplanCard nodes={nodes} evidenceCount={evidenceCount} />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Target size={16} className="text-blue-600" aria-hidden="true" />Roadmap completion</p>
+          <p className="mt-2 text-3xl font-bold text-blue-700">{completionPercent}%</p>
+          <p className="mt-1 text-xs text-slate-500">{completed} of {nodes.length} steps completed</p>
+          <div role="progressbar" aria-label="Roadmap completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${completionPercent}%` }} />
+          </div>
+        </section>
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />Completed</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-700">{completed}</p>
+          <p className="mt-1 text-xs text-slate-500">Skills, projects, and career steps</p>
+        </section>
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Compass size={16} className="text-blue-600" aria-hidden="true" />In progress</p>
+          <p className="mt-2 text-3xl font-bold text-blue-700">{inProgress}</p>
+          <p className="mt-1 text-xs text-slate-500">{upcoming} steps are still upcoming</p>
+        </section>
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><ClipboardList size={16} className="text-violet-600" aria-hidden="true" />Checklist items</p>
+          <p className="mt-2 text-3xl font-bold text-violet-700">{checkedItems}<span className="text-base font-medium text-slate-400"> / {checklistItems.length}</span></p>
+          <p className="mt-1 text-xs text-slate-500">Checked across your roadmap</p>
+        </section>
+      </div>
+
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900">{currentStep ? 'Your current step' : focusStep ? 'Your next step' : 'Roadmap complete'}</h2>
+          {focusStep ? (
+            <>
+              <div className="mt-3 flex items-start gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700"><RoadmapNodeIcon node={focusStep} size={21} /></span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-slate-900">{focusStep.title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">{focusStep.description}</p>
+                </div>
+              </div>
+              {focusChecklist.length > 0 && <p className="mt-3 text-xs text-slate-600">{focusChecked} of {focusChecklist.length} checklist items checked</p>}
+              <Link to={roadmapLink(focusStep.id)} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700">Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
+            </>
+          ) : (
+            <p className="mt-3 text-sm text-slate-600">Every step on your roadmap is complete. You can review your skills and evidence at any time.</p>
+          )}
+        </section>
+
+        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <h2 className="text-base font-bold text-slate-900">Coming up</h2>
+          {nextSteps.length ? (
+            <ul className="mt-2 divide-y divide-slate-100">
+              {nextSteps.map((node) => (
+                <li key={node.id}>
+                  <Link to={roadmapLink(node.id)} className="flex items-center gap-2 py-2 text-xs font-medium text-slate-700 hover:text-blue-700">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600"><RoadmapNodeIcon node={node} size={15} /></span>
+                    <span className="min-w-0 flex-1">{node.title}</span>
+                    <ArrowRight size={13} aria-hidden="true" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="mt-2 text-xs text-slate-500">No upcoming steps remain.</p>}
+        </section>
+      </div>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-base font-bold text-slate-900">Progress by type</h2>
+          <Link to="/app/skill-profile" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">View Skill Profile <ArrowRight size={13} aria-hidden="true" /></Link>
+        </div>
+        <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+          {categories.map(({ kind, label, color }) => {
+            const group = nodes.filter((node) => node.kind === kind)
+            const done = group.filter((node) => node.status === 'completed').length
+            const percent = group.length ? Math.round((done / group.length) * 100) : 0
+            return (
+              <div key={kind}>
+                <div className="flex items-center justify-between text-xs"><span className="font-semibold text-slate-800">{label}</span><span className="text-slate-500">{done} / {group.length}</span></div>
+                <div role="progressbar" aria-label={`${label} completed`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent} className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className={`h-full rounded-full transition-[width] ${color}`} style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </section>
+      <RecentActivity nodes={nodes} />
+    </section>
+  )
+}
