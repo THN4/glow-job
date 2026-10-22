@@ -7,6 +7,7 @@ import pytest
 from fastapi import FastAPI
 
 from app.features.resume.config import CvSettings
+from app.features.resume.profiles import DatabaseProfilesRepo
 from app.features.resume.router import router as cv_router
 from app.features.resume.services import Services, build_services, get_services
 from src.resume.extraction.contracts import ExtractorOutput
@@ -137,6 +138,69 @@ async def test_save_and_load_profile(flow: Flow):
     r = await flow.c.put("/api/profiles", json={"sessionId": "s1", "profileId": profile_id, "profile": edited})
     assert r.status_code == 200
     assert (await flow.c.get(f"/api/profiles/{profile_id}")).json()["profile"]["summary"] == "Edited"
+
+
+async def test_save_career_goal_persists_for_profile_session(tmp_path, monkeypatch):
+    app, svc = make_app(
+        tmp_path,
+        DB_HOST="localhost",
+        DB_PORT=5432,
+        DB_NAME="glowjob",
+        DB_USER="test",
+        DB_PASSWORD="test",
+    )
+    saved = []
+
+    async def fake_save(self, profile_id, session_id, goal):
+        saved.append((profile_id, session_id, goal))
+
+    monkeypatch.setattr(DatabaseProfilesRepo, "save_career_goal", fake_save)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://localhost:8787") as c:
+        response = await c.put(
+            "/api/profiles/prf_test/career-goal",
+            headers={"X-Session-Id": "session-test"},
+            json={
+                "targetRole": "Data Analyst",
+                "deadline": "custom",
+                "customDeadlineDate": "2027-01-15",
+                "hoursPerWeek": "5_to_10",
+                "learningStyle": "projects",
+                "situation": "student",
+                "notes": "Interested in healthcare data",
+            },
+        )
+    assert response.status_code == 200
+    assert response.json() == {"saved": True}
+    assert saved == [(
+        "prf_test",
+        "session-test",
+        {
+            "target_role": "Data Analyst",
+            "deadline": "custom",
+            "custom_deadline_date": "2027-01-15",
+            "hours_per_week": "5_to_10",
+            "learning_style": "projects",
+            "situation": "student",
+            "notes": "Interested in healthcare data",
+        },
+    )]
+
+
+async def test_save_career_goal_requires_custom_date(flow: Flow):
+    response = await flow.c.put(
+        "/api/profiles/prf_test/career-goal",
+        headers={"X-Session-Id": "session-test"},
+        json={
+            "targetRole": "Data Analyst",
+            "deadline": "custom",
+            "hoursPerWeek": "5_to_10",
+            "learningStyle": "projects",
+            "situation": "student",
+            "notes": "",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "INVALID_REQUEST"
 
 
 async def test_invalid_profile_returns_field_details(flow: Flow):

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { OnboardingData, OnboardingStep, Preferences, Profile } from '../types'
 import { DEFAULT_PREFERENCES } from '../../../lib/preferencesConstants'
 import { OnboardingContext } from './OnboardingContext'
@@ -6,6 +6,7 @@ import { createEmptyProfile } from '../../../lib/api'
 import { careerGoalSchema } from '../types'
 import { onboardingCopy } from '../../../lib/constants'
 import { applyProfileChanges, hasRequiredSkillLevels, isProfileReviewComplete } from '../../../lib/profileReview'
+import { startNewAnonymousProfileSession } from '../../resume/api'
 
 const initialData: OnboardingData = {
   cvFile: null,
@@ -22,6 +23,9 @@ type OnboardingProviderProps = {
 }
 
 export function OnboardingProvider({ children }: OnboardingProviderProps) {
+  useEffect(() => {
+    startNewAnonymousProfileSession()
+  }, [])
   const [navigation, setNavigation] = useState<{ currentStep: OnboardingStep; lastCompletedStep: OnboardingStep | 0 }>({ currentStep: 1, lastCompletedStep: 0 })
   const [data, setData] = useState<OnboardingData>(initialData)
   const { currentStep, lastCompletedStep } = navigation

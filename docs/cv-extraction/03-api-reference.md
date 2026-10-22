@@ -94,14 +94,17 @@ Returns an empty `CvProfile` (all lists `[]`, scalars `null`), for **"Continue w
 
 ## 3.6 `PUT /api/profiles`
 
-Saves the profile after the user has reviewed and edited it ("Looks good, continue").
+Saves the profile after the user has reviewed and edited it ("Confirm and save profile").
 
 **Request**
 ```json
 { "sessionId": "f93efc05-e67b-47a7-a81a-c9834d6d8b85", "profileId": null, "profile": { "schemaVersion": 1, "…": "…" } }
 ```
 
-- `profileId: null` creates a new profile. Passing an existing id updates it.
+- `profileId: null` creates a new profile. Passing the current profile id updates it.
+  If the same anonymous session already owns a profile but a different or null
+  `profileId` is sent, the API returns `409 PROFILE_ALREADY_EXISTS` instead of
+  replacing the existing profile.
 - The body is validated against `CvProfile`. Invalid input returns `400 INVALID_PROFILE` with field paths in `error.details`.
 - The backend ignores any client-supplied `catalogMatch` and recomputes it from
   the current catalog before saving. It never trusts a client-provided `skillId`.
@@ -111,15 +114,38 @@ Saves the profile after the user has reviewed and edited it ("Looks good, contin
 
 **Response `200`**: `{ "profileId": "prf_51aa…", "updatedAt": "2026-10-05T10:00:00Z" }`
 
-## 3.7 `GET /api/profiles/{profileId}`
+## 3.7 `PUT /api/profiles/{profileId}/career-goal`
+
+Saves the onboarding Career Goal and Preferences for the profile owner. The
+required `X-Session-Id` header must match the anonymous session that saved the
+profile. The API upserts the user's primary row in `app.user_career_goals` and
+updates `app.user_profiles.current_status` in one transaction. This endpoint
+requires the database-backed profile store.
+
+```json
+{
+  "targetRole": "Data Analyst",
+  "deadline": "custom",
+  "customDeadlineDate": "2027-01-15",
+  "hoursPerWeek": "5_to_10",
+  "learningStyle": "projects",
+  "situation": "student",
+  "notes": "Interested in healthcare data"
+}
+```
+
+**Response `200`**: `{ "saved": true }`. Repeating the request updates the
+primary goal rather than creating another one.
+
+## 3.8 `GET /api/profiles/{profileId}`
 
 Returns `{ "profileId", "updatedAt", "profile": CvProfile }`, or `404 PROFILE_NOT_FOUND`.
 
-## 3.8 `GET /api/health`
+## 3.9 `GET /api/health`
 
 Returns `{ "status": "ok", "extractor": "mock" }` (the extractor value depends on backend configuration).
 
-## 3.9 Errors
+## 3.10 Errors
 
 One envelope everywhere (for job failures it appears under `error` in the poll response):
 
@@ -135,6 +161,7 @@ One envelope everywhere (for job failures it appears under `error` in the poll r
 | 415 | `UNSUPPORTED_FILE_TYPE` | Not a PDF/JPG/PNG/WEBP (declared, or detected by the worker) | "We support PDF, JPG and PNG." |
 | 404 | `UPLOAD_NOT_FOUND` | Unknown/expired `uploadId`, or the file was never uploaded | "Upload expired. Please choose your file again." |
 | 404 | `JOB_NOT_FOUND` / `PROFILE_NOT_FOUND` | Unknown id (or the job expired) | Restart the flow |
+| 409 | `PROFILE_ALREADY_EXISTS` | The session already has a profile but the request didn't identify it for an intentional update | Start a fresh profile session or use the existing profile ID |
 | 429 | `DAILY_LIMIT_REACHED` | The daily extraction cap (credit protection) is used up | "We've reached today's limit. Please try again tomorrow or fill in your profile manually." (`retryable: false`) |
 | 503 | `SKILL_CATALOG_UNAVAILABLE` | Catalog access is configured but the DB is unreachable, empty, or invalid | Retry later; do not treat skills as unmatched |
 | 503 | `PROFILE_STORE_UNAVAILABLE` | The configured DB could not save or load the confirmed profile | Retry later; the profile was not saved |
@@ -146,7 +173,7 @@ One envelope everywhere (for job failures it appears under `error` in the poll r
 | — (job) | `EXTRACTION_FAILED` | Provider error after retries, or invalid output | "Something went wrong. Please try again." (`retryable: true`) |
 | — (job) | `EXTRACTION_TIMEOUT` | Worker exceeded the configured extraction timeout | Same as above (`retryable: true`) |
 
-## 3.10 Client integration notes
+## 3.11 Client integration notes
 
 The current `/onboarding/cv` page is a temporary demo for inspecting extraction
 and match results. These steps describe how a client can use the API; they do
@@ -164,7 +191,7 @@ types aligned with them.
 8. **Types:** the demo's TypeScript API types live in `frontend/src/features/resume/api.ts`. A replacement client should derive or maintain its own types against `/openapi.json`, the API source of truth.
 9. **CORS:** local Compose allows `http://localhost:5173`; configure any additional frontend origin through `CORS_ORIGINS`.
 
-## 3.11 `GET /api/career-profiles`
+## 3.12 `GET /api/career-profiles`
 
 Lists active career profiles that have at least one market-statistics row. The existing CV onboarding page uses this endpoint to populate the career selector before calculating a match. This endpoint requires the shared database.
 
@@ -184,7 +211,7 @@ Lists active career profiles that have at least one market-statistics row. The e
 
 If the shared database is unavailable, it returns `503 CAREER_MATCH_UNAVAILABLE`.
 
-## 3.12 `GET /api/profiles/{profileId}/career-match`
+## 3.13 `GET /api/profiles/{profileId}/career-match`
 
 Compares a saved, user-confirmed profile with the latest available market-statistics window for one canonical career profile. This endpoint requires the shared database and does not use RAG; it calculates market coverage and level alignment deterministically from `app.user_skills` and `market.career_skill_stats`.
 

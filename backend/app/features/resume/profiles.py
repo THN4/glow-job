@@ -38,6 +38,28 @@ class DatabaseProfilesRepo:
     async def put(self, profile: StoredProfile) -> None:
         await asyncio.to_thread(self._put, profile)
 
+    async def save_career_goal(
+        self, profile_id: str, session_id: str, goal: dict[str, Any]
+    ) -> None:
+        await asyncio.to_thread(self._save_career_goal, profile_id, session_id, goal)
+
+    async def list_versions(self, profile_id: str, session_id: str) -> list[dict[str, Any]]:
+        return await asyncio.to_thread(self._list_versions, profile_id, session_id)
+
+    async def restore_version(self, profile_id: str, version_id: int, session_id: str) -> StoredProfile | None:
+        version = await asyncio.to_thread(self._get_version, profile_id, version_id, session_id)
+        if version is None:
+            return None
+        restored = StoredProfile(
+            profile_id=profile_id,
+            session_id=session_id,
+            profile=version.profile,
+            created_at=version.created_at,
+            updated_at=datetime.now(timezone.utc).isoformat(),
+        )
+        await self.put(restored)
+        return await self.get(profile_id)
+
     def _connect(self) -> psycopg.Connection[Any]:
         return psycopg.connect(
             host=self._settings.DB_HOST,
@@ -97,6 +119,28 @@ class DatabaseProfilesRepo:
                     if existing_owner is not None and existing_owner[0] != user_id:
                         raise AppError("PROFILE_NOT_FOUND")
 
+                    previous = connection.execute(
+                        """
+                        SELECT profile_id, profile_data, created_at, updated_at
+                        FROM app.user_profiles WHERE user_id = %s FOR UPDATE
+                        """,
+                        (user_id,),
+                    ).fetchone()
+                    if previous is not None and previous[0] != saved.profile_id:
+                        raise AppError(
+                            "PROFILE_ALREADY_EXISTS",
+                            "This session already owns a profile. Start a new profile session or update the existing profile ID.",
+                        )
+                    if previous is not None and previous[1] != saved.profile:
+                        connection.execute(
+                            """
+                            INSERT INTO app.user_profile_versions (
+                                user_id, profile_id, profile_data, created_at, updated_at
+                            ) VALUES (%s, %s, %s, %s, %s)
+                            """,
+                            (user_id, previous[0], Jsonb(previous[1]), previous[2], previous[3]),
+                        )
+
                     profile = saved.profile
                     personal = profile.get("personal") or {}
                     derived = profile.get("derived") or {}
@@ -141,6 +185,142 @@ class DatabaseProfilesRepo:
             raise
         except Exception as exc:  # noqa: BLE001 - keep DB details out of API responses
             log.warning("profile database write failed: %s", type(exc).__name__)
+            raise AppError("PROFILE_STORE_UNAVAILABLE") from exc
+
+    def _save_career_goal(self, profile_id: str, session_id: str, goal: dict[str, Any]) -> None:
+        """Save onboarding goal and preferences for the profile's owning user."""
+        weekly_availability = {
+            "under_2": "under_2_hours",
+            "2_to_5": "hours_2_to_5",
+            "5_to_10": "hours_5_to_10",
+            "over_10": "hours_10_plus",
+        }[goal["hours_per_week"]]
+        learning_style = {
+            "courses": "structured_courses",
+            "projects": "hands_on_projects",
+            "reading": "reading_articles",
+            "videos": "videos_tutorials",
+        }[goal["learning_style"]]
+        current_status = {
+            "student": "student",
+            "full_time": "employed_full_time",
+            "part_time": "employed_part_time",
+            "between_opportunities": "between_opportunities",
+            "other": "other",
+        }[goal["situation"]]
+        readiness_timeframe = {
+            "3_months": "three_months",
+            "6_months": "six_months",
+            "1_year": "one_year",
+            "custom": "no_fixed_deadline",
+        }[goal["deadline"]]
+        target_date = goal.get("custom_deadline_date") if goal["deadline"] == "custom" else None
+
+        try:
+            with self._connect() as connection:
+                with connection.transaction():
+                    profile_row = connection.execute(
+                        """
+                        SELECT p.user_id
+                        FROM app.user_profiles AS p
+                        JOIN app.users AS u USING (user_id)
+                        WHERE p.profile_id = %s
+                          AND u.auth_provider = 'anonymous'
+                          AND u.auth_subject = %s
+                        FOR UPDATE OF p
+                        """,
+                        (profile_id, session_id),
+                    ).fetchone()
+                    if profile_row is None:
+                        raise AppError("PROFILE_NOT_FOUND")
+                    user_id = profile_row[0]
+                    connection.execute(
+                        """
+                        INSERT INTO app.user_career_goals (
+                            user_id, target_role_title, is_primary, readiness_timeframe,
+                            target_date, weekly_availability, preferred_learning_style,
+                            additional_context
+                        ) VALUES (
+                            %s, %s, true, %s::app.readiness_timeframe, %s,
+                            %s::app.weekly_availability_band,
+                            %s::app.learning_preference, %s
+                        )
+                        ON CONFLICT (user_id) WHERE is_primary DO UPDATE SET
+                            target_role_title = EXCLUDED.target_role_title,
+                            readiness_timeframe = EXCLUDED.readiness_timeframe,
+                            target_date = EXCLUDED.target_date,
+                            weekly_availability = EXCLUDED.weekly_availability,
+                            preferred_learning_style = EXCLUDED.preferred_learning_style,
+                            additional_context = EXCLUDED.additional_context,
+                            updated_at = now()
+                        """,
+                        (
+                            user_id, goal["target_role"], readiness_timeframe,
+                            target_date, weekly_availability, learning_style,
+                            goal.get("notes") or None,
+                        ),
+                    )
+                    connection.execute(
+                        """
+                        UPDATE app.user_profiles
+                        SET current_status = %s::app.current_situation, updated_at = now()
+                        WHERE user_id = %s
+                        """,
+                        (current_status, user_id),
+                    )
+        except AppError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - keep DB details out of API responses
+            log.warning("career goal database write failed: %s", type(exc).__name__)
+            raise AppError("PROFILE_STORE_UNAVAILABLE") from exc
+
+    def _list_versions(self, profile_id: str, session_id: str) -> list[dict[str, Any]]:
+        try:
+            with self._connect() as connection:
+                return [
+                    {"versionId": row[0], "profileId": row[1], "savedAt": _iso(row[2])}
+                    for row in connection.execute(
+                        """
+                        SELECT v.version_id, v.profile_id, v.saved_at
+                        FROM app.user_profile_versions v
+                        JOIN app.user_profiles p USING (user_id)
+                        JOIN app.users u USING (user_id)
+                        WHERE p.profile_id = %s AND u.auth_provider = 'anonymous'
+                          AND u.auth_subject = %s
+                        ORDER BY v.saved_at DESC, v.version_id DESC
+                        """,
+                        (profile_id, session_id),
+                    ).fetchall()
+                ]
+        except Exception as exc:  # noqa: BLE001
+            log.warning("profile version list failed: %s", type(exc).__name__)
+            raise AppError("PROFILE_STORE_UNAVAILABLE") from exc
+
+    def _get_version(self, profile_id: str, version_id: int, session_id: str) -> StoredProfile | None:
+        try:
+            with self._connect() as connection:
+                row = connection.execute(
+                    """
+                    SELECT v.profile_id, v.profile_data, v.created_at, v.updated_at
+                    FROM app.user_profile_versions v
+                    JOIN app.user_profiles p USING (user_id)
+                    JOIN app.users u USING (user_id)
+                    WHERE p.profile_id = %s AND v.version_id = %s
+                      AND u.auth_provider = 'anonymous' AND u.auth_subject = %s
+                    """,
+                    (profile_id, version_id, session_id),
+                ).fetchone()
+            if row is None:
+                return None
+            return StoredProfile(
+                profile_id=profile_id,
+                session_id=session_id,
+                profile=row[1],
+                created_at=_iso(row[2]),
+                updated_at=_iso(row[3]),
+            )
+        except Exception as exc:  # noqa: BLE001
+            log.warning("profile version read failed: %s", type(exc).__name__)
             raise AppError("PROFILE_STORE_UNAVAILABLE") from exc
 
     def _replace_profile_items(

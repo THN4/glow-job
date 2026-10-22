@@ -15,7 +15,7 @@ export const reviewCopy = {
   editSection: (title: string) => `Edit ${title}`,
   dialogDescription: 'Update your information below. Your changes are saved only when you choose Save changes.',
   save: 'Save changes', cancel: 'Cancel', close: 'Close',
-  continue: 'Looks good, continue',
+  continue: 'Confirm and save profile',
   autofilled: 'Sample profile',
   reviewWarning: 'CV extraction can contain mistakes. Check every section and correct any missing or inaccurate details before confirming. For an empty section, confirm that there is nothing to add.',
   skillLevelsBeforeContinue: 'Choose a level for every technical skill before continuing.',

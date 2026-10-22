@@ -34,7 +34,7 @@ export function RoleRecommendations({ selectedRole, onSelect, labelledBy }: {
     </Button>
   </div>
 
-  return <div role="group" aria-labelledby={labelledBy} className="grid grid-cols-1 gap-4 min-[1200px]:grid-cols-2 2xl:grid-cols-3">
+  return <div role="group" aria-labelledby={labelledBy} className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
     {state.roles.map((role) => <RoleRecommendationCard key={role.id} role={role}
       selected={selectedRole.trim().toLowerCase() === role.title.toLowerCase()} onSelect={() => onSelect(role.title)} />)}
   </div>

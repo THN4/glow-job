@@ -1,4 +1,6 @@
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
+const SESSION_ID_KEY = 'glowjob.anonymous.sessionId'
+const PROFILE_ID_KEY = 'glowjob.anonymous.profileId'
 
 export type CvItem = {
   id: string
@@ -89,7 +91,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_BASE}${path}`, init)
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new Error('ติดต่อ Backend ไม่ได้ ตรวจว่า Backend กำลังทำงานและตั้ง VITE_API_BASE_URL ถูกต้อง')
+    throw new Error('ติดต่อ Backend ไม่ได้ ตรวจว่า Backend กำลังทำงานและตั้ง VITE_API_BASE_URL ถูกต้อง', { cause: error })
   }
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ApiErrorBody
@@ -100,13 +102,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function getSessionId(): string {
-  const key = 'glowjob.anonymous.sessionId'
-  let sessionId = localStorage.getItem(key)
+  let sessionId = localStorage.getItem(SESSION_ID_KEY)
   if (!sessionId) {
     sessionId = crypto.randomUUID()
-    localStorage.setItem(key, sessionId)
+    localStorage.setItem(SESSION_ID_KEY, sessionId)
   }
   return sessionId
+}
+
+/** Start a distinct anonymous profile for a fresh onboarding run. */
+export function startNewAnonymousProfileSession(): void {
+  localStorage.setItem(SESSION_ID_KEY, crypto.randomUUID())
+  localStorage.removeItem(PROFILE_ID_KEY)
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
@@ -170,18 +177,38 @@ export async function extractCv(file: File, onStage: (stage: string) => void, si
 }
 
 export async function saveProfile(profile: CvProfile): Promise<{ profileId: string; updatedAt: string }> {
-  const profileId = localStorage.getItem('glowjob.anonymous.profileId')
+  const profileId = localStorage.getItem(PROFILE_ID_KEY)
   const saved = await request<{ profileId: string; updatedAt: string }>('/profiles', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId: getSessionId(), profileId, profile }),
   })
-  localStorage.setItem('glowjob.anonymous.profileId', saved.profileId)
+  localStorage.setItem(PROFILE_ID_KEY, saved.profileId)
   return saved
 }
 
+export type CareerGoalPreferences = {
+  targetRole: string
+  deadline: '3_months' | '6_months' | '1_year' | 'custom'
+  customDeadlineDate: string | null
+  hoursPerWeek: 'under_2' | '2_to_5' | '5_to_10' | 'over_10'
+  learningStyle: 'courses' | 'projects' | 'reading' | 'videos'
+  situation: 'student' | 'full_time' | 'part_time' | 'between_opportunities' | 'other'
+  notes: string
+}
+
+export async function saveCareerGoal(goal: CareerGoalPreferences): Promise<void> {
+  const profileId = localStorage.getItem(PROFILE_ID_KEY)
+  if (!profileId) throw new Error('ไม่พบโปรไฟล์ที่บันทึกไว้ กรุณากลับไปยืนยันโปรไฟล์ก่อน')
+  await request<{ saved: boolean }>(`/profiles/${encodeURIComponent(profileId)}/career-goal`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Session-Id': getSessionId() },
+    body: JSON.stringify(goal),
+  })
+}
+
 export async function loadSavedProfile(): Promise<{ profileId: string; profile: CvProfile } | null> {
-  const profileId = localStorage.getItem('glowjob.anonymous.profileId')
+  const profileId = localStorage.getItem(PROFILE_ID_KEY)
   if (!profileId) return null
   try {
     return await request(`/profiles/${encodeURIComponent(profileId)}`)
