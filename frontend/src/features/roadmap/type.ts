@@ -22,6 +22,10 @@ export type RoadmapChecklistItem = {
   completed: boolean
   kind?: 'learn' | 'practice'
   sourceId?: string
+  /** Ticked by a step check: the learner answered its questions correctly. */
+  verified?: boolean
+  /** A step check found this task worth reviewing. */
+  needsReview?: boolean
 }
 
 export type RoadmapNodeData = {

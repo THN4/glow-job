@@ -5,29 +5,21 @@ import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
 import {
   roadmapConnections,
-  roadmapNodes,
   roadmapSummary,
 } from '../data/roadmapMockData'
 import type { RoadmapEvidence, RoadmapNodeData } from '../type'
 import type { LearningSourcesLoader } from '../learningSources'
-import { skillLearningResources } from '../data/skillLearningResources'
-import { canStartNode, completeRoadmapNode, startRoadmapNode, uncompleteLatestNode } from '../progress'
+import { roadmapDefaults } from '../defaults'
+import { applyStepCheck, canStartNode, completeRoadmapNode, startRoadmapNode, uncompleteLatestNode } from '../progress'
 import { recordRoadmapActivity } from '../activity'
+import { recordStepCheckActivity } from '../../assessments/stepCheckActivity'
 import { loadRoadmap, ROADMAP_STORAGE_KEY, serializeRoadmap } from '../storage'
 
 export function RoadmapPage({ loadSources }: { loadSources?: LearningSourcesLoader }) {
   const [searchParams] = useSearchParams()
   const requestedNodeId = searchParams.get('node')
   const [initial] = useState(() => {
-    const loaded = loadRoadmap({ progress: {
-    history: roadmapNodes.filter((node) => node.status === 'completed').map((node) => node.id),
-    nodes: roadmapNodes.map((node): RoadmapNodeData => ({
-    ...node,
-    checklist: node.checklist?.length ? node.checklist
-      : skillLearningResources[node.id]?.checklist.length ? skillLearningResources[node.id].checklist
-      : [{ id: `${node.id}-task`, label: node.description, completed: node.status === 'completed' }],
-    })),
-    }, selectedNodeId: null, evidenceByNode: {} })
+    const loaded = loadRoadmap(roadmapDefaults())
     return requestedNodeId && loaded.progress.nodes.some((node) => node.id === requestedNodeId)
       ? { ...loaded, selectedNodeId: requestedNodeId }
       : loaded
@@ -72,9 +64,16 @@ export function RoadmapPage({ loadSources }: { loadSources?: LearningSourcesLoad
     const item = node.checklist?.find((entry) => entry.id === itemId)
     if (node.status !== 'in-progress' || !item || item.completed === completed) return
     setProgress({ ...progress, nodes: nodes.map((entry) => entry.id === node.id
-      ? { ...entry, checklist: entry.checklist?.map((checklistItem) => checklistItem.id === itemId ? { ...checklistItem, completed } : checklistItem) }
+      ? { ...entry, checklist: entry.checklist?.map((checklistItem) => checklistItem.id === itemId
+        // A manual change replaces a step-check result for this item.
+        ? { ...checklistItem, completed, verified: false, needsReview: completed ? false : checklistItem.needsReview }
+        : checklistItem) }
       : entry) })
     recordRoadmapActivity({ kind: 'checklist', title: `${completed ? 'Checked' : 'Unchecked'} an item in ${node.title}`, description: item.label, nodeId: node.id })
+  }
+  function applyCheck(node: RoadmapNodeData, verifiedIds: string[], reviewIds: string[]) {
+    setProgress((current) => ({ ...current, nodes: applyStepCheck(current.nodes, node.id, verifiedIds, reviewIds) }))
+    recordStepCheckActivity(node, verifiedIds.length, reviewIds.length)
   }
   function addEvidence(node: RoadmapNodeData, evidence: RoadmapEvidence) {
     setEvidenceByNode((current) => ({ ...current, [node.id]: [...current[node.id] ?? [], evidence] }))
@@ -124,6 +123,7 @@ export function RoadmapPage({ loadSources }: { loadSources?: LearningSourcesLoad
                 canUncomplete={history.at(-1) === selectedNode.id && selectedNode.status === 'completed'}
                 onUncomplete={() => undoCompletion(selectedNode.id)}
                 onChecklistChange={(itemId, completed) => changeChecklist(selectedNode, itemId, completed)}
+                onStepCheckApplied={(verifiedIds, reviewIds) => applyCheck(selectedNode, verifiedIds, reviewIds)}
                 evidenceItems={evidenceByNode[selectedNode.id] ?? []}
                 onAddEvidence={(evidence) => addEvidence(selectedNode, evidence)}
                 onRemoveEvidence={(id) => removeEvidence(selectedNode, id)}

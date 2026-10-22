@@ -26,7 +26,7 @@ class ConfirmedSkill(Record):
     skill_name: str
     raw_skill_name: str
     proficiency_level: Level
-    proficiency_basis: Literal["explicit", "inferred", "unknown"]
+    proficiency_basis: Literal["explicit", "inferred", "unknown", "self_reported", "assessed"]
     confidence: float | None = Field(default=None, ge=0, le=1)
     evidence: tuple[Evidence, ...] = ()
 

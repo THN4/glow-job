@@ -36,6 +36,16 @@ Host migration `016` adds roadmap generation: step/task plan fields, the
 `app.roadmap_generations` snapshot table and token/cost columns on
 `system.ai_runs` (see [roadmap generation](../docs/roadmap/roadmap-generation.md)).
 
+Host migration `017` adds skill assessments: the question bank, self-check
+statements, assessments and answers, two new `proficiency_basis` values
+(`self_reported`, `assessed`) and step-check flags on `app.user_task_progress`
+(see [assessments](../docs/assessments/assessment-plan.md)). Load the reviewed seed
+questions afterwards with `scripts.assessments.load_bank`.
+
+Host migration `018` adds on-demand step-check questions: the `provisional` item status and
+`app.assessment_generations` (daily cap and retry back-off, see
+[question bank](../docs/assessments/question-bank.md)).
+
 ## Development user data
 
 After the schema is ready, optionally run

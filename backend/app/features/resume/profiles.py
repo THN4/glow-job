@@ -11,6 +11,7 @@ from typing import Any
 import psycopg
 from psycopg.types.json import Jsonb
 
+from app.features.assessments.overlay import apply_accepted_assessments
 from app.features.resume.config import CvSettings
 from app.features.resume.errors import AppError
 from app.features.resume.storage import StoredProfile
@@ -181,6 +182,9 @@ class DatabaseProfilesRepo:
                         ),
                     )
                     self._replace_profile_items(connection, user_id, profile)
+                    # Kept skill-check levels live in app.skill_assessments; write them back
+                    # because the rows above were just recreated from the profile JSON.
+                    apply_accepted_assessments(connection, user_id)
         except AppError:
             raise
         except Exception as exc:  # noqa: BLE001 - keep DB details out of API responses

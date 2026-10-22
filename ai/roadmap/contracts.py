@@ -104,6 +104,10 @@ class ChecklistItem(View):
     task_kind: TaskKind
     completed: bool = False
     citations: list[Citation] = []
+    # Step checks: ticked by a check, failed in a check, and how many reviewed questions exist.
+    verified: bool = False
+    needs_review: bool = False
+    question_count: int = 0
 
 
 class NodeSkill(View):

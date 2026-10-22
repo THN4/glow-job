@@ -12,6 +12,19 @@ export function startRoadmapNode(nodes: RoadmapNodeData[], connections: RoadmapC
     : node.status === 'in-progress' ? { ...node, status: 'upcoming', subtitle: 'Upcoming' } : node)
 }
 
+/**
+ * Apply a step check to the step in progress: tick and mark verified tasks, flag the rest for review.
+ * Ticks already made by hand stay; a task can be both done and worth reviewing.
+ */
+export function applyStepCheck(nodes: RoadmapNodeData[], id: string, verifiedIds: string[], reviewIds: string[]): RoadmapNodeData[] {
+  return nodes.map((node) => node.id !== id || node.status !== 'in-progress' ? node : {
+    ...node,
+    checklist: (node.checklist ?? []).map((item) => verifiedIds.includes(item.id)
+      ? { ...item, completed: true, verified: true, needsReview: false }
+      : reviewIds.includes(item.id) ? { ...item, verified: false, needsReview: true } : item),
+  })
+}
+
 export function canCompleteNode(node: RoadmapNodeData): boolean {
   return node.status === 'in-progress' && Boolean(node.checklist?.length)
     && node.checklist!.every((item) => item.completed)

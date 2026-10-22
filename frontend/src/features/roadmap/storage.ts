@@ -7,7 +7,7 @@ const schema = z.object({
   nodes: z.array(z.object({
     id: z.string(),
     status: z.enum(['completed', 'in-progress', 'upcoming']),
-    checklist: z.array(z.object({ id: z.string(), completed: z.boolean() })),
+    checklist: z.array(z.object({ id: z.string(), completed: z.boolean(), verified: z.boolean().optional(), needsReview: z.boolean().optional() })),
   })),
   history: z.array(z.string()),
   selectedNodeId: z.string().nullable(),
@@ -35,7 +35,10 @@ export function restoreRoadmap(raw: string | null, defaults: RoadmapSnapshot): R
       return {
         ...node, status: previous.status,
         subtitle: previous.status === 'completed' ? 'Completed' : previous.status === 'in-progress' ? 'In progress' : 'Upcoming',
-        checklist: node.checklist?.map((item) => ({ ...item, completed: previous.checklist.find((entry) => entry.id === item.id)?.completed ?? item.completed })),
+        checklist: node.checklist?.map((item) => {
+          const saved = previous.checklist.find((entry) => entry.id === item.id)
+          return { ...item, completed: saved?.completed ?? item.completed, verified: saved?.verified, needsReview: saved?.needsReview }
+        }),
       }
     })
     if (nodes.filter((node) => node.status === 'in-progress').length > 1) return defaults
@@ -51,7 +54,7 @@ export function restoreRoadmap(raw: string | null, defaults: RoadmapSnapshot): R
 export function serializeRoadmap(snapshot: RoadmapSnapshot): string {
   return JSON.stringify({
     version: 1,
-    nodes: snapshot.progress.nodes.map((node) => ({ id: node.id, status: node.status, checklist: (node.checklist ?? []).map(({ id, completed }) => ({ id, completed })) })),
+    nodes: snapshot.progress.nodes.map((node) => ({ id: node.id, status: node.status, checklist: (node.checklist ?? []).map(({ id, completed, verified, needsReview }) => ({ id, completed, verified, needsReview })) })),
     history: snapshot.progress.history,
     selectedNodeId: snapshot.selectedNodeId,
     evidenceByNode: snapshot.evidenceByNode,

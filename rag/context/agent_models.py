@@ -124,7 +124,7 @@ class RoadmapCandidate(Record):
     skill_name: str
     selection_role: Literal["main"] = "main"
     gap: GapAssessment
-    proficiency_basis: Literal["explicit", "inferred", "unknown"] | None
+    proficiency_basis: Literal["explicit", "inferred", "unknown", "self_reported", "assessed"] | None
     market: MarketSkill | None
     priority: Priority
     learning_recommendation: Literal["candidate", "reference_only", "needs_confirmation"]

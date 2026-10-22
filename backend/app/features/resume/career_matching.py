@@ -26,6 +26,10 @@ _LEVEL_INDEX = {
 CORE_SKILL_LIMIT = 20
 
 
+# Levels the learner stated in the CV or confirmed in a skill check need no further confirmation.
+CONFIRMED_BASES = {"explicit", "assessed", "self_reported"}
+
+
 @dataclass(frozen=True)
 class UserSkill:
     skill_id: int
@@ -168,7 +172,7 @@ def calculate_match(
                 "priorityScore": None,
                 "priorityRank": None,
                 "requiresConfirmation": bool(
-                    user_skill and user_skill.proficiency_basis != "explicit"
+                    user_skill and user_skill.proficiency_basis not in CONFIRMED_BASES
                 ),
             })
             counts["marketDataInsufficient"] += 1
