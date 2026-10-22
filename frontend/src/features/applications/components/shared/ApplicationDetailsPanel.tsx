@@ -5,7 +5,7 @@ import type { ApplicationEntry, ApplicationHistoryEntry, ApplicationStatus } fro
 
 type ApplicationDetailsPanelProps = {
   application: ApplicationEntry
-  onUpdate: (application: ApplicationEntry) => void
+  onUpdate: (application: ApplicationEntry) => Promise<void>
   onEdit: () => void
 }
 
@@ -33,26 +33,46 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
   const [statusDraft, setStatusDraft] = useState(application.status)
   const [categoryDraft, setCategoryDraft] = useState(application.rejectionCategory ?? 'not-specified')
   const [reasonDraft, setReasonDraft] = useState(application.rejectionReason ?? '')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const history = getHistory(application)
 
-  function saveStatus() {
+  async function saveStatus() {
     if (statusDraft !== application.status) {
       const now = new Date()
       const dateISO = now.toISOString().slice(0, 10)
       const relevantDate = `${statusDraft === 'applied' ? 'Applied' : 'Updated'} ${formatDate(now)}`
-      onUpdate({
-        ...application,
-        status: statusDraft,
-        relevantDate,
-        relevantDateISO: dateISO,
-        statusHistory: [...history, { status: statusDraft, date: formatDate(now), dateISO }],
-      })
+      setSaving(true)
+      setSaveError(null)
+      try {
+        await onUpdate({
+          ...application,
+          status: statusDraft,
+          relevantDate,
+          relevantDateISO: dateISO,
+          statusHistory: [...history, { status: statusDraft, date: formatDate(now), dateISO }],
+        })
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : 'Could not save this update.')
+        setSaving(false)
+        return
+      }
+      setSaving(false)
     }
     setEditingStatus(false)
   }
 
-  function saveRejection() {
-    onUpdate({ ...application, rejectionCategory: categoryDraft, rejectionReason: reasonDraft.trim() })
+  async function saveRejection() {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await onUpdate({ ...application, rejectionCategory: categoryDraft, rejectionReason: reasonDraft.trim() })
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save rejection details.')
+      setSaving(false)
+      return
+    }
+    setSaving(false)
     setEditingRejection(false)
   }
 
@@ -95,7 +115,7 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
                 <select aria-label="New application status" value={statusDraft} onChange={(event) => setStatusDraft(event.target.value as ApplicationStatus)} className="min-h-9 min-w-0 flex-1 rounded-lg border border-blue-100 px-2 text-xs">
                   {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                 </select>
-                <button type="button" onClick={saveStatus} className="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700">Save</button>
+                <button type="button" onClick={saveStatus} disabled={saving} className="rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60">{saving ? 'Saving…' : 'Save'}</button>
               </div>
             )}
             <ol className="mt-2 space-y-2">
@@ -138,7 +158,7 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
               <label className="mt-3 block space-y-1.5 text-xs font-semibold text-slate-800">Reason details · user-entered
                 <textarea disabled={!editingRejection} value={reasonDraft} onChange={(event) => setReasonDraft(event.target.value)} rows={3} placeholder="Add details only if you choose to record a reason" className="w-full resize-y rounded-lg border border-rose-100 bg-rose-50/30 px-3 py-2 text-xs font-normal text-slate-700 outline-none placeholder:text-slate-400 focus:border-rose-300 disabled:bg-slate-50" />
               </label>
-              {editingRejection && <button type="button" onClick={saveRejection} className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700"><Save size={13} aria-hidden="true" />Save rejection details</button>}
+              {editingRejection && <button type="button" onClick={saveRejection} disabled={saving} className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"><Save size={13} aria-hidden="true" />{saving ? 'Saving…' : 'Save rejection details'}</button>}
             </section>
           )}
 
@@ -149,6 +169,7 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
           </div>
         </div>
       </div>
+      {saveError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{saveError}</p>}
     </section>
   )
 }
