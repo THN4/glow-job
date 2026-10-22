@@ -85,7 +85,7 @@
 | 2 | ตรวจ/ปรับตัวอย่างคะแนนและกำหนด eligibility/ranking policy | ใช้ policy v0.4: weighted Core Top 20 with cutoff ties; แชร์สูตรกับ Resume Career Match |
 | 3 | Dependency จากเอกสารที่เตรียมไว้ + approve/reject + AI handoff | Apply 18 คู่ที่อนุมัติลง DB แล้ว; reject 5 / pending 0; อ่านกลับครบ 18 คู่ (ordering 1 / scoped Context 14 / related 3) |
 | 4 | Embedding retrieval + Gemini text review + citations/coverage/budget | มี CLI/typed knowledge preview และประกอบเข้า Agent Context แล้ว; ยังต้อง calibrate retrieval และเพิ่ม/ทบทวนเนื้อหาบาง skill |
-| 5 | Final Agent Context, contract validation และตัวอย่างส่งต่อทีม AI/Backend | schema v0.4, คะแนนครบ cohort, quality gates และตัวอย่างจริงผ่าน validation; roadmap job บันทึก Context กับ generation แล้ว แต่การ trigger หลัง onboarding, เลือก RAG ตาม gap และ UI ยังต้องเชื่อม |
+| 5 | Final Agent Context, contract validation และตัวอย่างส่งต่อทีม AI/Backend | schema v0.5, คะแนนครบ cohort, project summaries, quality gates และตัวอย่างจริงผ่าน validation; roadmap job บันทึก Context กับ generation แล้ว แต่การ trigger หลัง onboarding, เลือก RAG ตาม gap และ UI ยังต้องเชื่อม |
 
 Learning modules กลางยังเลื่อนออกไป ส่วนการสร้าง Roadmap Agent, หน้าจอ และ App persistence เป็นงานทีมปลายทางตามข้อสรุป R1/R2
 
@@ -395,3 +395,17 @@ Learning modules กลางยังเลื่อนออกไป ส่�
 - โปรไฟล์จริงล่าสุด: Core match 36.68%, full-market coverage 21.01%, มี market
   assessments 209 rows และ 4 selected gaps; mock Roadmap smoke test สร้างแผนได้โดย
   defer ELT เป็น `NEEDS_CONFIRMATION` และ Azure เป็น `CONTENT_OUTLINE_ONLY`
+
+## Agent Context v0.5 — user projects for Roadmap planning (2026-10-22)
+
+- เพิ่มเฉพาะ project records ที่ผู้ใช้ยืนยันจาก `app.user_experiences` พร้อม summary,
+  highlights, ช่วงเวลา และ canonical skills ที่เชื่อมผ่าน `app.user_skill_evidence`;
+  ไม่ให้ AI อ่าน DB เอง
+- จำกัดข้อมูลก่อนส่งต่อ AI: ไม่เกิน 10 projects, 800 ตัวอักษรต่อ description,
+  และ 5 highlights ต่อ project; skill links ใช้ canonical ID เท่านั้น
+- Roadmap prompt ให้ตรวจ projects ที่ทำแล้วก่อนเสนอ project ใหม่ และไม่กล่าวอ้างว่า
+  project แสดง skill ใด เว้นแต่ skill นั้นอยู่ในรายการที่เชื่อมไว้
+- เปลี่ยน Agent Context schema เป็น v0.5; ไม่มี migration เพิ่มเพราะ projects เป็น
+  ข้อมูลที่อ่านจากตารางเดิม และ snapshot ยังคงเก็บใน `agent_context` JSONB
+- การสร้างตัวอย่าง user context ใหม่ต้องทำใน environment ที่เข้าถึง PostgreSQL ได้;
+  context เป็นข้อมูลส่วนบุคคลและยังคง Git-ignored

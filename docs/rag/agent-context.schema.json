@@ -1546,6 +1546,19 @@
           "default": false,
           "title": "Evidence Excerpts Truncated",
           "type": "boolean"
+        },
+        "projects": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/UserProject"
+          },
+          "title": "Projects",
+          "type": "array"
+        },
+        "projects_truncated": {
+          "default": false,
+          "title": "Projects Truncated",
+          "type": "boolean"
         }
       },
       "required": [
@@ -1557,13 +1570,125 @@
       ],
       "title": "UserContext",
       "type": "object"
+    },
+    "ProjectSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name"
+      ],
+      "title": "ProjectSkill",
+      "type": "object"
+    },
+    "UserProject": {
+      "additionalProperties": false,
+      "description": "A user-confirmed project, linked only to canonical skills with evidence.",
+      "properties": {
+        "experience_id": {
+          "exclusiveMinimum": 0,
+          "title": "Experience Id",
+          "type": "integer"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "highlights": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Highlights",
+          "type": "array"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Start Date"
+        },
+        "end_date": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Date"
+        },
+        "is_current": {
+          "default": false,
+          "title": "Is Current",
+          "type": "boolean"
+        },
+        "skills": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ProjectSkill"
+          },
+          "title": "Skills",
+          "type": "array"
+        }
+      },
+      "required": [
+        "experience_id",
+        "title"
+      ],
+      "title": "UserProject",
+      "type": "object"
     }
   },
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": "0.4",
-      "default": "0.4",
+      "const": "0.5",
+      "default": "0.5",
       "title": "Schema Version",
       "type": "string"
     },

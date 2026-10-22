@@ -1,15 +1,15 @@
 # Glow-Job RAG & Skill Context Specification
 
-**Version:** v0.4 — scoring policy และ Agent Context contract<br>
+**Version:** v0.5 — Agent Context เพิ่ม user-confirmed projects; scoring policy remains v0.4<br>
 **Updated:** 2026-10-22<br>
 **Scope:** Skill Gap, Career Match, Roadmap Skill Selection, Document-grounded Dependencies, RAG และ Agent Context<br>
 **Language:** Thai
 
-เอกสารนี้ต่อยอดจาก draft v0.3 และระบุ scoring policy กับ Agent Context contract v0.4 ที่ implement แล้ว Backend มี roadmap-generation job ที่ประกอบและบันทึก Context ไปกับ generation แล้ว แต่ยังไม่ trigger อัตโนมัติหลัง onboarding และยังต้องเตรียม Knowledge Context ที่ครอบคลุม gap กับเชื่อม UI ก่อน production rollout
+เอกสารนี้ต่อยอดจาก draft v0.3 และระบุ scoring policy v0.4 กับ Agent Context contract v0.5 ที่ implement แล้ว โดยเพิ่มประสบการณ์ project ที่ผู้ใช้ยืนยันและ canonical skills ที่เชื่อมผ่าน evidence table Backend มี roadmap-generation job ที่ประกอบและบันทึก Context ไปกับ generation แล้ว แต่ยังไม่ trigger อัตโนมัติหลัง onboarding และยังต้องเตรียม Knowledge Context ที่ครอบคลุม gap กับเชื่อม UI ก่อน production rollout
 
 คำว่า **ข้อกำหนด** หมายถึงแนวทางที่ตกลงกันแล้ว ส่วน **ข้อเสนอรอตรวจ** และ **TBD** หมายถึงรายละเอียดที่ยังต้องเลือกหรือวัดผลก่อน implementation ค่าตัวอย่างใน JSON เป็นข้อมูลสมมติ ไม่ใช่ผล query จาก DB หรือหลักฐาน prerequisite จริง
 
-ดู [สถานะงานและผลตรวจ](implementation-progress.md), [Agent Context v0.4](agent-context-guide.md), [คู่มือ input preview](context-data-guide.md) และ [ผลทดลองคะแนนชุดแรก](market-score-comparison.md) รายงานเปรียบเทียบเป็นประวัติการทดลอง; policy ที่เลือกใช้ปัจจุบันระบุในหัวข้อ 18–21 และ versioned Agent Context contract
+ดู [สถานะงานและผลตรวจ](implementation-progress.md), [Agent Context v0.5](agent-context-guide.md), [คู่มือ input preview](context-data-guide.md) และ [ผลทดลองคะแนนชุดแรก](market-score-comparison.md) รายงานเปรียบเทียบเป็นประวัติการทดลอง; policy คะแนนที่เลือกใช้ปัจจุบันระบุในหัวข้อ 18–21 และ contract ของ Agent Context ระบุใน schema รุ่นล่าสุด
 
 ข้อสรุปที่ผู้ใช้ยืนยันหลังตรวจซ้ำ: R1 งานรอบนี้จบที่การเตรียมข้อมูล/RAG/Agent Context และ contract ส่งต่อทีม AI/Backend; R2 เลื่อน reusable learning modules กลางออกไป; R3 ใช้ weighted Core Top 20, full-market coverage แยกต่างหาก และ versioned gap/priority scores ตามผลทบทวนในหัวข้อ 18–21 ส่วน Roadmap Agent, หน้าจอ และการบันทึกแผนใน Backend อยู่ใน repo แล้ว แต่การ trigger จาก onboarding และการเชื่อม UI เป็นงานต่อ
 
@@ -653,7 +653,7 @@ User Context บอกเป้าหมาย พื้นฐาน รูป�
 
 มี implementation สำหรับประกอบ contract และตัวอย่างแล้วที่
 [Agent Context guide](agent-context-guide.md) / [JSON Schema](agent-context.schema.json)
-ใช้ schema `0.4` และสถานะ score-quality `ready`, `estimated` หรือ `insufficient_market_data`.
+ใช้ schema `0.5` และสถานะ score-quality `ready`, `estimated` หรือ `insufficient_market_data`.
 รวม User/Goal/Market/cited knowledge ในเครื่องโดยไม่เรียกโมเดลเพิ่ม และคำนวณ policy versions
 สำหรับ Career Match, gap, priority และ retrieval
 มี registry ที่รวม chunks ซ้ำและ foundation mentions ที่รวม canonical IDs แต่คง scope
@@ -665,7 +665,7 @@ User Context บอกเป้าหมาย พื้นฐาน รูป�
 Contract ตัวอย่างใช้ snake_case ภายใน Context; API เดิมของ Resume ใช้ camelCase จึงต้องมี adapter ที่ทดสอบแยก ไม่เปลี่ยน public API โดยอัตโนมัติ JSON contract ที่ตรวจด้วย schema ต้องสร้างใน implementation
 
 ตัวอย่าง JSON ต่อไปนี้เป็น draft schema v0.3 เพื่ออธิบายแนวคิดเท่านั้น และไม่ได้แสดง
-คะแนนที่ implement ภายหลัง; ใช้ [schema v0.4 ปัจจุบัน](agent-context.schema.json)
+คะแนนที่ implement ภายหลัง; ใช้ [schema v0.5 ปัจจุบัน](agent-context.schema.json)
 และ [Agent Context guide](agent-context-guide.md) เป็น contract จริง
 
 ```json

@@ -6,12 +6,15 @@ The host-owned assembler combines a saved confirmed profile and goal, one explic
 Market cohort, cited Skill Knowledge Context, and live verified dependencies into
 Agent Context. It performs no model calls or database writes.
 
-Agent Context schema `0.4` now calculates Core skill match, full-market coverage,
+Agent Context schema `0.5` adds user-confirmed project summaries with canonical skill
+links. The Roadmap AI can use these to avoid proposing the same project again. Schema
+`0.5` also calculates Core skill match, full-market coverage,
 proficiency alignment, assessment coverage, per-skill gap scores and priority scores.
 Its Top 20 denominator, quality gates and formulas share the same versioned helper
 as the Resume Career Match calculation. `ready`, `estimated`, and
 `insufficient_market_data` describe score input quality. They are not probabilities
-of getting a job. Main skills still come from the caller's RAG selection; the output
+of getting a job. The local CLI accepts explicit main skills; the Roadmap API selects
+ranked core gaps with embedded documents. The output in both cases
 includes scores for the complete market snapshot so the downstream Roadmap Agent can
 inspect gaps beyond the retrieved subset.
 
@@ -67,7 +70,7 @@ snapshot with authorized teammates; the published schema contains no profile val
 
 | Section | Meaning |
 |---|---|
-| `user_context` | Background, saved goal/preferences/deadline, canonical confirmed skills and separate unresolved names |
+| `user_context` | Background, saved goal/preferences/deadline, canonical confirmed skills, separate unresolved names, and confirmed projects with evidence-linked skills |
 | `career_context` | Selected career/profile, one Market window/date basis, cohort job count, score metrics, policy versions and quality gates |
 | `skill_gap_summary` | Disjoint statuses across all skills in that Market snapshot |
 | `selected_skill_gap_summary` | Disjoint statuses for explicitly selected main skills only |
@@ -165,7 +168,7 @@ silently dropped.
 
 ## Local examples and integration ownership
 
-Current scored examples use schema `0.4`:
+Current scored examples use schema `0.5`:
 
 - `rag/data/agent-context/examples/agent-context-demo-student-v3.json` / `.md`: synthetic seed profile,
   tracked for the Roadmap consumer contract.
@@ -174,7 +177,7 @@ Current scored examples use schema `0.4`:
   generated from the latest saved onboarding profile in this workspace.
 
 The real-profile output is local and Git-ignored because it contains a profile ID,
-background and skill evidence. It has 209 market assessments; the selected RAG
+background, project summaries and skill evidence. It has 209 market assessments; the selected RAG
 subset has four potential gaps. Its status is `estimated`: the profile does not
 contain enough proficiency-level evidence to calculate proficiency alignment.
 Superseded schema `0.3` previews were removed; only the latest v0.4 user snapshot is
@@ -186,10 +189,10 @@ the existing input repository and pipeline-owned evidence/dependency readers.
 Backend must authorize the profile before calling the internal function; the local
 CLI is for the database owner and does not implement a login/auth boundary.
 
-The typed JSON can be consumed by the Roadmap Agent. The existing roadmap-generation
-job calls this assembler and stores the resulting Agent Context with the generated
-roadmap. It is not triggered automatically by onboarding. Before production use,
-the deployment must provide reviewed Knowledge Context files at the configured
-career-profile paths, and retrieval must select enough relevant skill content for
-the learner's scored gaps. Outlines, coverage gaps, score warnings, untrusted text
-and scoped conditions must remain visible to the consuming Agent.
+The typed JSON can be consumed by the Roadmap Agent. The roadmap-generation job
+selects ranked core gaps, retrieves and reviews their document evidence, calls this
+assembler, and stores the resulting Agent Context with the generated roadmap. It is
+not triggered automatically by onboarding. The API does not read a prepared
+career-profile knowledge file. Live retrieval needs mapped, embedded documents and
+Gemini access; outlines, coverage gaps, score warnings, untrusted text and scoped
+conditions must remain visible to the consuming Agent.
