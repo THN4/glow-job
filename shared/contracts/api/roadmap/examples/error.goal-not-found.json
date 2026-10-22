@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "GOAL_NOT_FOUND",
+    "message": "Set a career goal before creating a roadmap.",
+    "retryable": false
+  }
+}

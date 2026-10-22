@@ -1,0 +1,12 @@
+{
+  "jobId": "rmj_example",
+  "status": "failed",
+  "stage": "generating",
+  "roadmapId": null,
+  "reused": false,
+  "error": {
+    "code": "ROADMAP_GENERATION_FAILED",
+    "message": "The roadmap could not be generated. Please try again.",
+    "retryable": true
+  }
+}
