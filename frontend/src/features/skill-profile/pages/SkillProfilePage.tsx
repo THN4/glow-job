@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RoadmapNodeIcon } from '../../roadmap/components/RoadmapNodeIcon'
-import { loadCurrentRoadmap, setRoadmapTask } from '../../roadmap/api'
+import { addSkillEvidence, deleteSkillEvidence, loadCurrentRoadmap, loadSkillEvidence, setRoadmapTask, type SkillEvidence } from '../../roadmap/api'
 import { toRoadmapScreen } from '../../roadmap/adapter'
 import type { RoadmapView } from '../../roadmap/api-types'
+import type { RoadmapEvidence } from '../../roadmap/type'
 import type { RoadmapNodeStatus } from '../../roadmap/type'
 import { getSavedProfileId } from '../../resume/api'
 import { SkillProfileHeader } from '../components/SkillProfileHeader'
 import { SkillProfileStats } from '../components/SkillProfileStats'
 import { LearningChecklist } from '../components/LearningChecklist'
 import { LevelCheckDialog } from '../../assessments/components/LevelCheckDialog'
+import { EvidenceForm } from '../../roadmap/components/EvidenceForm'
 
 type SkillFilter = 'all' | 'completed' | 'in-progress' | 'upcoming'
 
@@ -38,6 +41,10 @@ export function SkillProfilePage() {
   const [error, setError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [levelCheckTarget, setLevelCheckTarget] = useState<{ skillId: number; name: string } | null>(null)
+  const [evidence, setEvidence] = useState<SkillEvidence[]>([])
+  const [evidenceLoading, setEvidenceLoading] = useState(false)
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<string | null>(null)
+  const [evidenceError, setEvidenceError] = useState<string | null>(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -55,6 +62,19 @@ export function SkillProfilePage() {
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
   }, [reloadKey])
+
+  useEffect(() => {
+    if (!view?.roadmapId) return
+    let cancelled = false
+    setEvidenceLoading(true)
+    loadSkillEvidence()
+      .then((items) => { if (!cancelled) setEvidence(items) })
+      .catch((caught: unknown) => {
+        if (!cancelled) setEvidenceError(caught instanceof Error ? caught.message : 'Could not load skill evidence.')
+      })
+      .finally(() => { if (!cancelled) setEvidenceLoading(false) })
+    return () => { cancelled = true }
+  }, [view?.roadmapId])
 
   const screen = useMemo(() => view ? toRoadmapScreen(view) : null, [view])
   const nodes = screen?.nodes ?? []
@@ -112,6 +132,25 @@ export function SkillProfilePage() {
     }
   }
 
+  async function saveEvidence(skillId: number, item: RoadmapEvidence) {
+    setEvidenceError(null)
+    const saved = await addSkillEvidence(skillId, item)
+    setEvidence((current) => [saved, ...current])
+  }
+
+  async function removeEvidence(evidenceId: string) {
+    setDeletingEvidenceId(evidenceId)
+    setEvidenceError(null)
+    try {
+      await deleteSkillEvidence(evidenceId)
+      setEvidence((current) => current.filter((item) => item.id !== evidenceId))
+    } catch (caught) {
+      setEvidenceError(caught instanceof Error ? caught.message : 'Could not delete skill evidence.')
+    } finally {
+      setDeletingEvidenceId(null)
+    }
+  }
+
   const selectSkillFilter = (filter: SkillFilter) => {
     setSelectedFilter(filter)
     if (filter === 'in-progress') {
@@ -148,6 +187,7 @@ export function SkillProfilePage() {
     <section aria-label="Skill profile" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 [@media(max-height:960px)]:gap-3">
       <SkillProfileHeader targetRole={screen.summary.targetRole} duration={screen.summary.duration} />
       {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {evidenceError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{evidenceError}</p>}
 
       <SkillProfileStats
         total={learningNodes.filter((node) => node.kind === 'skill').length}
@@ -210,6 +250,33 @@ export function SkillProfilePage() {
                             className="mt-3 min-h-9 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-50">
                             Assess skill level
                           </button>
+                        )}
+                        {node.skillId && (
+                          <div className="mt-4 border-t border-slate-100 pt-3" data-skill-evidence>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[11px] font-semibold text-slate-600">Evidence</p>
+                              {evidenceLoading && <span className="text-[10px] text-slate-400">Loading…</span>}
+                            </div>
+                            <ul className="mt-2 space-y-2">
+                              {evidence.filter((item) => item.skillId === node.skillId).map((item) => (
+                                <li key={item.id} className="flex items-start gap-2 rounded-md bg-slate-50 p-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold text-slate-800">{item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">{item.title}</a> : item.title}</p>
+                                    <p className="text-[10px] text-slate-500">{item.type}</p>
+                                    {item.notes && <p className="mt-1 whitespace-pre-wrap text-[11px] text-slate-600">{item.notes}</p>}
+                                    {item.photo && <img src={item.photo} alt={`${item.title} evidence`} className="mt-2 max-h-28 rounded object-contain" />}
+                                  </div>
+                                  <button type="button" disabled={deletingEvidenceId === item.id} onClick={() => void removeEvidence(item.id)} aria-label={`Delete ${item.title} evidence`}
+                                    className="rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-700 disabled:opacity-50">
+                                    <Trash2 size={14} aria-hidden="true" />
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="mt-2">
+                              <EvidenceForm topic={node.title} onSave={(item) => saveEvidence(node.skillId!, item)} />
+                            </div>
+                          </div>
                         )}
                       </div>
                       <div className="border-t border-slate-100 pt-3 md:border-l md:border-t-0 md:pl-4 md:pt-0">
