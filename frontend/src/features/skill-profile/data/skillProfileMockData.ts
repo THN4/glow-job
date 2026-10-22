@@ -1,8 +1,9 @@
 import type { SkillProfileData } from '../type'
+import { roadmapSummary } from '../../roadmap/data/roadmapMockData'
 
 export const skillProfileMockData: SkillProfileData = {
-  targetRole: 'Data Engineer Internship',
-  duration: '4 months',
+  targetRole: roadmapSummary.targetRole,
+  duration: roadmapSummary.duration,
   completedSkills: [
     {
       id: 'python',
