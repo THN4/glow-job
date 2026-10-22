@@ -4,13 +4,19 @@
 
 The host-owned assembler combines a saved confirmed profile and goal, one explicit
 Market cohort, cited Skill Knowledge Context, and live verified dependencies into
-the final **shape** of Agent Context. It performs no model calls or database writes.
+Agent Context. It performs no model calls or database writes.
 
-The current status is `preview_pending_policies`: the data contract and assembly
-are available for AI integration, while production Career Match, automated main-skill
-selection, reliability thresholds and numeric gap/priority scores remain undecided.
-Consumers must not present this preview as a production readiness score or generated
-Roadmap. Candidate order comes from the knowledge file's explicit main-skill order.
+Agent Context schema `0.5` adds user-confirmed project summaries with canonical skill
+links. The Roadmap AI can use these to avoid proposing the same project again. Schema
+`0.5` also calculates Core skill match, full-market coverage,
+proficiency alignment, assessment coverage, per-skill gap scores and priority scores.
+Its Top 20 denominator, quality gates and formulas share the same versioned helper
+as the Resume Career Match calculation. `ready`, `estimated`, and
+`insufficient_market_data` describe score input quality. They are not probabilities
+of getting a job. The local CLI accepts explicit main skills; the Roadmap API selects
+ranked core gaps with embedded documents. The output in both cases
+includes scores for the complete market snapshot so the downstream Roadmap Agent can
+inspect gaps beyond the retrieved subset.
 
 ```mermaid
 flowchart TD
@@ -18,7 +24,7 @@ flowchart TD
     M[Selected career + window/date basis] --> I
     K[Saved cited Knowledge Context] --> V[Live canonical names + source/chunk/hash/mapping checks]
     D[Verified DB dependencies] --> V
-    I --> G[Disjoint gap classification; scores stay null]
+    I --> G[Top-20 weighted match + all-market gap and priority scores]
     V --> A[Assemble per-main skill Context]
     G --> A
     A --> F[Group foundations by canonical ID; preserve every scope]
@@ -30,7 +36,7 @@ flowchart TD
 ## Run in CMD from the glow-job root
 
 Prepare the [Skill Knowledge Context](skill-knowledge-context-guide.md) first, or use
-the current local `rag/data/knowledge/knowledge-context-demo-v3.json` example.
+the current local `rag/data/knowledge/examples/knowledge-context-demo-v3.json` example.
 
 ```cmd
 docker compose run --rm --no-deps -T -e PYTHONDONTWRITEBYTECODE=1 -e PYTHONPATH=/workspace ^
@@ -39,8 +45,8 @@ docker compose run --rm --no-deps -T -e PYTHONDONTWRITEBYTECODE=1 -e PYTHONPATH=
   python -m scripts.rag.build_agent_context ^
   --profile-id prf_demo_student_data --career-profile-id 1 ^
   --date-basis first_seen_at ^
-  --knowledge /output/knowledge/knowledge-context-demo-v3.json ^
-  --output /output/agent-context/my-agent-context.json
+  --knowledge /output/knowledge/examples/knowledge-context-demo-v3.json ^
+  --output /output/agent-context/users/prf_demo_student_data/agent-context.json
 ```
 
 The example profile is a synthetic seed, not an uploaded real CV. The profile's
@@ -52,7 +58,7 @@ There is no need to re-extract a Resume or call Gemini during this assembly.
 For local Python with the existing pipeline dependencies:
 
 ```cmd
-python -m scripts.rag.build_agent_context --profile-id prf_demo_student_data --career-profile-id 1 --date-basis first_seen_at --knowledge rag/data/knowledge/knowledge-context-demo-v3.json --output rag/data/agent-context/my-agent-context.json
+python -m scripts.rag.build_agent_context --profile-id prf_demo_student_data --career-profile-id 1 --date-basis first_seen_at --knowledge rag/data/knowledge/examples/knowledge-context-demo-v3.json --output rag/data/agent-context/users/prf_demo_student_data/agent-context.json
 ```
 
 Use a new JSON filename if an output already exists. Results include `.json`, `.md`
@@ -64,19 +70,39 @@ snapshot with authorized teammates; the published schema contains no profile val
 
 | Section | Meaning |
 |---|---|
-| `user_context` | Background, saved goal/preferences/deadline, canonical confirmed skills and separate unresolved names |
-| `career_context` | Selected career/profile, one Market window/date basis, cohort job count and pending score state |
+| `user_context` | Background, saved goal/preferences/deadline, canonical confirmed skills, separate unresolved names, and confirmed projects with evidence-linked skills |
+| `career_context` | Selected career/profile, one Market window/date basis, cohort job count, score metrics, policy versions and quality gates |
 | `skill_gap_summary` | Disjoint statuses across all skills in that Market snapshot |
 | `selected_skill_gap_summary` | Disjoint statuses for explicitly selected main skills only |
-| `roadmap_candidates` | Per-main gap/market/provenance, caller rank, cited learning claims and foundation references |
+| `market_skill_assessments` | Per-skill status and evidence for every market row; core rank, gap score and priority score when eligible |
+| `roadmap_candidates` | RAG-selected skills with the same gap/priority scores plus cited learning claims and foundation references |
 | `foundation_mentions` | One item per canonical foundation ID with all relationship scopes and learner conditions retained |
 | `evidence_registry` | One full active chunk per ID, source URL/title/hash, roles and consuming main IDs |
 | `policy_versions`, `provenance`, `warnings` | Pending decisions, model/config versions, input hashes/times and assembly limitations |
 
-`career_context.scores.metrics` is empty; policy and numeric gap/priority scores
-are null. Availability ranges are not converted to invented exact hours. Context
-does not estimate activity durations, create shared learning modules or save a Roadmap.
-The current contract is [agent-context.schema.json](agent-context.schema.json).
+Career score metrics are percentages rounded to two decimals:
+
+- `core_skill_match_pct`: confirmed skill presence among the 20 highest-weighted
+  skills, including all ties at the cutoff.
+- `market_skill_coverage_pct`: confirmed skill presence across all positive-weight
+  market skills.
+- `proficiency_alignment_pct`: weighted level fit only where both user and market
+  levels pass the configured quality gates.
+- `assessment_coverage_pct`: share of total positive market weight with assessable
+  user and target levels. A score of `0` means no level comparison could be made;
+  `null` means the denominator itself is unavailable.
+
+For Core skills, missing profile evidence gets `gap_score=1.0`; a known level gap is
+`level_gap / 3`; known covered skills get `0.0`. Unknown user levels, unreliable
+market targets, and skills outside Core keep `gap_score=null`. Priority is
+`100 × gap_score × skill_weight / total_core_weight`; only positive gaps get a rank.
+Missing skills set `requires_confirmation=true` because absence from a profile does
+not prove inability. The complete `market_skill_assessments` list retains each
+market row and its reason code.
+
+Availability ranges are not converted to invented exact hours. Context does not
+estimate activity durations, create shared learning modules or save a Roadmap. The
+current contract is [agent-context.schema.json](agent-context.schema.json).
 
 ## Gap interpretation
 
@@ -87,10 +113,9 @@ Comparison uses canonical IDs only. Unresolved names never count as matched skil
 2. A cohort skill absent from confirmed canonical profile skills is
    `missing_from_profile`; this means no profile evidence, not proven inability.
 3. A present skill with unknown user level is `not_assessed`, never level zero.
-4. Known user level with unknown/absent market-level observations is
-   `market_data_insufficient`.
-5. Available known levels are compared ordinally into `covered` or `proficiency_gap`,
-   preserving basis and a warning that reliability policy is still pending.
+4. Known user level with unknown/low-confidence market-level observations is
+   `market_data_insufficient` under the quality gates in `career_context.scores`.
+5. Reliable known levels are compared ordinally into `covered` or `proficiency_gap`.
 
 `observed_level_gap` is an index difference, not a numeric priority, estimated study
 duration or calibrated proficiency measurement. The four known levels are ordinal;
@@ -98,9 +123,10 @@ equal index steps do not establish equal learning effort. `covered` describes th
 observed comparison only. `reference_only` prevents adding that comparison as a
 new activity; inferred inputs and reliability limitations remain visible.
 
-Market summaries cover the entire cohort rather than changing a Career Match
-denominator to the selected Roadmap mains. Main rank is explicit caller order,
-not a new demand/gap formula. An automatically selected policy remains future work.
+Market summaries and Career Match scores cover the entire cohort rather than changing
+the denominator to the selected Roadmap mains. Candidate priority ranks are global
+to positive Core gap scores; the selected RAG subset remains caller-controlled and
+does not change those scores.
 
 ## Evidence, foundations and stale data
 
@@ -136,22 +162,26 @@ all queries and the earlier model run.
 User skill evidence is capped at three excerpts per skill and 500 characters per
 excerpt, with a truncation flag/warning. Full document chunks are not silently
 truncated: `--max-registry-chars` defaults to 40,000 and `--max-payload-chars` to
-80,000 (characters, not exact tokens). Exceeding a preview budget requires fewer
-selected mains or an explicitly higher bound; citations are not silently dropped.
+500,000 (characters, not exact tokens). These limits can be raised explicitly up to
+120,000 registry characters and 1,000,000 payload characters; citations are not
+silently dropped.
 
 ## Local examples and integration ownership
 
-Current saved examples:
+Current scored examples use schema `0.5`:
 
-- `rag/data/agent-context/agent-context-demo-student-v2.json` / `.md`: seed student.
-- `rag/data/agent-context/agent-context-demo-unknown-v1.json` / `.md`: seed career changer with
-  confirmed skill names but unknown levels.
+- `rag/data/agent-context/examples/agent-context-demo-student-v3.json` / `.md`: synthetic seed profile,
+  tracked for the Roadmap consumer contract.
+- `ai/roadmap/fixtures/agent-context-demo-student.json`: tracked consumer fixture copied from that example.
+- `rag/data/agent-context/users/prf_bddf4db6/agent-context-user-bddf4db6-v0.4-final.json` / `.md`: output
+  generated from the latest saved onboarding profile in this workspace.
 
-Both reuse the same three-main document preview (Airflow/RAG/Java), with 8 grouped
-foundation IDs and 16 unique evidence chunks. Their user/goal/gap sections differ.
-For the career changer, four cohort skills are `not_assessed`; no unknown level
-is turned into covered, zero proficiency or satisfied prerequisites.
-These examples contain real local seed/cohort reads, not hypothetical counts.
+The real-profile output is local and Git-ignored because it contains a profile ID,
+background, project summaries and skill evidence. It has 209 market assessments; the selected RAG
+subset has four potential gaps. Its status is `estimated`: the profile does not
+contain enough proficiency-level evidence to calculate proficiency alignment.
+Superseded schema `0.3` previews were removed; only the latest v0.4 user snapshot is
+kept in the profile folder.
 
 `rag.context.assemble.assemble_context(connection, inputs, knowledge, ...)` is the
 host-owned integration boundary. Root CLI `scripts.rag.build_agent_context` wraps
@@ -159,7 +189,10 @@ the existing input repository and pipeline-owned evidence/dependency readers.
 Backend must authorize the profile before calling the internal function; the local
 CLI is for the database owner and does not implement a login/auth boundary.
 
-The AI team can consume the typed JSON and build learner-specific activities from
-instructional evidence. Outlines, coverage gaps, pending policy flags, untrusted
-document/user text and scoped conditions must be respected. Backend persistence,
-Agent/UI implementation, automated selection and policy approval remain separate.
+The typed JSON can be consumed by the Roadmap Agent. The roadmap-generation job
+selects ranked core gaps, retrieves and reviews their document evidence, calls this
+assembler, and stores the resulting Agent Context with the generated roadmap. It is
+not triggered automatically by onboarding. The API does not read a prepared
+career-profile knowledge file. Live retrieval needs mapped, embedded documents and
+Gemini access; outlines, coverage gaps, score warnings, untrusted text and scoped
+conditions must remain visible to the consuming Agent.

@@ -14,15 +14,28 @@ from scripts.rag.prepare_skill_context import write_json
 
 def markdown(context):
     lines = ["# Agent Context — local handoff preview", "",
-             f"Status: **{context.status}**", "",
+             f"Status: **{context.status}**; schema: `{context.schema_version}`", "",
              f"Career: {context.career_context.profile_name}", "",
-             "Saved profile/goal and cited knowledge are assembled locally; no model calls or DB writes.",
-             "Scores remain null until product policy is selected. Candidate order is the caller's order.", "",
-             "## Selected main skills", "",
-             "| Skill | Profile / Market gap | Knowledge | Teaching content | Recommendation |",
-             "|---|---|---|---|---|"]
+             "Saved profile/goal, complete market scoring and cited knowledge are assembled locally; no model calls or DB writes.",
+             f"Match policy: `{context.career_context.scores.policy_version}`; Core set: "
+             f"{context.career_context.scores.core_skill_policy.included_count}/"
+             f"{context.career_context.scores.core_skill_policy.nominal_limit} nominal skills (cutoff ties included).", "",
+             "## Career match scores", "",
+             "| Metric | Score |", "|---|---:|",
+             f"| Core skill match | {context.career_context.scores.metrics.core_skill_match_pct if context.career_context.scores.metrics.core_skill_match_pct is not None else 'N/A'}% |",
+             f"| Market skill coverage | {context.career_context.scores.metrics.market_skill_coverage_pct if context.career_context.scores.metrics.market_skill_coverage_pct is not None else 'N/A'}% |",
+             f"| Proficiency alignment | {context.career_context.scores.metrics.proficiency_alignment_pct if context.career_context.scores.metrics.proficiency_alignment_pct is not None else 'N/A'}% |",
+             f"| Assessment coverage | {context.career_context.scores.metrics.assessment_coverage_pct if context.career_context.scores.metrics.assessment_coverage_pct is not None else 'N/A'}% |",
+             "", *[f"- {warning}" for warning in context.career_context.scores.warnings], "",
+             "Scores describe confirmed skill presence and observed proficiency alignment against this Market snapshot; they are not hiring probabilities.", "",
+             "## RAG selected main skills", "",
+             "| Priority rank | Skill | Gap | Gap score | Priority score | Knowledge | Teaching content | Recommendation |",
+             "|---:|---|---|---:|---:|---|---|---|"]
     for skill in context.roadmap_candidates:
-        lines.append(f"| {skill.skill_name} | {skill.gap.status} | {skill.rag_status} | {skill.teaching_content_status} | {skill.learning_recommendation} |")
+        rank = skill.priority.rank if skill.priority.rank is not None else "—"
+        gap_score = skill.gap.gap_score if skill.gap.gap_score is not None else "—"
+        priority_score = skill.priority.priority_score if skill.priority.priority_score is not None else "—"
+        lines.append(f"| {rank} | {skill.skill_name} | {skill.gap.status} | {gap_score} | {priority_score} | {skill.rag_status} | {skill.teaching_content_status} | {skill.learning_recommendation} |")
     goal = context.user_context.career_goal
     lines.extend(["", "## Saved goal and constraints", "",
                   f"Target date: {goal.target_date if goal else 'not saved'}",
@@ -32,7 +45,8 @@ def markdown(context):
                   "Availability ranges are preserved; no midpoint or learning duration has been invented.", ""])
     for skill in context.roadmap_candidates:
         lines.extend([f"## {skill.skill_name}", "", f"Gap reason: {skill.gap.reason_code}", "",
-                      f"Observed levels: {skill.gap.current_level} → {skill.gap.target_level}; numeric gap score: null.", ""])
+                      f"Observed levels: {skill.gap.current_level} → {skill.gap.target_level}; gap score: {skill.gap.gap_score}; "
+                      f"priority score: {skill.priority.priority_score}; confirmation required: {skill.gap.requires_confirmation}.", ""])
         for claim in skill.claims:
             lines.extend([f"- [{claim.support_kind}] {claim.text}", ""])
             for citation in claim.citations:
@@ -52,6 +66,9 @@ def markdown(context):
     lines.extend(["## Evidence registry and limitations", "",
                   f"Unique chunks: {len(context.evidence_registry)}; "
                   f"document characters: {sum(len(entry.content) for entry in context.evidence_registry)}.", "",
+                  f"Market skill assessments: {len(context.market_skill_assessments)}; "
+                  f"core eligible: {context.career_context.scores.core_skill_policy.eligible_skill_count}; "
+                  f"excluded from score denominator: {context.career_context.scores.core_skill_policy.excluded_skill_count}.", "",
                   *[f"- {warning}" for warning in context.warnings], ""])
     return "\n".join(lines)
 
@@ -64,7 +81,8 @@ def main():
     parser.add_argument("--knowledge", type=Path, required=True, help="Saved validated knowledge-context-preview-1 JSON; defines explicit mains")
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--max-registry-chars", type=int, default=40000)
-    parser.add_argument("--max-payload-chars", type=int, default=80000)
+    parser.add_argument("--max-payload-chars", type=int, default=500000,
+                        help="Maximum serialized Agent Context size in characters")
     args = parser.parse_args()
     try:
         if not args.profile_id.strip() or args.career_profile_id < 1:
@@ -83,6 +101,9 @@ def main():
         write_json(args.output.with_suffix(".schema.json"), AgentContext.model_json_schema())
         args.output.with_suffix(".md").write_text(markdown(context), encoding="utf-8")
         print(json.dumps({"status": context.status, "main_skills": len(context.roadmap_candidates),
+                          "career_scores": context.career_context.scores.metrics.model_dump(),
+                          "core_skill_policy": context.career_context.scores.core_skill_policy.model_dump(),
+                          "market_skill_assessments": len(context.market_skill_assessments),
                           "foundation_mentions": len(context.foundation_mentions),
                           "unique_evidence_chunks": len(context.evidence_registry),
                           "selected_gaps": context.selected_skill_gap_summary.model_dump(),

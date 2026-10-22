@@ -1,133 +1,134 @@
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { getSavedProfileId } from '../../resume/api'
 import { NodeDetailPanel } from '../components/NodeDetailPanel'
 import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
-import {
-  roadmapConnections,
-  roadmapSummary,
-} from '../data/roadmapMockData'
-import type { RoadmapEvidence, RoadmapNodeData } from '../type'
-import type { LearningSourcesLoader } from '../learningSources'
-import { roadmapDefaults } from '../defaults'
-import { applyStepCheck, canStartNode, completeRoadmapNode, startRoadmapNode, uncompleteLatestNode } from '../progress'
-import { recordRoadmapActivity } from '../activity'
-import { recordStepCheckActivity } from '../../assessments/stepCheckActivity'
-import { loadRoadmap, ROADMAP_STORAGE_KEY, serializeRoadmap } from '../storage'
+import { generateRoadmap, loadCurrentRoadmap, setRoadmapStep, setRoadmapTask } from '../api'
+import type { ProgressStatus, RoadmapJob, RoadmapView } from '../api-types'
+import { toRoadmapScreen } from '../adapter'
 
-export function RoadmapPage({ loadSources }: { loadSources?: LearningSourcesLoader }) {
+export function RoadmapPage() {
   const [searchParams] = useSearchParams()
-  const requestedNodeId = searchParams.get('node')
-  const [initial] = useState(() => {
-    const loaded = loadRoadmap(roadmapDefaults())
-    return requestedNodeId && loaded.progress.nodes.some((node) => node.id === requestedNodeId)
-      ? { ...loaded, selectedNodeId: requestedNodeId }
-      : loaded
-  })
-  const [progress, setProgress] = useState(initial.progress)
-  const { nodes, history } = progress
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initial.selectedNodeId)
-  const [evidenceByNode, setEvidenceByNode] = useState<Record<string, RoadmapEvidence[]>>(initial.evidenceByNode)
+  const requestedNodeKey = searchParams.get('node')
+  const [view, setView] = useState<RoadmapView | null>(null)
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [working, setWorking] = useState(false)
+  const [stage, setStage] = useState<RoadmapJob['stage'] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
+    const controller = new AbortController()
+    loadCurrentRoadmap(controller.signal)
+      .then((loaded) => {
+        setView(loaded)
+        if (requestedNodeKey && loaded.nodes.some((node) => node.key === requestedNodeKey)) {
+          setSelectedNodeId(requestedNodeKey)
+        }
+      })
+      .catch((caught: unknown) => {
+        if (!(caught instanceof DOMException && caught.name === 'AbortError')) {
+          setLoadFailed(true)
+          setError(caught instanceof Error ? caught.message : 'เปิด roadmap ไม่สำเร็จ')
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [requestedNodeKey])
+
+  const screen = useMemo(() => view ? toRoadmapScreen(view) : null, [view])
+  const selectedNode = screen?.nodes.find((node) => node.id === selectedNodeId) ?? null
+
+  async function createRoadmap(force = false) {
+    if (working) return
+    setWorking(true)
+    setError(null)
     try {
-      localStorage.setItem(ROADMAP_STORAGE_KEY, serializeRoadmap({ progress, selectedNodeId, evidenceByNode }))
-      window.dispatchEvent(new Event('roadmap-updated'))
-    } catch {
-      console.warn('Roadmap changes could not be saved to browser storage.')
+      setView(await generateRoadmap(setStage, undefined, force))
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'สร้าง roadmap ไม่สำเร็จ')
+    } finally {
+      setStage(null)
+      setWorking(false)
     }
-  }, [progress, selectedNodeId, evidenceByNode])
-  const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null
-  const summary = { ...roadmapSummary, completion: Math.round(nodes.filter((node) => node.status === 'completed').length / nodes.length * 100) }
-  function selectNode(node: RoadmapNodeData) { setSelectedNodeId(node.id) }
-  function completeNode(id: string) {
-    const updated = completeRoadmapNode(nodes, roadmapConnections, id)
-    if (updated === nodes) return
-    setProgress({ nodes: updated, history: [...history, id] })
-    const node = nodes.find((entry) => entry.id === id)
-    if (node) recordRoadmapActivity({ kind: 'completed', title: `Completed ${node.title}`, description: 'Marked complete after finishing its checklist.', nodeId: id })
   }
-  function undoCompletion(id: string) {
-    const updated = uncompleteLatestNode(nodes, history, id)
-    if (updated === nodes) return
-    setProgress({ nodes: updated, history: history.slice(0, -1) })
-    const node = nodes.find((entry) => entry.id === id)
-    if (node) recordRoadmapActivity({ kind: 'reopened', title: `Reopened ${node.title}`, description: 'Moved this step back to in progress.', nodeId: id })
+
+  async function updateTask(taskId: string, completed: boolean) {
+    if (!view?.roadmapId || working) return
+    setWorking(true)
+    setError(null)
+    try {
+      setView(await setRoadmapTask(view.roadmapId, taskId, completed))
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'บันทึกความคืบหน้าไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
-  function startNode(id: string) {
-    const updated = startRoadmapNode(nodes, roadmapConnections, id)
-    if (updated === nodes) return
-    setProgress({ ...progress, nodes: updated })
-    const node = nodes.find((entry) => entry.id === id)
-    if (node) recordRoadmapActivity({ kind: 'started', title: `Started ${node.title}`, description: `${node.title} is now your current roadmap step.`, nodeId: id })
+
+  async function updateStep(stepKey: string, status: ProgressStatus) {
+    if (!view?.roadmapId || working) return
+    setWorking(true)
+    setError(null)
+    try {
+      setView(await setRoadmapStep(view.roadmapId, stepKey, status))
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'บันทึกความคืบหน้าไม่สำเร็จ')
+    } finally {
+      setWorking(false)
+    }
   }
-  function changeChecklist(node: RoadmapNodeData, itemId: string, completed: boolean) {
-    const item = node.checklist?.find((entry) => entry.id === itemId)
-    if (node.status !== 'in-progress' || !item || item.completed === completed) return
-    setProgress({ ...progress, nodes: nodes.map((entry) => entry.id === node.id
-      ? { ...entry, checklist: entry.checklist?.map((checklistItem) => checklistItem.id === itemId
-        // A manual change replaces a step-check result for this item.
-        ? { ...checklistItem, completed, verified: false, needsReview: completed ? false : checklistItem.needsReview }
-        : checklistItem) }
-      : entry) })
-    recordRoadmapActivity({ kind: 'checklist', title: `${completed ? 'Checked' : 'Unchecked'} an item in ${node.title}`, description: item.label, nodeId: node.id })
-  }
-  function applyCheck(node: RoadmapNodeData, verifiedIds: string[], reviewIds: string[]) {
-    setProgress((current) => ({ ...current, nodes: applyStepCheck(current.nodes, node.id, verifiedIds, reviewIds) }))
-    recordStepCheckActivity(node, verifiedIds.length, reviewIds.length)
-  }
-  function addEvidence(node: RoadmapNodeData, evidence: RoadmapEvidence) {
-    setEvidenceByNode((current) => ({ ...current, [node.id]: [...current[node.id] ?? [], evidence] }))
-    recordRoadmapActivity({ kind: 'evidence', title: `Added ${evidence.type} evidence`, description: `${evidence.title} for ${node.title}.`, nodeId: node.id })
-  }
-  function removeEvidence(node: RoadmapNodeData, evidenceId: string) {
-    const evidence = evidenceByNode[node.id]?.find((entry) => entry.id === evidenceId)
-    if (!evidence) return
-    setEvidenceByNode((current) => ({ ...current, [node.id]: (current[node.id] ?? []).filter((entry) => entry.id !== evidenceId) }))
-    recordRoadmapActivity({ kind: 'evidence', title: `Removed evidence from ${node.title}`, description: evidence.title, nodeId: node.id })
-  }
+
+  if (loading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your roadmap...</p>
+  if (loadFailed) return (
+    <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
+      <h1 className="text-xl font-bold text-slate-900">Could not load your roadmap</h1>
+      <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>
+      <button type="button" onClick={() => window.location.reload()}
+        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+    </section>
+  )
+  if (!screen) return (
+    <section className="mx-auto max-w-xl rounded-2xl border border-blue-100 bg-white p-8 text-center">
+      <h1 className="text-2xl font-bold text-slate-900">Your Career Roadmap</h1>
+      <p className="mt-3 text-sm text-slate-600">Your roadmap has not been created yet. Complete onboarding, then create your plan.</p>
+      {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+      {getSavedProfileId() ? <button type="button" disabled={working} onClick={() => createRoadmap()}
+        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        {working ? `Creating roadmap: ${stage ?? 'queued'}...` : 'Create my roadmap'}
+      </button> : <Link to="/onboarding"
+        className="mt-5 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">
+        Start onboarding
+      </Link>}
+    </section>
+  )
 
   return (
     <section aria-label="Career roadmap" className="mx-auto flex min-h-0 w-full max-w-[1500px] flex-1 flex-col">
+      {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="relative flex min-h-0 flex-1 gap-4 min-[1200px]:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <RoadmapHeader
-            summary={summary}
-            showProgress={!selectedNode}
-          />
+          <RoadmapHeader summary={screen.summary} showProgress={!selectedNode}
+            onRegenerate={() => createRoadmap(true)} regenerating={working} />
           <RoadmapCanvas
-            nodes={nodes}
-            connections={roadmapConnections}
-            selectedNodeId={selectedNode?.id ?? null}
-            onSelectNode={selectNode}
+            nodes={screen.nodes}
+            connections={screen.connections}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={(node) => setSelectedNodeId(node.id)}
             detailsOpen={Boolean(selectedNode)}
-            progressSummary={selectedNode ? summary : undefined}
+            progressSummary={selectedNode ? screen.summary : undefined}
           />
         </div>
         {selectedNode && (
           <>
-            <button
-              type="button"
-              aria-label="Close roadmap details"
-              onClick={() => setSelectedNodeId(null)}
-              className="fixed inset-0 z-30 bg-slate-900/25 backdrop-blur-[1px] min-[1200px]:hidden"
-            />
+            <button type="button" aria-label="Close roadmap details" onClick={() => setSelectedNodeId(null)}
+              className="fixed inset-0 z-30 bg-slate-900/25 backdrop-blur-[1px] min-[1200px]:hidden" />
             <div className="fixed inset-x-2 bottom-2 top-[6dvh] z-40 overflow-hidden min-[640px]:inset-x-6 min-[640px]:top-[8dvh] min-[1200px]:static min-[1200px]:mt-6 min-[1200px]:h-[calc(100%-1.5rem)] min-[1200px]:w-[304px] min-[1200px]:shrink-0">
-              <NodeDetailPanel
-                loadSources={loadSources}
-                node={selectedNode}
-                nodes={nodes}
-                onClose={() => setSelectedNodeId(null)}
-                onComplete={() => completeNode(selectedNode.id)}
-                canStart={canStartNode(nodes, roadmapConnections, selectedNode.id)}
-                onStart={() => startNode(selectedNode.id)}
-                canUncomplete={history.at(-1) === selectedNode.id && selectedNode.status === 'completed'}
-                onUncomplete={() => undoCompletion(selectedNode.id)}
-                onChecklistChange={(itemId, completed) => changeChecklist(selectedNode, itemId, completed)}
-                onStepCheckApplied={(verifiedIds, reviewIds) => applyCheck(selectedNode, verifiedIds, reviewIds)}
-                evidenceItems={evidenceByNode[selectedNode.id] ?? []}
-                onAddEvidence={(evidence) => addEvidence(selectedNode, evidence)}
-                onRemoveEvidence={(id) => removeEvidence(selectedNode, id)}
-              />
+              <NodeDetailPanel node={selectedNode} nodes={screen.nodes} extra={screen.extras[selectedNode.id]}
+                onTaskChange={updateTask} onStepChange={updateStep} busy={working}
+                onClose={() => setSelectedNodeId(null)} />
             </div>
           </>
         )}

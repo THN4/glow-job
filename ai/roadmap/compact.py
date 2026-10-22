@@ -100,6 +100,25 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 for s in user.confirmed_skills
             ],
             "profile_evidence_excerpts": excerpts,
+            "projects": [
+                {
+                    "title": project.title,
+                    "role": project.role,
+                    "description": project.description,
+                    "highlights": list(project.highlights),
+                    "period": {
+                        "start": project.start_date.isoformat() if project.start_date else None,
+                        "end": project.end_date.isoformat() if project.end_date else None,
+                        "current": project.is_current,
+                    },
+                    "skills": [
+                        {"skill_id": skill.skill_id, "name": skill.skill_name}
+                        for skill in project.skills
+                    ],
+                }
+                for project in user.projects
+            ],
+            "projects_truncated": user.projects_truncated,
         },
         "goal": None if goal is None else {
             "target_role": goal.target_role_title,
@@ -118,11 +137,16 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
             {
                 "skill_id": c.skill_id,
                 "name": c.skill_name,
-                "rank": c.priority.rank,
+                # Selection order is controlled by the caller. Priority rank is a
+                # separate signal and may be null for zero/unknown gaps.
+                "rank": rank,
+                "priority_rank": c.priority.rank,
+                "priority_score": c.priority.priority_score,
                 "gap_status": c.gap.status,
                 "current_level": c.gap.current_level,
                 "target_level": c.gap.target_level,
                 "recommendation": c.learning_recommendation,
+                "rag_status": c.rag_status,
                 "teaching_content": c.teaching_content_status,
                 "market": None if c.market is None else {
                     "jobs_mentioning": c.market.demand_count,
@@ -136,7 +160,30 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 ],
                 "foundation_skill_ids": list(c.foundation_skill_ids),
             }
-            for c in context.roadmap_candidates
+            for rank, c in enumerate(
+                [item for item in context.roadmap_candidates if item.learning_recommendation != "reference_only"], 1
+            )
+            if c.learning_recommendation != "reference_only"
+        ],
+        "completed_skills": [
+            {
+                "skill_id": c.skill_id,
+                "name": c.skill_name,
+                "gap_status": c.gap.status,
+                "current_level": c.gap.current_level,
+                "target_level": c.gap.target_level,
+                "proficiency_basis": c.proficiency_basis,
+                "rank": rank,
+                "claims": [
+                    {"text": claim.text, "kind": claim.support_kind,
+                     "chunk_ids": sorted({cite.chunk_id for cite in claim.citations})}
+                    for claim in c.claims
+                ],
+                "teaching_content": c.teaching_content_status,
+            }
+            for rank, c in enumerate(context.roadmap_candidates, 1)
+            if c.learning_recommendation == "reference_only"
+            and c.gap.status in {"covered", "not_assessed"}
         ],
         "foundations": [
             {
@@ -145,9 +192,12 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 "in_profile": f.confirmed_in_user_profile,
                 "user_level": f.user_level,
                 "learning_content": f.learning_content_status,
+                "learner_satisfaction": f.learner_satisfaction,
                 "relationships": [
                     {"for_skill_id": r.target_skill_id, "type": r.dependency_type,
-                     "scope": r.scope_type, "condition": r.scope_note, "applicability": r.applicability}
+                     "scope": r.scope_type, "condition": r.scope_note, "applicability": r.applicability,
+                     "runtime_role": r.runtime_role,
+                     "blocks_unconditional_progress": r.blocks_unconditional_progress}
                     for r in f.relationships
                 ],
             }

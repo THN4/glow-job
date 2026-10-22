@@ -38,6 +38,25 @@ class UnresolvedSkill(Record):
     evidence: tuple[Evidence, ...] = ()
 
 
+class ProjectSkill(Record):
+    skill_id: int = Field(gt=0)
+    skill_name: str
+
+
+class UserProject(Record):
+    """A user-confirmed project, linked only to canonical skills with evidence."""
+
+    experience_id: int = Field(gt=0)
+    title: str
+    role: str | None = None
+    description: str | None = None
+    highlights: tuple[str, ...] = ()
+    start_date: date | None = None
+    end_date: date | None = None
+    is_current: bool = False
+    skills: tuple[ProjectSkill, ...] = ()
+
+
 class Background(Record):
     current_status: Literal[
         "student", "employed_full_time", "employed_part_time",
@@ -73,6 +92,7 @@ class UserInputs(Record):
     goal: Goal | None = None
     confirmed_skills: tuple[ConfirmedSkill, ...] = ()
     unresolved_skills: tuple[UnresolvedSkill, ...] = ()
+    projects: tuple[UserProject, ...] = ()
 
     @model_validator(mode="after")
     def unique_canonical_skills(self):

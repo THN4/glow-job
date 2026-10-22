@@ -14,3 +14,6 @@ backend-py/.data/
 backend-py/tests/generated/
 backend-py/tests/eval/out/
 glowjob-full.dump
+
+# Local database exports can contain private profile data.
+/backups/

@@ -1,7 +1,7 @@
 # RAG / Skill Context — สถานะการทำงาน
 
-**อัปเดต:** 2026-10-18<br>
-**ขอบเขต:** เตรียมข้อมูล/RAG/Agent Context และ contract ส่งต่อทีม AI/Backend ตาม [สเปก v0.3](skill-context-spec.md)
+**อัปเดต:** 2026-10-22<br>
+**ขอบเขต:** เตรียมข้อมูล/RAG/Agent Context และ contract ส่งต่อทีม AI/Backend; ประวัติช่วงต้นอ้างอิง [สเปก v0.3](skill-context-spec.md)
 
 บันทึกด้านล่างเรียงตามช่วงที่ทำ สถานะปัจจุบันให้อ่านหัวข้อสุดท้ายและตารางช่วงถัดไป
 
@@ -82,10 +82,10 @@
 
 | ช่วง | งาน | สถานะ |
 |---|---|---|
-| 2 | ตรวจ/ปรับตัวอย่างคะแนนและกำหนด eligibility/ranking policy | มีผลชุดแรกแล้ว รอเลือกหลังตรวจผล |
+| 2 | ตรวจ/ปรับตัวอย่างคะแนนและกำหนด eligibility/ranking policy | ใช้ policy v0.4: weighted Core Top 20 with cutoff ties; แชร์สูตรกับ Resume Career Match |
 | 3 | Dependency จากเอกสารที่เตรียมไว้ + approve/reject + AI handoff | Apply 18 คู่ที่อนุมัติลง DB แล้ว; reject 5 / pending 0; อ่านกลับครบ 18 คู่ (ordering 1 / scoped Context 14 / related 3) |
-| 4 | Embedding retrieval + Gemini text review + citations/coverage/budget | มี CLI/typed knowledge preview และตัวอย่างจริง Airflow/RAG/Java; ยังไม่ calibrate/evaluate หรือเชื่อม Final Agent Context |
-| 5 | Final Agent Context, contract validation และตัวอย่างส่งต่อทีม AI/Backend | มี typed assembly + JSON Schema + seed examples 2 profiles; status preview_pending_policies, ยังไม่เลือก production scoring/selection |
+| 4 | Embedding retrieval + Gemini text review + citations/coverage/budget | มี CLI/typed knowledge preview และประกอบเข้า Agent Context แล้ว; ยังต้อง calibrate retrieval และเพิ่ม/ทบทวนเนื้อหาบาง skill |
+| 5 | Final Agent Context, contract validation และตัวอย่างส่งต่อทีม AI/Backend | schema v0.5, คะแนนครบ cohort, project summaries, quality gates และตัวอย่างจริงผ่าน validation; roadmap job บันทึก Context กับ generation แล้ว แต่การ trigger หลัง onboarding, เลือก RAG ตาม gap และ UI ยังต้องเชื่อม |
 
 Learning modules กลางยังเลื่อนออกไป ส่วนการสร้าง Roadmap Agent, หน้าจอ และ App persistence เป็นงานทีมปลายทางตามข้อสรุป R1/R2
 
@@ -311,7 +311,7 @@ Learning modules กลางยังเลื่อนออกไป ส่�
 - JSON, Database Systems, vector databases และ object-oriented design แสดง
   “พบพื้นฐานที่เกี่ยวข้อง แต่เนื้อหายังไม่พร้อม”, creates_learning_activity=false
   ส่วน main skills อื่นยังเตรียม Context ต่อได้
-- สร้างตัวอย่างจริงฉบับล่าสุดที่ `rag/data/knowledge/knowledge-context-demo-v3.json` และ `.md`
+- สร้างตัวอย่างจริงฉบับล่าสุดที่ `rag/data/knowledge/examples/knowledge-context-demo-v3.json` และ `.md`
   พร้อม `.schema.json`/`.assembly.json`: Airflow partial มี instructional 5 claims,
   RAG partial มี instructional 2 claims, Java partial มี topic_outline 3 claims
   รวม 10 claims, ไม่มี error ในฉบับรวม และมีข้อจำกัดแต่ละ skill ระบุชัดเจน
@@ -345,8 +345,8 @@ Learning modules กลางยังเลื่อนออกไป ส่�
 - ตรวจ live canonical names/source/chunk/hash/mapping และ quote references ก่อน assembly
   พร้อม hard limits registry 40,000 chars / payload 80,000 chars และจำกัด user excerpts
   ไม่ตัด document citations เงียบ ๆ; หลาย read snapshots ไม่อ้างว่าเป็น global transaction เดียว
-- สร้างตัวอย่างจาก seed DB จริงโดย reuse `knowledge-context-demo-v3.json`:
-  `agent-context-demo-student-v2.json` และ `agent-context-demo-unknown-v1.json` ใน `rag/data/agent-context`
+- ช่วงแรกสร้างตัวอย่าง schema v0.3 จาก seed DB จริงโดย reuse `knowledge-context-demo-v3.json`;
+  ไฟล์รุ่นเก่าถูกลบหลังสร้างตัวอย่าง v0.4 และจัดไฟล์ลง `examples/`
   แต่ละชุด main 3 / foundation IDs 8 / registry chunks 16, เอกสารรวม 15,841 characters
 - ตัวอย่าง student payload ประมาณ 56,815 chars, selected gaps เป็น missing_from_profile 3;
   cohort 209 skills: proficiency_gap 2 / missing 205 / not_assessed 1 / insufficient 1
@@ -368,3 +368,44 @@ Learning modules กลางยังเลื่อนออกไป ส่�
   เพื่อให้ clone แล้วได้โครงโฟลเดอร์; generated files ยัง Git-ignored ตามเดิม
 - ปรับตัวอย่างคำสั่ง local/Docker และ path ในคู่มือทั้งหมดให้ตรงกับโครงใหม่
   ไม่มีการเรียก model, เปลี่ยน DB หรือรัน tests เพิ่มในงานจัดโฟลเดอร์รอบนี้
+
+## Scored Agent Context v0.4 (2026-10-22)
+
+- เพิ่ม Career Match metrics ตามสูตรที่ใช้ใน Backend: weighted Top 20 with cutoff ties,
+  full positive-weight market coverage, proficiency alignment และ assessment coverage
+- เพิ่ม quality gates สำหรับ sample size, market freshness, target-level confidence
+  และจำนวน market observations; แชร์ core selection/gap/priority helpers กับ Resume matcher
+- คำนวณ `gap_score` เฉพาะ Core skill: missing profile evidence = 1.0, observed level
+  deficit = `level_gap / 3`, known covered = 0.0; unknown/unreliable/outside-Core = null
+- คำนวณ priority เป็น `100 × gap_score × market_weight / total_core_weight`;
+  positive gaps ถูกจัดอันดับ deterministic และ `requires_confirmation` แยก potential gap
+- เพิ่ม `market_skill_assessments` ครบทุก row ใน snapshot พร้อม status/reason/core rank,
+  gap/priority และคง `roadmap_candidates` เป็น subset ที่มี RAG knowledge
+- เปลี่ยน Agent Context schema เป็น 0.4 และเพิ่ม Pydantic checks สำหรับ denominator,
+  ranking completeness, candidate-to-market consistency และ score range
+- เพิ่ม RAG score tests; รัน `tests/rag` ผ่าน 31 รายการ (7 PostgreSQL opt-in ถูก skip)
+  และเพิ่ม contract output/scored JSON จาก onboarding profile จริงไว้ใน `rag/data`
+- Career match pytest suite รันไม่ได้ใน image ปัจจุบันเพราะไม่มี `pytest`; ใช้ smoke check
+  เรียก matcher โดยตรงยืนยัน score/gap/priority ได้ แต่ต้องรัน backend test suite ใน
+  development environment ก่อน merge/deploy
+- Roadmap CLI อ่าน fixture v0.4 และสร้างผลด้วย mock provider ผ่าน; แก้ compact context
+  ให้แยกลำดับที่ caller เลือกออกจาก priority rank ซึ่งเป็น null ได้
+- Score output ไม่เปลี่ยน DB; ตัวอย่างจริงได้ status `estimated` เพราะ proficiency
+  ระดับผู้ใช้ยัง unknown และ RAG teaching coverage ของบาง skill ยังไม่ครบ
+- โปรไฟล์จริงล่าสุด: Core match 36.68%, full-market coverage 21.01%, มี market
+  assessments 209 rows และ 4 selected gaps; mock Roadmap smoke test สร้างแผนได้โดย
+  defer ELT เป็น `NEEDS_CONFIRMATION` และ Azure เป็น `CONTENT_OUTLINE_ONLY`
+
+## Agent Context v0.5 — user projects for Roadmap planning (2026-10-22)
+
+- เพิ่มเฉพาะ project records ที่ผู้ใช้ยืนยันจาก `app.user_experiences` พร้อม summary,
+  highlights, ช่วงเวลา และ canonical skills ที่เชื่อมผ่าน `app.user_skill_evidence`;
+  ไม่ให้ AI อ่าน DB เอง
+- จำกัดข้อมูลก่อนส่งต่อ AI: ไม่เกิน 10 projects, 800 ตัวอักษรต่อ description,
+  และ 5 highlights ต่อ project; skill links ใช้ canonical ID เท่านั้น
+- Roadmap prompt ให้ตรวจ projects ที่ทำแล้วก่อนเสนอ project ใหม่ และไม่กล่าวอ้างว่า
+  project แสดง skill ใด เว้นแต่ skill นั้นอยู่ในรายการที่เชื่อมไว้
+- เปลี่ยน Agent Context schema เป็น v0.5; ไม่มี migration เพิ่มเพราะ projects เป็น
+  ข้อมูลที่อ่านจากตารางเดิม และ snapshot ยังคงเก็บใน `agent_context` JSONB
+- การสร้างตัวอย่าง user context ใหม่ต้องทำใน environment ที่เข้าถึง PostgreSQL ได้;
+  context เป็นข้อมูลส่วนบุคคลและยังคง Git-ignored

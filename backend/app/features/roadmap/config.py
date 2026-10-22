@@ -1,7 +1,8 @@
 """Settings for roadmap generation. Read from environment variables / backend .env.
 
-Defaults cost nothing: the mock provider makes no model call. Paid providers are
-guarded by daily limits and a monthly budget computed from system.ai_runs.
+The mock Roadmap provider makes no generation call, but live RAG still calls
+Gemini for query embeddings and evidence review. Roadmap model calls are guarded
+by daily limits and a monthly budget computed from system.ai_runs.
 """
 
 from __future__ import annotations
@@ -16,28 +17,26 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class RoadmapSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # mock = rule-based roadmap, no model call (local development and tests)
-    # anthropic = Claude through the Anthropic API; bedrock = Claude through Amazon Bedrock
-    ROADMAP_PROVIDER: Literal["mock", "anthropic", "bedrock"] = "mock"
-    ROADMAP_MODEL_ID: str | None = None  # default: claude-opus-5-5 / anthropic.claude-opus-5-5
+    # mock = rule-based roadmap, no model call; gemini = Google Gemini API.
+    # anthropic and bedrock remain available as alternate providers.
+    ROADMAP_PROVIDER: Literal["mock", "gemini", "anthropic", "bedrock"] = "mock"
+    ROADMAP_MODEL_ID: str | None = None  # Gemini default: gemini-3.8-flash
     ROADMAP_AWS_REGION: str | None = None
     ROADMAP_EFFORT: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     ROADMAP_MAX_TOKENS: int = Field(default=24000, ge=4000, le=128000)
     ROADMAP_CACHE_CONTEXT: bool = False
 
-    # USD per million tokens. Defaults are Anthropic API list prices for Opus 5.5;
-    # replace with the Bedrock price for the chosen region before deployment.
-    ROADMAP_PRICE_INPUT_PER_MTOK: float = Field(default=4.0, ge=0)
-    ROADMAP_PRICE_OUTPUT_PER_MTOK: float = Field(default=20.0, ge=0)
+    # USD per million tokens. Defaults match Gemini 3.8 Flash introductory pricing
+    # as of 2026-10; override these when pricing changes or another provider is used.
+    ROADMAP_PRICE_INPUT_PER_MTOK: float = Field(default=0.75, ge=0)
+    ROADMAP_PRICE_OUTPUT_PER_MTOK: float = Field(default=3.75, ge=0)
 
     # Paid-provider guards. 0 disables a limit. Reused roadmaps never count.
     ROADMAP_DAILY_LIMIT_PER_PROFILE: int = Field(default=3, ge=0)
     ROADMAP_DAILY_LIMIT: int = Field(default=30, ge=0)
     ROADMAP_MONTHLY_BUDGET_USD: float = Field(default=50.0, ge=0)
 
-    # Agent Context inputs. Knowledge is prepared per career profile ahead of time
-    # (scripts.rag.prepare_skill_context) and saved as career-profile-<id>.json.
-    ROADMAP_KNOWLEDGE_DIR: str = "../rag/data/knowledge"
+    # Agent Context is built from the authorized profile, market and live RAG evidence.
     ROADMAP_DATE_BASIS: Literal["posted_at", "first_seen_at"] = "first_seen_at"
     # Development only: use this saved Agent Context JSON instead of building one.
     ROADMAP_CONTEXT_FIXTURE: str | None = None

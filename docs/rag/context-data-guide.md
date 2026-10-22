@@ -27,8 +27,10 @@ process. Inside the Compose network, environment variables supplied by the
 root Compose stack take precedence and use `postgres` with its internal port.
 
 The returned object has `status=input_preview`; it is not a completed Agent
-Context. It contains source inputs and warnings, not a selected production
-score policy or a generated Roadmap. The machine-readable input contract is
+Context. It contains source inputs and warnings, not calculated match scores or a
+generated Roadmap. The Agent Context assembler applies the versioned career-match,
+Top-20 gap and priority policies described in the
+[Agent Context guide](agent-context-guide.md). The machine-readable input contract is
 [context-inputs.schema.json](context-inputs.schema.json).
 
 The Pydantic models also enforce cross-field rules (one cohort, unique skill
@@ -120,7 +122,6 @@ Learning modules remain deferred. The document dependency review/apply flow is n
 implemented; 18 human-approved relationships are applied with live evidence/scope
 checks. See the [prepared-document dependency guide](../../data-pipeline/docs/documents/skill-dependency-review-guide.md).
 
-The next assembly layer is available in the [Agent Context guide](agent-context-guide.md):
-it combines these saved inputs with cited knowledge locally, groups foundations,
-deduplicates evidence and preserves unknown gap/score states. Its output remains
-`preview_pending_policies`, with production policy decisions still open.
+The Agent Context assembler combines these saved inputs with cited knowledge locally,
+groups foundations, deduplicates evidence and calculates match/gap scores. The output
+reports whether the source data is `ready`, `estimated` or insufficient.

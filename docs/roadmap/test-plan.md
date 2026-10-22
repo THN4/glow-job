@@ -4,14 +4,14 @@
 
 | ชั้น | ทดสอบอะไร | ค่าใช้จ่าย | สถานะ |
 |---|---|---|---|
-| 1 | Unit: logic ของ AI core | ฟรี | ✅ ผ่าน 18 ข้อ |
-| 2 | API กับ repository ปลอม | ฟรี | ✅ ผ่าน 6 ข้อ |
+| 1 | Unit: logic ของ AI core | ฟรี | ✅ ผ่าน 24 ข้อ |
+| 2 | API กับ repository ปลอม | ฟรี | ✅ ผ่าน 7 ข้อ |
 | 3 | API + SQL กับ PostgreSQL จริง (DB ชั่วคราว) | ฟรี | ✅ ผ่าน 3 ข้อ |
 | 4 | Docker image + HTTP end-to-end | ฟรี | ✅ ผ่าน |
-| 5 | DB ทีมที่มีข้อมูล market/knowledge จริง | ฟรี | ⏳ รอ DB และไฟล์ knowledge |
-| 6 | Claude จริง (Anthropic API) | ~$0.1–0.25 ต่อครั้ง | ⏳ รอการอนุมัติ |
-| 7 | Bedrock | ตามราคา AWS | ⏳ รอเลือก region |
-| 8 | Frontend integration | ฟรี (mock) | ⏳ รอ FE |
+| 5 | DB ทีมที่มีข้อมูล market/knowledge จริง | RAG อาจเรียก Gemini | ⚠️ ตรวจแบบอ่านอย่างเดียวแล้ว; ยังไม่ได้เรียก API สด |
+| 6 | Gemini จริง (Google AI API) | ประมาณ $0.02–0.04 ต่อครั้งที่ราคาโปรโมชัน | ⏳ ยังไม่ได้เรียก |
+| 7 | Claude บน Bedrock (ตัวเลือกสำรอง) | ตามราคา AWS | ⏳ รอเลือก region |
+| 8 | Frontend integration | ฟรีเมื่อใช้ fixture กับ mock | ⏳ รอ FE |
 
 ## 1–2. Unit และ API (ทุกครั้งที่แก้โค้ด)
 
@@ -26,7 +26,7 @@ cd backend
 - กฎของ validator (citation ผิด, foundation กลายเป็นบทเรียน, skill นอก context, cycle, เกินงบ, key ซ้ำ)
 - การ repair 1 ครั้ง และการบันทึกค่าใช้จ่ายเมื่อล้มเหลว
 - schema ของ structured output
-- รูปแบบ request ที่ส่งไป Claude (adaptive thinking, effort, JSON schema)
+- รูปแบบ request ที่ส่งไป Gemini (thinking level, structured JSON)
 - refusal
 - flow ของ API, การ reuse, การกันคนอื่นเข้าถึง, ลิมิตรายวันและงบรายเดือน
 
@@ -73,32 +73,35 @@ docker build -f backend/Dockerfile -t glowjob-backend .
 
 ## 5. DB ทีม + knowledge จริง (ยังไม่ได้ทดสอบ)
 
-เป็นชั้นเดียวที่ทดสอบ `build_context` (ประกอบ Agent Context จาก DB จริง) ซึ่งชั้นก่อนหน้าใช้ fixture แทน
+เป็นชั้นที่ทดสอบการเลือก gap, ค้นเอกสาร, ตรวจหลักฐาน และประกอบ Agent Context สำหรับผู้ใช้จริง ซึ่งชั้นก่อนหน้าใช้ fixture แทน
 
 1. Apply migration 016 กับ DB ทีม
-2. วางไฟล์ `rag/data/knowledge/career-profile-1.json` และ**ไม่ตั้ง** `ROADMAP_CONTEXT_FIXTURE`
+2. ตั้ง `GEMINI_API_KEY` ให้ RAG และ**ไม่ตั้ง** `ROADMAP_CONTEXT_FIXTURE`; ตรวจว่า market และเอกสารของ skill gap มีใน DB
 3. ใช้ `prf_demo_student_data` คู่กับ `X-Session-Id: glowjob-demo-v1:student-data` เรียก goal → roadmap
 4. ตรวจผล:
    - job สำเร็จ ไม่ใช่ `KNOWLEDGE_NOT_READY` / `ROADMAP_CONTEXT_FAILED`
-   - skills ใน roadmap ตรงกับ main skills ในไฟล์ knowledge
+   - skills ใน roadmap มาจาก core gap ที่จัดอันดับของผู้ใช้คนนั้น
    - ทุก citation มี URL
-   - เรียกซ้ำแล้วได้ `reused: true`
+   - เรียกซ้ำแล้วตรวจว่า `reused: true` เฉพาะเมื่อ compact context เหมือนเดิม; บันทึกกรณีผล review เปลี่ยน
 5. ลอง profile ที่ระดับ skill เป็น unknown (`prf_demo_unknown_data`) และ profile ที่ยังไม่มี goal
 
-## 6. Claude จริง (ต้องอนุมัติก่อน)
+การค้นและตรวจหลักฐานยังเรียก Gemini ก่อนตรวจว่า roadmap เดิม reuse ได้ แม้เลือก `mock` เป็น Roadmap provider; ยังต้องเพิ่ม cache และบันทึก usage/cost ของ RAG ก่อนใช้กับผู้ใช้จำนวนมาก
+
+ผลตรวจล่าสุด: Roadmap core + API tests ผ่าน 31 ข้อใน Docker; Agent Context v0.5 ของผู้ใช้จริงที่มี 4 โปรเจกต์และ 4 selected skills สร้าง roadmap ด้วย mock แบบอ่านไฟล์อย่างเดียวได้ 5 nodes และ 6 citations. DB มี market skills 209 รายการ, ranked gaps 16 รายการ และ 11 รายการมี embeddings. Frontend build และ lint ผ่าน. การเรียก API สดสำหรับผู้ใช้จริงยังไม่ได้ทำ เพราะจะส่งข้อมูลโปรไฟล์ไป Gemini และเขียน roadmap ลง DB; ระบบตรวจอนุมัติอัตโนมัติปฏิเสธการทดสอบครั้งนั้น และต้องรอผู้ใช้อนุญาตก่อน.
+
+## 6. Gemini จริง (ต้องมี `GEMINI_API_KEY` และตั้งใจเรียกโมเดลแบบคิดค่าใช้จ่าย)
 
 ```cmd
 set PYTHONPATH=.;data-pipeline
-set ANTHROPIC_API_KEY=...
-backend\.venv\Scripts\python -m ai.roadmap.cli --context ai/roadmap/fixtures/agent-context-demo-student.json --output rag/data/roadmap-claude.json --provider anthropic --allow-spend --save-draft
+backend\.venv\Scripts\python -m ai.roadmap.cli --context ai/roadmap/fixtures/agent-context-demo-student.json --output rag/data/roadmap-gemini.json --provider gemini --allow-spend --save-draft
 ```
 
 ทำ 2–3 ครั้ง (demo student และ unknown-level) แล้วบันทึกตัวเลขเหล่านี้:
-- `usage` (token จริง) และ `estimated_cost_usd` เพื่อยืนยันประมาณการ $0.12–0.25
+- `usage` (token จริง) และ `estimated_cost_usd` เพื่อเทียบกับราคา Gemini ปัจจุบัน
 - `validation_warnings` ควรมีน้อย ถ้ามี citation ถูกลบบ่อยให้ปรับ prompt
 - เวลาที่ใช้ ใช้ตั้งข้อความ loading ของ FE
 
-ให้คนอ่าน `roadmap-claude.json` ตาม checklist:
+ให้คนอ่าน `roadmap-gemini.json` ตาม checklist:
 - [ ] เป็นภาษาอังกฤษทั้งหมด และไม่มีข้อความไทยหลุดมา
 - [ ] ชั่วโมงรวมอยู่ในงบ (`summary.estimatedHours` เทียบกับ `budgetHours`)
 - [ ] skill ที่ไม่คุ้มเวลาถูก defer พร้อมเหตุผลที่อ่านเข้าใจ
@@ -108,7 +111,7 @@ backend\.venv\Scripts\python -m ai.roadmap.cli --context ai/roadmap/fixtures/age
 - [ ] next action ทำได้จริงภายในสัปดาห์แรก
 - [ ] ถ้าลด effort เป็น `low` คุณภาพยังพอไหม (ประหยัดขึ้น) แต่ไม่ต้องลอง `high` ถ้า `medium` ผ่านแล้ว
 
-## 7. Bedrock (หลังเลือก region)
+## 7. Bedrock (ตัวเลือกสำรอง หลังเลือก region)
 
 1. ตั้ง `ROADMAP_PROVIDER=bedrock`, `ROADMAP_AWS_REGION` และราคา Bedrock
 2. รัน CLI แบบเดียวกับชั้น 6 แต่ใช้ `--provider bedrock --aws-region <region>`
@@ -116,16 +119,16 @@ backend\.venv\Scripts\python -m ai.roadmap.cli --context ai/roadmap/fixtures/age
 4. ทดสอบผ่าน API บน AWS: role ของ container เรียก Bedrock ได้โดยไม่ต้องมี key ใน `.env`
 5. ตั้ง `ROADMAP_MONTHLY_BUDGET_USD` ต่ำ ๆ ชั่วคราว (เช่น 0.01) แล้วตรวจว่าได้ `ROADMAP_BUDGET_REACHED`
 
-## 8. Frontend integration (ทำร่วมกับ FE)
+## 8. Frontend integration (การเชื่อม API เบื้องต้นเสร็จแล้ว; ยังต้องทดสอบใน browser กับข้อมูลจริง)
 
-ใช้ mock provider ทั้งหมด และไล่ตาม [frontend-handoff.md](frontend-handoff.md):
+หน้า `/onboarding` ผูก goal กับ `careerProfileId`, เริ่ม roadmap job และ poll แล้ว หน้า `/app/roadmap` อ่านแผนจริงและบันทึก checklist/step ได้; ตรวจต่อกับทีม FE ตาม [frontend-handoff.md](frontend-handoff.md):
 
 - [ ] ฟอร์ม goal: validation (targetDate ต้องเป็นอนาคต), บันทึกแล้วโหลดค่าเดิมกลับมาได้
 - [ ] ยังไม่มี roadmap → empty state → กดสร้าง → loading → แสดงแผน
-- [ ] กดสร้างซ้ำได้ `reused` เร็ว / ปุ่ม Regenerate มี dialog ยืนยัน
+- [ ] ตรวจการกดสร้างซ้ำและ `reused`; ยังไม่มีปุ่ม Regenerate ใน UI
 - [ ] Canvas: node และเส้นถูกต้องตาม `layer/order/edges` และ goal node อยู่ท้าย
 - [ ] ติ๊ก checklist แล้ว refresh หน้าค่ายังอยู่ และ % กับสถานะ node เปลี่ยนตาม
-- [ ] error ทุกแบบในโฟลเดอร์ `examples/` แสดงข้อความถูก และปุ่ม retry ขึ้นเฉพาะ `retryable`
+- [ ] error ทุกแบบในโฟลเดอร์ `examples/` แสดงข้อความถูก; UI ตอนนี้แสดงข้อความจาก API และให้ลองใหม่เอง ยังไม่ได้แยก `retryable`
 - [ ] ไม่มีคำว่า "On track" หรือ % ที่สื่อว่าเป็นความพร้อมสมัครงาน
 - [ ] เปิดจากเบราว์เซอร์อื่น (session ต่างกัน) แล้วเห็นแผนของคนอื่นไม่ได้
 - [ ] หน้าจอมือถือ: panel รายละเอียดและ citation อ่านได้

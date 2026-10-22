@@ -4,7 +4,8 @@ from typing import Any
 
 from rag.context.models import (
     Background, CareerProfile, ConfirmedSkill, ContextInputs, DateBasis, Evidence,
-    Goal, MarketInputs, MarketSkill, MarketWindow, UnresolvedSkill, UserInputs,
+    Goal, MarketInputs, MarketSkill, MarketWindow, ProjectSkill, UnresolvedSkill,
+    UserInputs, UserProject,
 )
 
 
@@ -86,13 +87,28 @@ def _load_user(connection: Any, profile_id: str, career_profile_id: int) -> User
     profile = profiles[0]
     user_id = profile.pop("user_id")
     goals = _dicts(connection, """
-        SELECT goal_id, career_id, career_profile_id, target_role_title,
+        SELECT g.goal_id, coalesce(g.career_id, exact_match.career_id) AS career_id,
+               coalesce(g.career_profile_id, exact_match.career_profile_id) AS career_profile_id,
+               g.target_role_title,
                readiness_timeframe::text, target_date, weekly_availability::text,
                available_hours_per_week, preferred_learning_style::text,
                additional_context
-        FROM app.user_career_goals
-        WHERE user_id = %s AND career_profile_id = %s
-        ORDER BY is_primary DESC, updated_at DESC, goal_id DESC LIMIT 1
+        FROM app.user_career_goals AS g
+        LEFT JOIN LATERAL (
+            SELECT min(candidate.career_id) AS career_id,
+                   min(candidate.career_profile_id) AS career_profile_id
+            FROM (
+                SELECT p.career_id, p.career_profile_id
+                FROM core.career_profiles AS p
+                JOIN core.careers AS c USING (career_id)
+                WHERE p.is_active AND c.is_active
+                  AND lower(btrim(p.profile_name)) = lower(btrim(g.target_role_title))
+            ) AS candidate
+            HAVING count(*) = 1
+        ) AS exact_match ON g.career_profile_id IS NULL
+        WHERE g.user_id = %s
+          AND coalesce(g.career_profile_id, exact_match.career_profile_id) = %s
+        ORDER BY g.is_primary DESC, g.updated_at DESC, g.goal_id DESC LIMIT 1
     """, (user_id, career_profile_id))
     rows = _dicts(connection, """
         SELECT u.user_skill_id, u.skill_id, s.skill_name, u.raw_skill_name,
@@ -112,6 +128,40 @@ def _load_user(connection: Any, profile_id: str, career_profile_id: int) -> User
     for row in evidence_rows:
         row_id = row.pop("user_skill_id")
         evidence.setdefault(row_id, []).append(Evidence.model_validate(row))
+    project_rows = _dicts(connection, """
+        SELECT experience_id, title, role, left(description, 2000) AS description,
+               highlights, start_date, end_date, is_current
+        FROM app.user_experiences
+        WHERE user_id = %s AND experience_type = 'project'::app.experience_type
+          AND user_confirmed
+        ORDER BY is_current DESC, end_date DESC NULLS LAST,
+                 start_date DESC NULLS LAST, experience_id DESC
+        LIMIT 50
+    """, (user_id,))
+    project_ids = [row["experience_id"] for row in project_rows]
+    project_skills: dict[int, list[ProjectSkill]] = {}
+    if project_ids:
+        linked_skills = _dicts(connection, """
+            SELECT DISTINCT e.experience_id, s.skill_id, s.skill_name
+            FROM app.user_skill_evidence e
+            JOIN app.user_skills u ON u.user_skill_id = e.user_skill_id
+            JOIN core.skills s ON s.skill_id = u.skill_id
+            WHERE u.user_id = %s AND u.user_confirmed AND u.match_status = 'matched'
+              AND e.experience_id = ANY(%s)
+            ORDER BY e.experience_id, s.skill_name
+        """, (user_id, project_ids))
+        for row in linked_skills:
+            project_skills.setdefault(row["experience_id"], []).append(
+                ProjectSkill(skill_id=row["skill_id"], skill_name=row["skill_name"])
+            )
+    projects = []
+    for row in project_rows:
+        highlights = row.get("highlights") or []
+        if not isinstance(highlights, (list, tuple)):
+            highlights = []
+        row["highlights"] = tuple(value for value in highlights if isinstance(value, str))
+        row["skills"] = tuple(project_skills.get(row["experience_id"], ()))
+        projects.append(UserProject.model_validate(row))
     confirmed, unresolved = [], []
     for row in rows:
         item_evidence = tuple(evidence.get(row["user_skill_id"], ()))
@@ -133,4 +183,5 @@ def _load_user(connection: Any, profile_id: str, career_profile_id: int) -> User
         profile_id=profile_id, background=Background.model_validate(profile),
         goal=Goal.model_validate(goals[0]) if goals else None,
         confirmed_skills=tuple(confirmed), unresolved_skills=tuple(unresolved),
+        projects=tuple(projects),
     )

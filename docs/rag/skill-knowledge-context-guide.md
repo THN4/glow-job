@@ -110,7 +110,7 @@ from `topic_outline` (topics named in an outline). A table of contents cannot be
 classified as ready teaching content: any outline-only claim makes the response
 partial. `teaching_content_status` is available, outline_only, unavailable, or
 not_reviewed. Explanations must be Thai; direct quotes preserve their original
-language. The current local combined sample is `rag/data/knowledge/knowledge-context-demo-v3.json`
+language. The current local combined sample is `rag/data/knowledge/examples/knowledge-context-demo-v3.json`
 with `.md`, `.schema.json`, and an `.assembly.json` recording which per-skill results
 were reused. Earlier v1/v2 examples are superseded. Airflow and RAG have partial
 instructional coverage; Java currently has topic outlines only. No DB data was changed.

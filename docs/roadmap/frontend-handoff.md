@@ -1,8 +1,12 @@
 # Roadmap: งานที่ส่งต่อ Frontend
 
-**สถานะ Backend (2026-10-19):** API ของ goal, การสร้าง roadmap, การอ่าน roadmap และการบันทึก progress พร้อมใช้งาน
-ค่าเริ่มต้นเป็น `mock` provider ซึ่งไม่เรียก AI และไม่มีค่าใช้จ่าย Frontend จึงพัฒนาและทดสอบได้เต็มที่
-เมื่อสลับเป็น Claude ภายหลัง ข้อมูลยังมีรูปแบบเดิม ไม่ต้องแก้ Frontend
+**สถานะ (2026-10-22):** Backend มี API สำหรับ goal, job สร้าง roadmap, อ่านแผน และบันทึก progress
+หน้า `/onboarding` บันทึก goal พร้อม `careerProfileId` จากรายการอาชีพใน DB แล้วเรียก POST สร้างแผนและรอ job ก่อนเปิด `/app/roadmap`
+หน้า Roadmap อ่านแผนจริง แสดง citation และบันทึก checklist/สถานะ step ผ่าน API แล้ว
+หน้า `/onboarding/cv` เป็นหน้าทดลอง CV แยกจาก flow ดังกล่าว
+
+การใช้ `ROADMAP_PROVIDER=mock` ข้ามเฉพาะโมเดลสร้าง roadmap; การสร้าง Agent Context แบบ RAG ยังใช้ Gemini สำหรับ embedding/review และอาจมีค่าใช้จ่าย
+`ROADMAP_CONTEXT_FIXTURE` ใช้ได้สำหรับการพัฒนาในเครื่องเท่านั้น
 
 - สัญญา API: [api-contract.md](api-contract.md)
 - Types: [shared/contracts/api/roadmap/roadmap.ts](../../shared/contracts/api/roadmap/roadmap.ts)
@@ -17,22 +21,18 @@ sequenceDiagram
     participant FE as Frontend
     participant BE as Backend
     U->>FE: ยืนยัน CV แล้ว (มี profileId)
-    FE->>BE: GET /profiles/{id}/goal
-    alt ยังไม่มี goal
-        FE->>U: แสดงฟอร์มเป้าหมาย
-        U->>FE: เลือกอาชีพ / ระยะเวลา / เวลาต่อสัปดาห์ / วิธีเรียน
-        FE->>BE: PUT /profiles/{id}/goal
+    FE->>U: แสดงฟอร์มเป้าหมาย
+    U->>FE: เลือกอาชีพ / ระยะเวลา / เวลาต่อสัปดาห์ / วิธีเรียน
+    FE->>BE: GET /career-profiles
+    FE->>BE: PUT /profiles/{id}/career-goal
+    FE->>BE: PUT /profiles/{id}/goal (ผูก careerProfileId)
+    FE->>BE: POST /profiles/{id}/roadmaps
+    loop ทุก 2 วินาที
+        FE->>BE: GET /roadmap-jobs/{jobId}
     end
     FE->>BE: GET /profiles/{id}/roadmaps/current
-    alt 404 ROADMAP_NOT_FOUND
-        FE->>U: Empty state + ปุ่ม "Create my roadmap"
-        U->>FE: กดสร้าง
-        FE->>BE: POST /profiles/{id}/roadmaps
-        loop ทุก 2 วินาที
-            FE->>BE: GET /roadmap-jobs/{jobId}
-        end
-        FE->>BE: GET /profiles/{id}/roadmaps/current
-    end
+    FE->>U: เปิด /app/roadmap
+    FE->>BE: GET /profiles/{id}/roadmaps/current
     FE->>U: แสดง Roadmap
     U->>FE: ติ๊ก checklist
     FE->>BE: PUT .../roadmaps/{roadmapId}/tasks/{taskId}
@@ -43,14 +43,14 @@ sequenceDiagram
 
 | # | งาน | หมายเหตุ |
 |---|---|---|
-| 1 | **ฟอร์มเป้าหมาย (Career goal)** | ฟิลด์ตาม `CareerGoalInput` ดึงรายการอาชีพจาก `GET /career-profiles` ซึ่งมีอยู่แล้ว เสนอให้ต่อท้าย `CvOnboardingPage` หลังผู้ใช้เลือกอาชีพ |
-| 2 | **API client + hooks** | สร้าง `features/roadmap/api.ts` ตามแบบ `features/resume/api.ts` (ส่ง `X-Session-Id` ทุกครั้ง) และใช้ `@tanstack/react-query` ที่ติดตั้งไว้แล้ว |
-| 3 | **Generate + polling** | ปุ่มสร้าง แสดงข้อความตาม `stage` และ poll job ทุก 2 วินาที (ใช้รูปแบบเดียวกับ `extractCv`) |
-| 4 | **เปลี่ยน mock เป็นข้อมูลจริงใน RoadmapPage** | เลิกใช้ `roadmapMockData.ts` และใช้ [adapter.ts](../../frontend/src/features/roadmap/adapter.ts) (`toRoadmapScreen(view)`) ที่แปลง API เป็น `RoadmapNodeData` / `RoadmapConnection` / `RoadmapSummary` ที่ component เดิมใช้อยู่แล้ว |
+| 1 | **ฟอร์มเป้าหมาย (Career goal)** | มีใน `/onboarding`; ก่อนบันทึกจะตรวจชื่ออาชีพให้ตรงกับ `GET /career-profiles` เพราะ RAG รองรับเฉพาะอาชีพใน catalog ตอนนี้ UI แนะนำอาชีพแบบตัวอย่างอยู่ ควรให้ทีม Frontend ปรับรายการแนะนำให้มาจาก catalog |
+| 2 | **API client** | มี `features/roadmap/api.ts` แล้ว ส่ง `X-Session-Id` ทุกครั้ง |
+| 3 | **Generate + polling** | `/onboarding` เริ่ม job และ poll ทุก 2 วินาที; หน้า Roadmap มีปุ่ม Create กรณีเปิดตรงแล้วยังไม่มีแผน |
+| 4 | **ข้อมูลจริงใน RoadmapPage** | ใช้ [adapter.ts](../../frontend/src/features/roadmap/adapter.ts) (`toRoadmapScreen(view)`) แล้ว และบันทึก checklist/step ผ่าน API |
 | 5 | **Canvas** | ใช้ grid 4 คอลัมน์ × 6 แถวเดิมได้เลย เพราะ API ส่ง `position` เป็นเลขเต็มและรับประกันไม่เกิน 6 แถว (ถ้าแผนจากโมเดลเกิน backend จะให้โมเดลแก้เอง) แก้แค่ badge "You are here" ให้ใช้ `currentNodeId` แทน `status === 'in-progress'` และเพิ่ม badge "Best next step" ตาม design |
-| 6 | **Node detail** | แสดง `estimatedHours`, citations (ลิงก์และ quote), `notice` และ checklist ที่ติ๊กแล้วบันทึกจริง |
-| 7 | **ส่วนประกอบรอบ roadmap** | `nextAction` (การ์ด "Start here"), `deferred` ("Next roadmap" พร้อมเหตุผล), `confirmations`, `contentNotices`, `limitations` |
-| 8 | **Sidebar / header** | ใช้ goal และ `progress` จริงแทน `workspaceMockData` และ `roadmapSummary` |
+| 6 | **Node detail** | แสดง `estimatedHours`, citations, `notice` และ checklist ที่บันทึกจริงแล้ว |
+| 7 | **ส่วนประกอบรอบ roadmap** | ยังต้องออกแบบ/แสดง `nextAction`, `deferred`, `confirmations`, `contentNotices`, `limitations` |
+| 8 | **Sidebar / header** | Header ในหน้า Roadmap ใช้ข้อมูลจริงแล้ว แต่ sidebar ของ `WorkspaceLayout` ยังใช้ `workspaceMockData` |
 
 ## เทียบกับ design ใน Figma (glowjob_ui)
 
@@ -71,7 +71,7 @@ sequenceDiagram
 | ข้อความใต้ชื่อ node (Completed / In progress / Upcoming project / Career activity) | `nodes[].subtitle` | คำนวณใหม่ทุกครั้งที่อ่าน ตามความคืบหน้า |
 | Badge "You are here" | `currentNodeKey` | ขั้นที่ in progress ก่อน ถ้าไม่มีใช้ขั้นถัดไปที่ควรทำ |
 | Badge "Best next step" | `nextAction.nodeKey`, `nextAction.text` | เลื่อนไปข้างหน้าเองเมื่อขั้นนั้นเสร็จหรือถูกข้าม |
-| เส้นประ (เส้นทางที่แนะนำแต่ไม่บังคับ) | `edges[].optional` | ใช้กับเส้นจาก `foundation-check` |
+| เส้นประ (เส้นทางที่แนะนำแต่ไม่บังคับ) | `edges[].optional` | foundation check ที่เป็น prerequisite แบบ `global_ordering` มี `optional: false` |
 | Node สุดท้าย "Data Engineer · Job-ready in 4 months" | subtitle `Target: Jan 18, 2027` | **ไม่ใช้ "Job-ready"** เพราะระบบไม่ได้ประเมินความพร้อมรับงาน |
 | Panel: ชื่อ, chip Skill / In progress | `title`, `kind`, `status`/`subtitle` | |
 | "Current confidence 42%" | **ไม่คำนวณ** | FE ใช้ "Not assessed" อยู่แล้ว ซึ่งถูกต้อง แนะนำแสดง `skill.profileLabel` เช่น "Not in your profile yet" ใต้หัวข้อนี้ |
@@ -79,7 +79,7 @@ sequenceDiagram
 | Learning checklist "0 / 4 completed" | `checklist[]` | ติ๊กแล้วเรียก `PUT .../tasks/{id}` |
 | "Estimated time: 2 weeks at 8 hrs/week" | `extras[id].timeText` เช่น "8 to 14 hours · at 2 to 5 hrs/week" | เป็นช่วงเพราะผู้ใช้ระบุเวลาเป็นช่วง ไม่ได้แปลงเป็นสัปดาห์ให้ เพื่อไม่ให้เลขดูแม่นเกินจริง |
 | ปุ่ม "Start learning" / "Mark as completed" | `PUT .../steps/{stepKey}` ด้วย `in_progress` / `completed` | **FE ปัจจุบันใช้ "Review skill" / "Manage evidence"** ต่างจาก design ต้องตกลงกับ designer ว่าใช้ชุดไหน API รองรับได้ทั้งหมด |
-| "Evidence you can add" (GitHub project / Certificate / Self report) | **ยังไม่มี API** | ตอนนี้ FE เก็บใน state เฉพาะหน้า ข้อมูลหายเมื่อรีเฟรช ถ้าต้องบันทึกจริงต้องออกแบบ endpoint ใหม่ (ตาราง `app.user_skill_evidence` มีอยู่แล้ว) |
+| "Evidence you can add" (GitHub project / Certificate / Self report) | **ยังไม่มี API** | หน้า Roadmap ที่ใช้ข้อมูลจริงซ่อนปุ่มจำลองนี้แล้ว ถ้าต้องบันทึกจริงต้องออกแบบ endpoint ใหม่ (ตาราง `app.user_skill_evidence` มีอยู่แล้ว) |
 | Market Updates, ชื่อผู้ใช้ ใน sidebar | ไม่เกี่ยวกับ Roadmap API | |
 
 ### สิ่งที่ API มี แต่ design ยังไม่มีที่แสดง (ต้องขอ design เพิ่ม)
@@ -114,7 +114,7 @@ sequenceDiagram
 |---|---|---|
 | ยังไม่มี goal | `goal.get.empty.json`, `error.goal-not-found.json` | ฟอร์มเป้าหมาย |
 | ยังไม่มี roadmap | `error.roadmap-not-found.json` | Empty state + ปุ่มสร้าง |
-| กำลังสร้าง | `job.queued.json`, `job.running.json` | Loading และข้อความตาม stage (ใช้เวลา 30–120 วินาทีเมื่อใช้ Claude) |
+| กำลังสร้าง | `job.queued.json`, `job.running.json` | Loading และข้อความตาม stage (เวลาจริงขึ้นกับโมเดลและขนาด context) |
 | สร้างไม่สำเร็จ | `job.failed.json` | ถ้า `retryable` เป็น true แสดงปุ่ม Try again |
 | ถึงลิมิตรายวันหรืองบประมาณ | `error.limit-reached.json`, `error.budget-reached.json` | ข้อความแจ้ง และไม่มีปุ่ม retry |
 | เนื้อหาอาชีพยังไม่พร้อม | `error.knowledge-not-ready.json` | ข้อความแจ้ง |
@@ -125,15 +125,15 @@ sequenceDiagram
 - **ห้ามแสดง `progress.percent` เป็น "ความพร้อมสมัครงาน"** ค่านี้คือสัดส่วน task ที่ทำเสร็จเท่านั้น
 - ข้อความ "Not in your profile yet" หมายถึง CV ไม่ได้แสดงหลักฐาน ไม่ได้แปลว่าผู้ใช้ทำไม่เป็น ห้ามเขียนว่า "You lack ..."
 - ปุ่ม **Regenerate** (`force: true`) ต้องมี dialog ยืนยัน เพราะเรียก AI ใหม่ทุกครั้งและมีค่าใช้จ่าย
-  การกด Create ซ้ำโดยที่ข้อมูลไม่เปลี่ยนจะได้แผนเดิมกลับมาโดยไม่เสียเงิน (`reused: true`)
+  การกด Create ซ้ำอาจได้ `reused: true` ซึ่งข้ามโมเดลสร้างแผน แต่ตอนนี้ยังต้องสร้าง RAG context ใหม่ก่อนตรวจ reuse จึงยังอาจมีค่า embedding/review
 - Citation แสดงชื่อเอกสารและลิงก์ (`url`) พร้อม quote สั้น ๆ
 - UI ทั้งหมดเป็นภาษาอังกฤษ และข้อความจาก API ก็เป็นภาษาอังกฤษ
 
-## รัน Backend ในเครื่อง (ไม่มีค่าใช้จ่าย)
+## รัน Backend ในเครื่องเพื่อดู UI โดยไม่เรียกโมเดล
 
 1. ในไฟล์ `.env` ที่ root ตั้ง `ROADMAP_PROVIDER=mock` และ
    `ROADMAP_CONTEXT_FIXTURE=/app/ai/roadmap/fixtures/agent-context-demo-student.json`
-   (ใช้ context ตัวอย่างไปก่อนจนกว่า knowledge จริงจะพร้อม)
+   (fixture นี้ใช้ทดสอบ UI เท่านั้น และเป็นข้อมูลตัวอย่างที่ไม่ตรงกับ CV จริง)
 2. Apply migration ล่าสุด (016) ตาม [migrations/README.md](../../migrations/README.md)
 3. `docker compose up --build -d`
 4. ใช้ profile ตัวอย่างจาก seed (`prf_demo_student_data` คู่กับ `X-Session-Id: glowjob-demo-v1:student-data`)
@@ -144,7 +144,7 @@ sequenceDiagram
 1. **Kickoff (30–60 นาที):** อ่าน api-contract.md ด้วยกัน และตอบคำถามด้านล่าง
 2. **FE ทำ UI จากไฟล์ตัวอย่าง:** import JSON ใน `examples/` แทน mock เดิม ไม่ต้องรอ backend
 3. **FE เชื่อม API จริง (mock provider):** ทดสอบ flow ทั้งหมดใน Docker
-4. **Backend เปิด Claude ชั่วคราว** กับ profile ตัวอย่าง 2–3 ครั้ง เพื่อดูความยาวข้อความจริงในการ์ด
+4. **Backend เปิด Gemini ชั่วคราว** กับ profile ตัวอย่าง 2–3 ครั้ง เพื่อดูความยาวข้อความจริงในการ์ด
 5. **รีวิวร่วมกัน:** ถ้อยคำ, สถานะ error และการแสดง citation
 
 ### การตัดสินใจที่ตกลงแล้ว (2026-10-22)

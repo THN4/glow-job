@@ -14,7 +14,7 @@ from ai.roadmap.compact import compact_context, planning_budget
 from ai.roadmap.contracts import RoadmapDraft
 from ai.roadmap.cost import Pricing, estimate_cost
 from ai.roadmap.generate import GenerationFailed, generate_roadmap, prepare
-from ai.roadmap.providers import ClaudeRoadmapModel, MockRoadmapModel, ModelError, ModelTurn, Usage, output_schema
+from ai.roadmap.providers import ClaudeRoadmapModel, GeminiRoadmapModel, MockRoadmapModel, ModelError, ModelTurn, Usage, output_schema
 from ai.roadmap.validate import validate_draft
 from ai.roadmap.view import apply_progress
 from rag.context.agent_models import AgentContext
@@ -71,6 +71,55 @@ def test_compact_context_drops_dependency_only_sources(context):
     assert len(compact["learner"]["profile_evidence_excerpts"]) == 1  # five identical excerpts deduplicated
 
 
+def global_docker_prerequisite(context):
+    foundations = []
+    for foundation in context.foundation_mentions:
+        if foundation.skill_id == DOCKER:
+            relationships = tuple(
+                relationship.model_copy(update={
+                    "dependency_type": "prerequisite",
+                    "runtime_role": "global_ordering",
+                    "blocks_unconditional_progress": True,
+                })
+                for relationship in foundation.relationships
+            )
+            foundation = foundation.model_copy(update={"relationships": relationships})
+        foundations.append(foundation)
+    return context.model_copy(update={"foundation_mentions": tuple(foundations)})
+
+
+def test_global_prerequisite_is_sent_and_enforced(context):
+    required = global_docker_prerequisite(context)
+    compact = compact_context(required, planning_budget(required, TODAY))
+    docker = next(f for f in compact["foundations"] if f["skill_id"] == DOCKER)
+    assert docker["relationships"][0]["runtime_role"] == "global_ordering"
+    assert docker["relationships"][0]["blocks_unconditional_progress"] is True
+
+    valid = validate_draft(draft(), required, planning_budget(required, TODAY))
+    assert valid.fatal == []
+    unordered = draft()
+    unordered.steps[1].depends_on = []
+    rejected = validate_draft(unordered, required, planning_budget(required, TODAY))
+    assert any("must depend on prerequisite Docker" in issue for issue in rejected.fatal)
+
+    missing = draft(steps=draft().steps[1:])
+    missing.steps[0].depends_on = []
+    rejected = validate_draft(missing, required, planning_budget(required, TODAY))
+    assert any("needs a prerequisite check for Docker" in issue for issue in rejected.fatal)
+
+    model = MockRoadmapModel()
+    result = generate_roadmap(required, model, prepared=prepare(required, model, today=TODAY))
+    assert any(edge.from_ == "check-docker" and edge.to == "apache-airflow"
+               and edge.optional is False for edge in result.view.edges), result.view.edges
+    skipped = apply_progress(result.view, completed_tasks=set(), skipped_steps={"check-docker"}, today=TODAY)
+    assert skipped.next_action.node_key == "check-docker"
+    other_tasks = {item.id for node in result.view.nodes if node.key != "check-docker"
+                   for item in node.checklist}
+    blocked = apply_progress(result.view, completed_tasks=other_tasks,
+                             skipped_steps={"check-docker"}, today=TODAY)
+    assert blocked.nodes[-1].status != "completed" and blocked.progress.percent < 100
+
+
 def test_valid_draft_passes(context):
     check = validate_draft(draft(), context, planning_budget(context, TODAY))
     assert check.fatal == [] and check.warnings == []
@@ -82,11 +131,11 @@ def test_bad_citations_and_foundation_lessons_are_fixed_in_code(context):
     bad.steps[0].tasks[0].task_kind = "learn"
     bad.steps[0].hours_max = 6
     check = validate_draft(bad, context, planning_budget(context, TODAY))
-    assert check.fatal == []
+    assert any("no valid citation" in issue for issue in check.fatal)
     assert check.draft.steps[1].tasks[0].citations == []
     assert check.draft.steps[0].tasks[0].task_kind == "check"
     assert check.draft.steps[0].hours_max == 2
-    assert len(check.warnings) == 4
+    assert len(check.warnings) == 3
 
 
 def test_citation_must_belong_to_the_steps_skill(context):
@@ -95,6 +144,7 @@ def test_citation_must_belong_to_the_steps_skill(context):
     bad.steps[1].tasks[0].citations[0].quote = "sometimes called retrieval-augmented generation (RAG)"
     check = validate_draft(bad, context, planning_budget(context, TODAY))
     assert check.draft.steps[1].tasks[0].citations == []
+    assert any("no valid citation" in issue for issue in check.fatal)
 
 
 def test_forgotten_main_skill_is_deferred(context):
@@ -237,6 +287,33 @@ def test_claude_call_shape_and_parse(context):
     assert "tool_choice" not in call and "temperature" not in call
     assert turn.draft.title == "Data Engineer roadmap" and turn.usage.output_tokens == 3000
     assert turn.messages[-1]["role"] == "assistant"
+
+
+def test_gemini_uses_json_schema_field_for_pydantic_contract(monkeypatch):
+    from google.genai import types
+
+    monkeypatch.setattr(types, "GenerateContentConfig", lambda **kwargs: kwargs)
+    monkeypatch.setattr(types, "ThinkingConfig", lambda **kwargs: kwargs)
+    calls = []
+
+    def generate_content(**kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(
+            text=draft().model_dump_json(),
+            usage_metadata=SimpleNamespace(prompt_token_count=10, candidates_token_count=20,
+                                           thoughts_token_count=0),
+            candidates=[], prompt_feedback=None,
+        )
+
+    client = SimpleNamespace(models=SimpleNamespace(generate_content=generate_content))
+    model = GeminiRoadmapModel(client, model_id="gemini-3.8-flash")
+    turn = model.generate({})
+
+    config = calls[0]["config"]
+    assert "response_json_schema" in config
+    assert config["response_json_schema"] == RoadmapDraft.model_json_schema()
+    assert "response_schema" not in config
+    assert turn.draft.title == "Data Engineer roadmap" and turn.usage.calls == 1
 
 
 def test_claude_refusal_keeps_billed_usage(context):
