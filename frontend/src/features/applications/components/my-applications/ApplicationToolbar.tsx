@@ -1,12 +1,12 @@
 import { Search } from 'lucide-react'
-import type { ApplicationDateFilter, ApplicationStatus } from '../../type'
+import type { ApplicationDateFilter, ApplicationStatusFilter } from '../../type'
 
 type ApplicationToolbarProps = {
   query: string
-  status: ApplicationStatus | 'all'
+  status: ApplicationStatusFilter
   dateFilter: ApplicationDateFilter
   onQueryChange: (query: string) => void
-  onStatusChange: (status: ApplicationStatus | 'all') => void
+  onStatusChange: (status: ApplicationStatusFilter) => void
   onDateChange: (dateFilter: ApplicationDateFilter) => void
 }
 
@@ -35,10 +35,11 @@ export function ApplicationToolbar({
       <select
         id="application-status-filter"
         value={status}
-        onChange={(event) => onStatusChange(event.target.value as ApplicationStatus | 'all')}
+        onChange={(event) => onStatusChange(event.target.value as ApplicationStatusFilter)}
         className="min-h-10 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400"
       >
         <option value="all">Status: All</option>
+        <option value="in-progress">Status: In Progress</option>
         <option value="wishlist">Status: Wishlist</option>
         <option value="applied">Status: Applied</option>
         <option value="screening">Status: Screening</option>
