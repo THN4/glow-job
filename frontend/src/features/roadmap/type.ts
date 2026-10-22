@@ -18,6 +18,7 @@ export type RoadmapNodeData = {
   title: string
   kind: RoadmapNodeKind
   status: RoadmapNodeStatus
+  baselineComplete?: boolean
   position: RoadmapNodePosition
   subtitle: string
   description: string

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { OnboardingLayout } from '../components/layout/OnboardingLayout'
 import { UploadCvStep } from '../pages/steps/UploadCvStep'
 import { useOnboarding } from './OnboardingContext'
@@ -18,10 +19,12 @@ import { AnalyzingCvStep } from '../pages/steps/AnalyzingCvStep'
 import { AnalysisNavigation } from '../components/analysis/AnalysisNavigation'
 import { hasRequiredSkillLevels, markProfileReviewed } from '../../../lib/profileReview'
 import { focusField } from '../../../lib/focusField'
-import { saveCareerGoal, saveProfile, type CvProfile } from '../../resume/api'
+import { loadCareerProfiles, saveProfile, type CvProfile } from '../../resume/api'
 import { toSavedCvProfile } from '../api/profilePersistence'
+import { generateRoadmap, saveRoadmapGoal } from '../../roadmap/api'
 
 export function OnboardingFlow() {
+  const navigate = useNavigate()
   const {
     currentStep,
     completedSteps,
@@ -43,8 +46,19 @@ export function OnboardingFlow() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [goalSaved, setGoalSaved] = useState(false)
+  const [roadmapStage, setRoadmapStage] = useState<string | null>(null)
+  const roadmapController = useRef<AbortController | null>(null)
+  const [supportedRoles, setSupportedRoles] = useState<string[]>([])
 
   useEffect(() => () => analysisController.current?.abort(), [])
+  useEffect(() => () => roadmapController.current?.abort(), [])
+  useEffect(() => {
+    let active = true
+    void loadCareerProfiles().then((careers) => {
+      if (active) setSupportedRoles([...new Set(careers.map((career) => career.profileName))])
+    }).catch(() => { /* The save action reports catalog errors if it is still unavailable. */ })
+    return () => { active = false }
+  }, [])
 
   function cancelAnalysis() {
     analysisController.current?.abort()
@@ -134,16 +148,24 @@ export function OnboardingFlow() {
       setGoalSaved(false)
       setSaveError(null)
       try {
-        await saveCareerGoal({
+        await saveRoadmapGoal({
           targetRole: data.targetRole.trim(),
           deadline: data.deadline,
           customDeadlineDate: data.deadline === 'custom' ? data.customDeadlineDate : null,
           ...data.preferences,
         })
         setGoalSaved(true)
+        const controller = new AbortController()
+        roadmapController.current = controller
+        await generateRoadmap(setRoadmapStage, controller.signal)
+        navigate('/app/roadmap')
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : 'บันทึกเป้าหมายและ Preferences ไม่สำเร็จ กรุณาลองอีกครั้ง')
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setSaveError(error instanceof Error ? error.message : 'สร้าง roadmap ไม่สำเร็จ กรุณาลองอีกครั้ง')
+        }
       } finally {
+        roadmapController.current = null
+        setRoadmapStage(null)
         saving.current = false
         setIsSaving(false)
       }
@@ -178,7 +200,8 @@ export function OnboardingFlow() {
       onStepChange={analysis || isSaving ? undefined : goToStep}
       onBack={currentStep > 1 && !isSaving ? previousStep : undefined}
       onContinue={currentStep === 1 || currentStep === 2 ? undefined : handleContinue}
-      continueLabel={isSaving ? 'Saving...' : currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
+      continueLabel={isSaving ? roadmapStage ? `Building roadmap: ${roadmapStage}...` : 'Saving...' : currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
+      isLoading={isSaving}
       continueIcon={currentStep === 4 ? Sparkles : undefined}
       analyzing={Boolean(analysis)}
       footer={analysis && (analysis.ready || analysis.error) ? <AnalysisNavigation failed={Boolean(analysis.error)} ready={analysis.ready} onCancel={cancelAnalysis}
@@ -198,6 +221,7 @@ export function OnboardingFlow() {
           onContinue={handleContinue} onBack={previousStep} />
       ) : currentStep === 3 ? (
         <CareerGoalStep targetRole={data.targetRole} deadline={data.deadline}
+          supportedRoles={supportedRoles}
           showValidation={goalValidationAttempted}
           customDeadlineDate={data.customDeadlineDate}
           onRoleChange={(targetRole) => updateData({ targetRole })}
@@ -207,9 +231,17 @@ export function OnboardingFlow() {
         <PreferencesStep preferences={data.preferences} onChange={updatePreferences} />
       ) : (
         <section>
-          <PageHeader {...onboardingCopy.headers[currentStep]} />
-          <p className="mt-2 text-sm text-muted-foreground">{onboardingCopy.placeholder}</p>
-          {goalSaved && <p className="mt-4 text-sm font-medium text-emerald-700" role="status">Career goal and preferences saved.</p>}
+          <PageHeader {...(currentStep === 5 ? {
+            title: roadmapStage ? 'Building your roadmap' : saveError ? 'We couldn’t build your roadmap yet' : isSaving ? 'Saving your goal' : 'Ready to build your roadmap',
+            subtitle: roadmapStage
+              ? 'We’re matching your profile with career requirements and finding cited learning content.'
+              : saveError
+                ? goalSaved ? 'Your goal is saved. Retry to generate the roadmap.' : 'We couldn’t save your goal and prepare the roadmap. Please try again.'
+                : isSaving ? 'Your saved profile and preferences are being prepared.'
+                  : 'Your profile and preferences are ready. Build a personalized roadmap from your skill gaps and learning documents.',
+          } : onboardingCopy.headers[currentStep])} />
+          {roadmapStage && <p className="mt-4 text-sm font-medium text-blue-700" role="status">Creating your roadmap: {roadmapStage}...</p>}
+          {goalSaved && saveError && <p className="mt-4 text-sm font-medium text-emerald-700" role="status">Career goal and preferences are saved.</p>}
           {saveError && <p className="mt-4 text-sm text-destructive" role="alert">{saveError}</p>}
         </section>
       )}

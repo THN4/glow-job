@@ -7,8 +7,8 @@
     "generation": {
       "provider": "mock",
       "model": "mock-roadmap-v1",
-      "promptVersion": "roadmap-prompt-v2",
-      "contextId": "ctx_ba6341aee9f74c269a4648c9b2d17fea",
+      "promptVersion": "roadmap-prompt-v5",
+      "contextId": "ctx_88025785443b4aac8bfe0f4efe0f4e94",
       "reused": false
     },
     "summary": {
@@ -90,6 +90,8 @@
             "citations": []
           }
         ],
+        "details": [],
+        "baselineComplete": false,
         "citations": [],
         "notice": null
       },
@@ -184,6 +186,8 @@
             "citations": []
           }
         ],
+        "details": [],
+        "baselineComplete": false,
         "citations": [
           {
             "chunkId": 1,
@@ -284,6 +288,8 @@
             "citations": []
           }
         ],
+        "details": [],
+        "baselineComplete": false,
         "citations": [
           {
             "chunkId": 389,
@@ -336,6 +342,8 @@
             "citations": []
           }
         ],
+        "details": [],
+        "baselineComplete": false,
         "citations": [],
         "notice": null
       },
@@ -361,6 +369,8 @@
         },
         "status": "not_started",
         "checklist": [],
+        "details": [],
+        "baselineComplete": false,
         "citations": [],
         "notice": null
       }
@@ -420,7 +430,7 @@
       }
     ],
     "limitations": [
-      "Readiness scores are not calculated yet. Progress only counts the tasks you complete.",
+      "Roadmap progress counts completed tasks only; it is not a career-readiness percentage.",
       "\"Not in your profile yet\" means your CV did not show it, not that you cannot do it.",
       "Hours are rough planning estimates, not measured learning time.",
       "Some skills only have a topic outline or partial sources so far."

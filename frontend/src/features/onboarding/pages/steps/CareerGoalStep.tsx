@@ -16,9 +16,10 @@ type CareerGoalStepProps = {
   onDeadlineChange: (deadline: Deadline) => void
   onCustomDeadlineDateChange: (date: string) => void
   showValidation?: boolean
+  supportedRoles?: string[]
 }
 
-export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false }: CareerGoalStepProps) {
+export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false, supportedRoles = [] }: CareerGoalStepProps) {
   const titleId = useId()
   const recommendationsId = useId()
   const searchTitleId = useId()
@@ -61,6 +62,16 @@ export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRol
         <div>
           <h2 id={searchTitleId} className="mb-2 text-lg font-semibold text-foreground">Already have a role in mind?</h2>
           <RoleSearchBox value={targetRole} onChange={onRoleChange} onSelect={onRoleChange} error={roleError} />
+          {supportedRoles.length > 0 && <div className="mt-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Roadmaps available now</p>
+            <div className="flex flex-wrap gap-2">
+              {supportedRoles.map((role) => <button key={role} type="button" onClick={() => onRoleChange(role)}
+                aria-pressed={targetRole.trim().toLocaleLowerCase() === role.toLocaleLowerCase()}
+                className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm text-blue-800 aria-pressed:border-blue-600 aria-pressed:bg-blue-600 aria-pressed:text-white">
+                {role}
+              </button>)}
+            </div>
+          </div>}
           <div className="mt-2">
             <PopularRoleChips selectedRole={targetRole} onSelect={onRoleChange} />
           </div>

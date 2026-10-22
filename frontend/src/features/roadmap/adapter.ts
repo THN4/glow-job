@@ -44,6 +44,7 @@ export type RoadmapNodeExtra = {
   notice: string | null
   citations: ApiNode['citations']
   tasks: Array<{ id: string; detail: string; taskKind: ApiNode['checklist'][number]['taskKind']; citations: ApiNode['citations'] }>
+  details: ApiNode['details']
 }
 
 export type RoadmapScreenData = {
@@ -80,9 +81,10 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
   const weekly = view.summary.weeklyHours
   const nodes: RoadmapNodeData[] = view.nodes.map((node) => ({
     id: node.key,
-    title: node.title,
+    title: node.kind === 'skill' && node.skill ? node.skill.name : node.title,
     kind: KIND[node.kind],
     status: STATUS[node.status],
+    baselineComplete: node.baselineComplete,
     position: node.position,
     subtitle: node.subtitle,
     description: node.summary,
@@ -104,6 +106,7 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
         taskKind: item.taskKind,
         citations: item.citations,
       })),
+      details: node.details,
     }
   }
 

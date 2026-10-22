@@ -121,6 +121,10 @@ export function getSessionId(): string {
   return sessionId
 }
 
+export function getSavedProfileId(): string | null {
+  return localStorage.getItem(PROFILE_ID_KEY)
+}
+
 /** Start a distinct anonymous profile for a fresh onboarding run. */
 export function startNewAnonymousProfileSession(): void {
   localStorage.setItem(SESSION_ID_KEY, crypto.randomUUID())

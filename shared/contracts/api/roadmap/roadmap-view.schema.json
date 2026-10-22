@@ -507,6 +507,19 @@
           "title": "Checklist",
           "type": "array"
         },
+        "details": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SkillDetail"
+          },
+          "title": "Details",
+          "type": "array"
+        },
+        "baselineComplete": {
+          "default": false,
+          "title": "Baselinecomplete",
+          "type": "boolean"
+        },
         "citations": {
           "default": [],
           "items": {
@@ -536,6 +549,32 @@
         "whyItMatters"
       ],
       "title": "RoadmapNode",
+      "type": "object"
+    },
+    "SkillDetail": {
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "citations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "detail"
+      ],
+      "title": "SkillDetail",
       "type": "object"
     },
     "Summary": {

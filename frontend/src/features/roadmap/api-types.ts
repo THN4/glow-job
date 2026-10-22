@@ -35,6 +35,12 @@ export type ChecklistItem = {
   citations: Citation[]
 }
 
+export type SkillDetail = {
+  title: string
+  detail: string
+  citations: Citation[]
+}
+
 export type NodeSkill = {
   skillId: number
   name: string
@@ -67,6 +73,9 @@ export type RoadmapNode = {
   position: { row: number; column: number }
   status: ProgressStatus
   checklist: ChecklistItem[]
+  details: SkillDetail[]
+  /** Complete at roadmap creation because the skill is confirmed in the profile. */
+  baselineComplete: boolean
   citations: Citation[]
   /** Show as an info banner when present, e.g. "learning content is not ready yet". */
   notice: string | null
