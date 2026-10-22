@@ -41,6 +41,7 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "ASSESSMENT_NOT_FOUND": (404, False, "The skill check was not found."),
     "ASSESSMENT_STATE_INVALID": (409, False, "This skill check is not at that step."),
     "ASSESSMENT_UNAVAILABLE": (503, True, "Skill checks need the shared database."),
+    "APPLICATIONS_UNAVAILABLE": (503, True, "Applications need the shared database."),
     "SKILL_NOT_FOUND": (404, False, "The skill was not found."),
     "NO_CHECK_QUESTIONS": (409, False, "There are no questions for these tasks yet."),
     "INTERNAL_ERROR": (500, True, "Something went wrong."),
