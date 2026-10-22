@@ -38,7 +38,7 @@ the `.gitkeep` files make the folder structure available after clone.
 - `knowledge/examples/knowledge-context-demo-v3.json` and its sidecars: Airflow,
   RAG and Java document evidence for a synthetic profile.
 - `agent-context/examples/agent-context-demo-student-v3.json` and its sidecars:
-  schema v0.4 synthetic Agent Context used by the Roadmap consumer fixture.
+  schema v0.5 synthetic Agent Context used by the Roadmap consumer fixture.
 - `knowledge/users/prf_bddf4db6/`: reviewed RAG context for one real profile.
 - `agent-context/users/prf_bddf4db6/`: its latest scored Agent Context snapshot.
 - `inputs/market-inputs.json` and `scoring/`: local Market preview and historical

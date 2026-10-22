@@ -3,8 +3,8 @@
 Free (mock provider):
     python -m ai.roadmap.cli --context ai/roadmap/fixtures/agent-context-demo-student.json --output out.json
 
-Paid providers need --allow-spend so a real model call is never made by accident:
-    python -m ai.roadmap.cli --context ... --output ... --provider anthropic --allow-spend
+Gemini calls need --allow-spend so a real model call is never made by accident:
+    python -m ai.roadmap.cli --context ... --output ... --provider gemini --allow-spend
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--context", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True, help="Where to write the RoadmapView JSON")
-    parser.add_argument("--provider", choices=("mock", "anthropic", "bedrock"), default="mock")
+    parser.add_argument("--provider", choices=("mock", "gemini", "anthropic", "bedrock"), default="mock")
     parser.add_argument("--model", help="Override the model ID")
     parser.add_argument("--aws-region", help="Required for bedrock")
     parser.add_argument("--effort", choices=("low", "medium", "high", "xhigh", "max"), default="medium")

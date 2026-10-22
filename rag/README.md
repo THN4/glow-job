@@ -22,7 +22,7 @@ Current functionality:
   pipeline retrieval service: skill-filtered embeddings, text-model review,
   source/quote validation and foundation/related mentions with coverage gaps.
 - Assemble saved User/Goal/Market inputs with cited knowledge into typed Agent
-  Context v0.4, with full-market and Core Top-20 match scores, all-market skill
+  Context v0.5, with confirmed project summaries, full-market and Core Top-20 match scores, all-market skill
   assessments, per-skill gap/priority scores, grouped foundations and a deduplicated
   evidence registry. Assembly makes no model calls or database writes.
 

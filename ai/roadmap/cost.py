@@ -1,8 +1,7 @@
 """Estimate the USD cost of one generation from token usage.
 
-Defaults are Anthropic API list prices for Claude Opus 5.5 per million tokens. Amazon
-Bedrock prices are set by AWS and can differ: set ROADMAP_PRICE_* from the Bedrock
-pricing page for the chosen region before relying on these numbers.
+Defaults match Gemini 3.8 Flash introductory API prices per million tokens as of
+2026-10. Override the settings if prices change or another provider is selected.
 """
 
 from __future__ import annotations
@@ -14,8 +13,8 @@ from ai.roadmap.providers import Usage
 
 @dataclass(frozen=True)
 class Pricing:
-    input_per_mtok: float = 4.0
-    output_per_mtok: float = 20.0
+    input_per_mtok: float = 0.75
+    output_per_mtok: float = 3.75
     cache_write_multiplier: float = 1.25
     cache_read_multiplier: float = 0.1
 

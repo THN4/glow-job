@@ -20,6 +20,7 @@ from app.features.roadmap.config import RoadmapSettings
 from app.features.roadmap.router import get_roadmap_service, router
 from app.features.roadmap.service import RoadmapService
 from rag.context.agent_models import AgentContext
+from rag.context.build import KnowledgeNotReady
 
 FIXTURE = Path(__file__).resolve().parents[2] / "ai/roadmap/fixtures/agent-context-demo-student.json"
 PROFILE, SESSION, USER = "prf_test", "session-1", 7
@@ -34,6 +35,7 @@ class FakeRepo:
         self.runs: list[dict] = []
         self.month_cost = 0.0
         self.contexts_built = 0
+        self.missing_knowledge = False
 
     def owner(self, profile_id, session_id):
         return USER if (profile_id, session_id) == (PROFILE, SESSION) else None
@@ -50,8 +52,10 @@ class FakeRepo:
                      "additionalContext": goal["additional_context"], "updatedAt": "2026-10-19T00:00:00+00:00"}
         return self.goal
 
-    def build_context(self, profile_id, career_profile_id, knowledge_file, date_basis):
+    def build_context(self, profile_id, career_profile_id, date_basis):
         self.contexts_built += 1
+        if self.missing_knowledge:
+            raise KnowledgeNotReady("The selected skill gaps have no reviewed instructional evidence")
         return AgentContext.model_validate_json(FIXTURE.read_bytes())
 
     def reusable_roadmap(self, user_id, goal_id, input_sha256):
@@ -125,10 +129,7 @@ class PaidMock(MockRoadmapModel):
 
 
 def make(tmp_path, model=None, **env):
-    knowledge = tmp_path / "knowledge"
-    knowledge.mkdir()
-    (knowledge / "career-profile-1.json").write_text("{}", encoding="utf-8")
-    settings = RoadmapSettings(_env_file=None, ROADMAP_KNOWLEDGE_DIR=str(knowledge), **env)
+    settings = RoadmapSettings(_env_file=None, **env)
     repo = FakeRepo()
     svc = RoadmapService(settings, repo, model_factory=lambda: model or MockRoadmapModel())
     app = FastAPI()
@@ -198,7 +199,7 @@ async def test_other_sessions_cannot_read_or_poll(tmp_path):
 
 async def test_missing_knowledge_fails_the_job(tmp_path):
     client, svc, repo = make(tmp_path)
-    (tmp_path / "knowledge/career-profile-1.json").unlink()
+    repo.missing_knowledge = True
     async with client:
         await client.put(f"/api/profiles/{PROFILE}/goal", json=GOAL_BODY)
         job = await generate(client, svc)
@@ -206,7 +207,8 @@ async def test_missing_knowledge_fails_the_job(tmp_path):
 
 
 async def test_paid_provider_records_cost_and_respects_limits(tmp_path):
-    client, svc, repo = make(tmp_path, model=PaidMock(), ROADMAP_DAILY_LIMIT_PER_PROFILE=1)
+    client, svc, repo = make(tmp_path, model=PaidMock(), ROADMAP_DAILY_LIMIT_PER_PROFILE=1,
+                             ROADMAP_PRICE_INPUT_PER_MTOK=4, ROADMAP_PRICE_OUTPUT_PER_MTOK=20)
     async with client:
         await client.put(f"/api/profiles/{PROFILE}/goal", json=GOAL_BODY)
         job = await generate(client, svc)

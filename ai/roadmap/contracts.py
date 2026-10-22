@@ -12,7 +12,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
-StepKind = Literal["skill", "foundation_check", "project", "career_activity"]
+StepKind = Literal["skill", "completed_skill", "foundation_check", "project", "career_activity"]
 TaskKind = Literal["learn", "practice", "check"]
 DeferReason = Literal[
     "OUTSIDE_TIME_BUDGET", "CONTENT_OUTLINE_ONLY", "LOW_MARKET_SIGNAL", "NEEDS_CONFIRMATION",
@@ -38,6 +38,12 @@ class DraftTask(Draft):
     citations: list[DraftCitation]
 
 
+class DraftSkillDetail(Draft):
+    title: str
+    detail: str
+    citations: list[DraftCitation]
+
+
 class DraftStep(Draft):
     key: str = Field(description="Short unique slug, e.g. 'airflow-basics'.")
     kind: StepKind
@@ -49,6 +55,7 @@ class DraftStep(Draft):
     hours_max: int
     depends_on: list[str]
     tasks: list[DraftTask]
+    details: list[DraftSkillDetail] = []
 
 
 class DraftNextAction(Draft):
@@ -95,6 +102,12 @@ class Citation(View):
     url: str | None
     heading: str | None
     quote: str
+
+
+class SkillDetail(View):
+    title: str
+    detail: str
+    citations: list[Citation] = []
 
 
 class ChecklistItem(View):
@@ -144,6 +157,10 @@ class RoadmapNode(View):
     position: Position = Position(row=1, column=1)
     status: ProgressStatus = "not_started"
     checklist: list[ChecklistItem] = []
+    details: list[SkillDetail] = []
+    # True when the learner's confirmed profile and market assessment show this skill is
+    # already covered. It is a baseline fact, not progress earned in this roadmap.
+    baseline_complete: bool = False
     citations: list[Citation] = []
     notice: str | None = None
 

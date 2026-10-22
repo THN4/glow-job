@@ -10,8 +10,6 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timezone
 from decimal import Decimal
-from hashlib import sha256
-from pathlib import Path
 from typing import Any
 
 import psycopg
@@ -157,19 +155,14 @@ class RoadmapRepository:
 
     # ------------------------------------------------------------------ Agent Context
 
-    def build_context(self, profile_id: str, career_profile_id: int, knowledge_file: Path,
+    def build_context(self, profile_id: str, career_profile_id: int,
                       date_basis: str) -> AgentContext:
-        from rag.context.assemble import assemble_context
-        from rag.context.repository import load_inputs
-        from src.documents.schemas.skill_context import KnowledgeContextPreview
+        from rag.context.build import build_agent_context
 
-        raw = knowledge_file.read_bytes()
-        knowledge = KnowledgeContextPreview.model_validate_json(raw)
         with self._connect() as connection:
-            inputs = load_inputs(connection, career_profile_id=career_profile_id, profile_id=profile_id,
-                                 date_basis=date_basis)
-            return assemble_context(
-                connection, inputs, knowledge, knowledge_sha256=sha256(raw).hexdigest(),
+            return build_agent_context(
+                connection, profile_id=profile_id, career_profile_id=career_profile_id,
+                date_basis=date_basis,
                 min_total_jobs=self._settings.MATCH_MIN_TOTAL_JOBS,
                 max_market_age_days=self._settings.MATCH_MAX_MARKET_AGE_DAYS,
                 min_level_observations=self._settings.MATCH_MIN_LEVEL_OBSERVATIONS,
@@ -273,6 +266,7 @@ class RoadmapRepository:
                     continue
                 number += 1
                 step = steps[node.key]
+                persisted_kind = "skill" if step.kind == "completed_skill" else step.kind
                 step_id = connection.execute(
                     """
                     INSERT INTO app.roadmap_steps (
@@ -286,7 +280,7 @@ class RoadmapRepository:
                      _level(node.skill.current_level if node.skill else None),
                      _level(node.skill.target_level if node.skill else None),
                      "; ".join(node.why_it_matters) or None, step.hours_max, step.hours_min, step.hours_max,
-                     node.key, step.kind, Jsonb(node.why_it_matters), Jsonb(node.depends_on),
+                     node.key, persisted_kind, Jsonb(node.why_it_matters), Jsonb(node.depends_on),
                      Jsonb([c.model_dump(by_alias=True) for c in node.citations])),
                 ).fetchone()[0]
                 for task_number, item in enumerate(node.checklist, 1):

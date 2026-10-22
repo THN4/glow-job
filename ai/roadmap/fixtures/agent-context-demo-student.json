@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.4",
+  "schema_version": "0.5",
   "context_id": "ctx_88025785443b4aac8bfe0f4efe0f4e94",
   "generated_at": "2026-10-22T14:08:43.382514Z",
   "status": "estimated",
@@ -26,7 +26,7 @@
       "current_status": "student",
       "current_situation_detail": null,
       "current_job_title": null,
-      "years_experience": 0.0,
+      "years_experience": 0,
       "education_level": "bachelor",
       "field_of_study": "Computer Science"
     },
@@ -49,13 +49,13 @@
         "raw_skill_name": "Pandas",
         "proficiency_level": "beginner",
         "proficiency_basis": "explicit",
-        "confidence": 1.0,
+        "confidence": 1,
         "evidence": [
           {
             "evidence_type": "project",
             "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label.",
             "experience_id": 50,
-            "confidence": 1.0
+            "confidence": 1
           }
         ]
       },
@@ -65,13 +65,13 @@
         "raw_skill_name": "SQL",
         "proficiency_level": "beginner",
         "proficiency_basis": "explicit",
-        "confidence": 1.0,
+        "confidence": 1,
         "evidence": [
           {
             "evidence_type": "project",
             "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label.",
             "experience_id": 50,
-            "confidence": 1.0
+            "confidence": 1
           }
         ]
       },
@@ -81,13 +81,13 @@
         "raw_skill_name": "Docker",
         "proficiency_level": "unknown",
         "proficiency_basis": "unknown",
-        "confidence": 1.0,
+        "confidence": 1,
         "evidence": [
           {
             "evidence_type": "project",
             "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label.",
             "experience_id": 50,
-            "confidence": 1.0
+            "confidence": 1
           }
         ]
       },
@@ -97,13 +97,13 @@
         "raw_skill_name": "Python",
         "proficiency_level": "beginner",
         "proficiency_basis": "explicit",
-        "confidence": 1.0,
+        "confidence": 1,
         "evidence": [
           {
             "evidence_type": "project",
             "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label.",
             "experience_id": 50,
-            "confidence": 1.0
+            "confidence": 1
           }
         ]
       },
@@ -113,13 +113,13 @@
         "raw_skill_name": "Git",
         "proficiency_level": "beginner",
         "proficiency_basis": "explicit",
-        "confidence": 1.0,
+        "confidence": 1,
         "evidence": [
           {
             "evidence_type": "project",
             "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label.",
             "experience_id": 50,
-            "confidence": 1.0
+            "confidence": 1
           }
         ]
       }
@@ -134,12 +134,14 @@
             "evidence_type": "project",
             "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label.",
             "experience_id": 50,
-            "confidence": 1.0
+            "confidence": 1
           }
         ]
       }
     ],
-    "evidence_excerpts_truncated": false
+    "evidence_excerpts_truncated": false,
+    "projects": [],
+    "projects_truncated": false
   },
   "career_context": {
     "career_id": 1,
@@ -220,7 +222,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -238,7 +240,7 @@
         "skill_name": "CI/CD",
         "demand_count": 9,
         "total_jobs": 45,
-        "demand_percentage": 20.0,
+        "demand_percentage": 20,
         "required_count": 7,
         "preferred_count": 1,
         "optional_count": 0,
@@ -254,7 +256,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -312,7 +314,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0953,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -354,7 +356,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -456,7 +458,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -718,7 +720,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0404,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 2,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -818,7 +820,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0216,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1324,7 +1326,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.146,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1334,7 +1336,7 @@
         "current_level": null,
         "target_level": "advanced",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": []
@@ -1458,7 +1460,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.1869,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1468,7 +1470,7 @@
         "current_level": null,
         "target_level": "advanced",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": []
@@ -1592,7 +1594,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0789,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1634,7 +1636,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -1658,7 +1660,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0647,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1690,7 +1692,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.1249,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 4,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1753,13 +1755,13 @@
         "skill_name": "Power BI",
         "demand_count": 9,
         "total_jobs": 45,
-        "demand_percentage": 20.0,
+        "demand_percentage": 20,
         "required_count": 7,
         "preferred_count": 2,
         "optional_count": 0,
         "weighted_demand_score": 0.1656,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -1769,7 +1771,7 @@
         "current_level": null,
         "target_level": "advanced",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": []
@@ -1801,7 +1803,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -1819,7 +1821,7 @@
         "skill_name": "Python",
         "demand_count": 27,
         "total_jobs": 45,
-        "demand_percentage": 60.0,
+        "demand_percentage": 60,
         "required_count": 25,
         "preferred_count": 0,
         "optional_count": 0,
@@ -1867,7 +1869,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -1901,7 +1903,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -1970,7 +1972,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -1994,7 +1996,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.2124,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 4,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2004,7 +2006,7 @@
         "current_level": null,
         "target_level": "beginner",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": []
@@ -2026,7 +2028,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0516,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 2,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2058,7 +2060,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.1804,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 4,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2068,7 +2070,7 @@
         "current_level": null,
         "target_level": "beginner",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": []
@@ -2124,7 +2126,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0907,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 2,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2156,7 +2158,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0413,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 2,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2232,7 +2234,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -2266,7 +2268,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -2392,7 +2394,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0349,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2424,7 +2426,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.1053,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 4,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2500,7 +2502,7 @@
         "current_level": null,
         "target_level": "unknown",
         "observed_level_gap": null,
-        "gap_score": 1.0,
+        "gap_score": 1,
         "requires_confirmation": true,
         "reason_code": "SKILL_NOT_FOUND_IN_CONFIRMED_PROFILE",
         "limitations": [
@@ -2592,7 +2594,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0349,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2930,7 +2932,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.074,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -2996,7 +2998,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0756,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 4,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -3028,7 +3030,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0216,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -3060,7 +3062,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0802,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -3364,7 +3366,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0216,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -3702,7 +3704,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0384,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -4006,7 +4008,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0216,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -4038,7 +4040,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0216,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -4104,7 +4106,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0404,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 2,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -4306,7 +4308,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0122,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -4440,7 +4442,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0202,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -4540,7 +4542,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0404,
         "target_level": "intermediate",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 2,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -5830,7 +5832,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0127,
         "target_level": "beginner",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"
@@ -7188,7 +7190,7 @@
         "optional_count": 0,
         "weighted_demand_score": 0.0216,
         "target_level": "advanced",
-        "target_level_confidence": 1.0,
+        "target_level_confidence": 1,
         "level_observation_count": 1,
         "importance_tier": "unknown",
         "last_updated": "2026-10-10T17:26:33.717555Z"

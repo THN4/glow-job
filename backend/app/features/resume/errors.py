@@ -29,7 +29,7 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "EXTRACTION_TIMEOUT": (504, True, "The extraction took too long. Please try again."),
     "GOAL_NOT_FOUND": (409, False, "Set a career goal before creating a roadmap."),
     "CAREER_PROFILE_NOT_FOUND": (404, False, "The career profile was not found."),
-    "KNOWLEDGE_NOT_READY": (409, False, "Learning content for this career is not ready yet."),
+    "KNOWLEDGE_NOT_READY": (409, False, "The selected skill gaps need reviewed learning content."),
     "ROADMAP_CONTEXT_FAILED": (409, False, "The roadmap inputs could not be prepared."),
     "ROADMAP_NOT_FOUND": (404, False, "No roadmap was found."),
     "TASK_NOT_FOUND": (404, False, "The roadmap task was not found."),

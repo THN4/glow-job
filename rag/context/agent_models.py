@@ -8,7 +8,7 @@ from pydantic import Field, model_validator
 
 from rag.context.models import (
     Record, Level, Background, Goal, ConfirmedSkill, UnresolvedSkill,
-    CareerProfile, MarketWindow, MarketSkill,
+    CareerProfile, MarketWindow, MarketSkill, UserProject,
 )
 
 GapStatus = Literal["covered", "proficiency_gap", "missing_from_profile", "not_assessed", "market_data_insufficient"]
@@ -120,7 +120,9 @@ class UserContext(Record):
     career_goal: Goal | None
     confirmed_skills: tuple[ConfirmedSkill, ...]
     unresolved_skills: tuple[UnresolvedSkill, ...]
+    projects: tuple[UserProject, ...] = ()
     evidence_excerpts_truncated: bool = False
+    projects_truncated: bool = False
 
 
 class EvidenceEntry(Record):
@@ -201,7 +203,7 @@ class RoadmapCandidate(Record):
 
 
 class AgentContext(Record):
-    schema_version: Literal["0.4"] = "0.4"
+    schema_version: Literal["0.5"] = "0.5"
     context_id: str = Field(default_factory=lambda: "ctx_" + uuid4().hex)
     generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: Literal["ready", "estimated", "insufficient_market_data"]

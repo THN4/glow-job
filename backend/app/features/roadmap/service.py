@@ -1,6 +1,6 @@
 """Roadmap generation jobs: authorize, guard spend, build context, generate, save.
 
-Generation runs in an in-process queue (one at a time) because a Claude call can take
+Generation runs in an in-process queue (one at a time) because a Gemini call can take
 a minute or more. The API returns a job ID and the client polls it, as with CV extraction.
 """
 
@@ -22,6 +22,7 @@ from app.features.resume.errors import AppError
 from app.features.resume.storage import JobQueue, TtlDict, now_iso
 from app.features.roadmap.config import RoadmapSettings
 from rag.context.agent_models import AgentContext
+from rag.context.build import KnowledgeNotReady
 
 log = logging.getLogger("roadmap")
 JOB_TTL_SECONDS = 60 * 60
@@ -183,12 +184,11 @@ class RoadmapService:
         if fixture:
             log.warning("using development Agent Context fixture %s", fixture)
             return AgentContext.model_validate_json(Path(fixture).read_bytes())
-        knowledge = Path(self.settings.ROADMAP_KNOWLEDGE_DIR) / f"career-profile-{job.goal['careerProfileId']}.json"
-        if not knowledge.is_file():
-            raise AppError("KNOWLEDGE_NOT_READY")
         try:
-            context = self.repo.build_context(job.profile_id, job.goal["careerProfileId"], knowledge,
+            context = self.repo.build_context(job.profile_id, job.goal["careerProfileId"],
                                               self.settings.ROADMAP_DATE_BASIS)
+        except KnowledgeNotReady as err:
+            raise AppError("KNOWLEDGE_NOT_READY", str(err)) from err
         except ValueError as err:
             raise AppError("ROADMAP_CONTEXT_FAILED", f"The roadmap inputs could not be prepared: {err}") from err
         if context.user_context.career_goal is None:
@@ -217,6 +217,11 @@ class RoadmapService:
     async def set_step(self, profile_id: str, session_id: str, roadmap_id: int, step_key: str,
                        status: str) -> RoadmapView:
         user_id = await self.owner(profile_id, session_id)
+        current = await asyncio.to_thread(self.repo.current, user_id)
+        if current is None:
+            raise AppError("ROADMAP_NOT_FOUND")
+        if any(node.key == step_key and node.baseline_complete for node in current.nodes):
+            raise AppError("TASK_NOT_FOUND", "This skill is already complete in your confirmed profile.")
         if not await asyncio.to_thread(self.repo.set_step, user_id, roadmap_id, step_key, status):
             raise AppError("TASK_NOT_FOUND", "The roadmap step was not found.")
         view = await asyncio.to_thread(self.repo.current, user_id)

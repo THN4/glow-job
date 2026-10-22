@@ -16,12 +16,12 @@ from ai.roadmap.compact import Budget
 from ai.roadmap.contracts import (
     ChecklistItem, Citation, Confirmation, ContentNotice, DeferredSkill, Edge, Generation,
     HoursRange, Layout, NextAction, NodeSkill, Position, Progress, RoadmapDraft, RoadmapNode,
-    RoadmapView, Summary,
+    RoadmapView, SkillDetail, Summary,
 )
 from rag.context.agent_models import AgentContext
 
 NOT_READY_NOTICE = "Related foundation found, but learning content is not ready yet."
-KIND = {"skill": "skill", "foundation_check": "foundation-check", "project": "project",
+KIND = {"skill": "skill", "completed_skill": "skill", "foundation_check": "foundation-check", "project": "project",
         "career_activity": "career-activity"}
 BASE_LIMITATIONS = [
     "Roadmap progress counts completed tasks only; it is not a career-readiness percentage.",
@@ -33,7 +33,7 @@ TIMEFRAME_LABEL = {"three_months": "3 months", "six_months": "6 months", "one_ye
 GAP_LABEL = {
     "missing_from_profile": "Not in your profile yet",
     "not_assessed": "Level not assessed yet",
-    "covered": "In your profile at the level seen in job posts",
+    "covered": "Confirmed in your profile · meets the market target",
     "proficiency_gap": "In your profile, below the level seen in job posts",
     "market_data_insufficient": "Not enough job-post data to compare",
 }
@@ -86,15 +86,33 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
                           citations=[citation(c.chunk_id, c.quote) for c in task.citations])
             for number, task in enumerate(step.tasks, 1)
         ]
+        details = [
+            SkillDetail(title=item.title, detail=item.detail,
+                        citations=[citation(c.chunk_id, c.quote) for c in item.citations])
+            for item in step.details
+        ]
         unique: dict[int, Citation] = {}
         for item in checklist:
             for cite in item.citations:
                 unique.setdefault(cite.chunk_id, cite)
+        for item in details:
+            for cite in item.citations:
+                unique.setdefault(cite.chunk_id, cite)
+        if step.kind == "completed_skill" and not details:
+            if skill is not None and skill.gap_status == "covered":
+                notice = "Your profile and market level match are confirmed. Reviewed learning details are not available for this skill yet."
+            else:
+                notice = "This skill is confirmed in your profile. Your proficiency level and market alignment have not been verified, and reviewed learning details are not available yet."
+        display_title = (
+            skill.name if skill is not None and step.kind in {"skill", "completed_skill"}
+            else step.title
+        )
         nodes.append(RoadmapNode(
-            key=step.key, kind=KIND[step.kind], title=step.title, summary=step.summary,
+            key=step.key, kind=KIND[step.kind], title=display_title, summary=step.summary,
             why_it_matters=step.why, skill=skill,
             estimated_hours=HoursRange(min=step.hours_min, max=step.hours_max),
-            depends_on=step.depends_on, checklist=checklist, citations=list(unique.values()), notice=notice,
+            depends_on=step.depends_on, checklist=checklist, details=details,
+            baseline_complete=step.kind == "completed_skill", citations=list(unique.values()), notice=notice,
         ))
 
     goal = context.user_context.career_goal
@@ -117,7 +135,20 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
         limitations.append("Some skills only have a topic outline or partial sources so far.")
 
     by_key = {node.key: node for node in nodes}
-    edges = [Edge(from_=dep, to=node.key, optional=by_key[dep].kind == "foundation-check")
+    hard_foundations = {
+        foundation.skill_id for foundation in context.foundation_mentions
+        if any(relationship.runtime_role == "global_ordering"
+               and relationship.dependency_type == "prerequisite"
+               and relationship.blocks_unconditional_progress
+               and relationship.target_skill_id in planned
+               for relationship in foundation.relationships)
+    }
+    edges = [Edge(
+        from_=dep, to=node.key,
+        optional=(by_key[dep].kind == "foundation-check"
+                  and by_key[dep].skill is not None
+                  and by_key[dep].skill.skill_id not in hard_foundations),
+    )
              for node in nodes for dep in node.depends_on]
     weekly = (HoursRange(min=budget.weekly_min, max=budget.weekly_max)
               if budget.weekly_min is not None and budget.weekly_max is not None else None)
@@ -165,9 +196,15 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
     view = view.model_copy(deep=True)
     started_steps = started_steps or set()
     by_key = {node.key: node for node in view.nodes}
+    hard_checks = {edge.from_ for edge in view.edges if not edge.optional
+                   and by_key[edge.from_].kind == "foundation-check"}
     done_steps = total_steps = done_tasks = total_tasks = 0
     for node in view.nodes:
         if node.kind == "goal":
+            continue
+        if node.baseline_complete:
+            node.status = "completed"
+            node.subtitle = _subtitle(node)
             continue
         for item in node.checklist:
             item.completed = item.id in completed_tasks
@@ -181,11 +218,13 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
         else:
             node.status = "not_started"
         node.subtitle = _subtitle(node)
-        if node.status != "skipped":
+        if node.status != "skipped" or node.key in hard_checks:
+            if node.baseline_complete:
+                continue
             total_steps += 1
             done_steps += node.status == "completed"
             total_tasks += len(node.checklist)
-            done_tasks += finished
+            done_tasks += finished if node.status != "skipped" else 0
     goal = next(node for node in view.nodes if node.kind == "goal")
     goal.status = "completed" if total_steps and done_steps == total_steps else "not_started"
     view.progress = Progress(
@@ -193,18 +232,19 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
         percent=round(100 * done_tasks / total_tasks) if total_tasks else 0,
         label=f"{done_tasks} of {total_tasks} tasks done")
 
-    for edge in view.edges:
-        edge.optional = by_key[edge.from_].kind == "foundation-check"
     ordered = sorted(view.nodes, key=lambda n: (n.position.row, n.position.column))
     finished_states = {"completed", "skipped"}
 
     def unlocked(node: RoadmapNode) -> bool:
-        required = [d for d in node.depends_on if by_key[d].kind != "foundation-check"]
-        return all(by_key[d].status in finished_states for d in required)
+        required = [edge for edge in view.edges if edge.to == node.key and not edge.optional]
+        return all(by_key[edge.from_].status == "completed" if edge.from_ in hard_checks
+                   else by_key[edge.from_].status in finished_states for edge in required)
 
     chosen = by_key.get(view.next_action.node_key)
-    if chosen is None or chosen.status in finished_states:
-        upcoming = next((n for n in ordered if n.kind != "goal" and n.status not in finished_states and unlocked(n)),
+    if chosen is None or chosen.status in finished_states or not unlocked(chosen):
+        upcoming = next((n for n in ordered if n.kind != "goal"
+                         and (n.status not in finished_states or n.key in hard_checks and n.status == "skipped")
+                         and unlocked(n)),
                         None)
         if upcoming is not None:
             view.next_action = NextAction(node_key=upcoming.key, text=f"Next up: {upcoming.title}.")

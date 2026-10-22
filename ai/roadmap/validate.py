@@ -1,8 +1,7 @@
 """Check a model draft against Agent Context in code.
 
-Problems code can fix safely (a bad citation, an unknown dependency key, a main skill
-the model forgot) are fixed here and reported as warnings, so they never cost another
-model call. Only structural problems are returned as fatal and trigger one repair call.
+Repairable presentation errors become warnings. Missing learning evidence and
+required prerequisite order are fatal so a model cannot publish an ungrounded plan.
 """
 
 from __future__ import annotations
@@ -38,6 +37,13 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
 
     mains = {c.skill_id: c for c in context.roadmap_candidates}
     foundations = {f.skill_id: f for f in context.foundation_mentions}
+    confirmed = {s.skill_id for s in context.user_context.confirmed_skills}
+    completed_candidates = {
+        skill_id: candidate for skill_id, candidate in mains.items()
+        if candidate.learning_recommendation == "reference_only"
+        and candidate.gap.status in {"covered", "not_assessed"}
+        and skill_id in confirmed
+    }
     sources = {
         e.chunk_id: e for e in context.evidence_registry if "learning_content" in e.usage_roles
     }
@@ -53,9 +59,40 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
     known = set(keys)
 
     scheduled: set[int] = set()
+    scheduled_completed: set[int] = set()
     for step in draft.steps:
         label = f"Step '{step.key}'"
-        if step.kind == "skill":
+        if step.kind == "completed_skill":
+            candidate = completed_candidates.get(step.skill_id)
+            if candidate is None:
+                fatal.append(f"{label} is marked completed, but skill_id {step.skill_id} is not a confirmed profile skill selected as a baseline.")
+            elif step.skill_id in scheduled_completed:
+                fatal.append(f"{label} repeats completed skill {candidate.skill_name}.")
+            else:
+                scheduled_completed.add(step.skill_id)
+            if step.hours_min != 0 or step.hours_max != 0 or step.tasks or step.depends_on:
+                fatal.append(f"{label} is a profile-complete skill and must have zero hours, no tasks, and no dependencies.")
+            if len(step.details) > 3:
+                warnings.append(f"{label}: trimmed skill details to three evidence-backed topics.")
+                step.details = step.details[:3]
+            if candidate is not None and candidate.teaching_content_status == "available" and not step.details:
+                fatal.append(f"{label} needs at least one cited detail because reviewed learning content is available.")
+            if candidate is not None and candidate.teaching_content_status != "available" and step.details:
+                warnings.append(f"{label}: removed details because reviewed learning content is unavailable.")
+                step.details = []
+            for detail in step.details:
+                kept = []
+                for cite in detail.citations:
+                    source = sources.get(cite.chunk_id)
+                    allowed = source is not None and step.skill_id in source.used_by_skill_ids
+                    if allowed and len(_norm(cite.quote)) >= 20 and _norm(cite.quote) in _norm(source.content):
+                        kept.append(cite)
+                    else:
+                        warnings.append(f"{label}: removed a detail citation to chunk {cite.chunk_id} that did not match its source.")
+                detail.citations = kept
+                if not detail.citations:
+                    fatal.append(f"{label}: skill detail '{detail.title}' needs a valid source citation.")
+        elif step.kind == "skill":
             candidate = mains.get(step.skill_id)
             if candidate is None:
                 fatal.append(f"{label} is a skill step, but skill_id {step.skill_id} is not a main skill.")
@@ -86,7 +123,7 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
         if unknown:
             warnings.append(f"{label}: removed unknown dependencies {unknown}.")
             step.depends_on = [key for key in step.depends_on if key in known and key != step.key]
-        if not step.tasks:
+        if not step.tasks and step.kind != "completed_skill":
             fatal.append(f"{label} has no tasks.")
 
         for task in step.tasks:
@@ -94,7 +131,8 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
             for cite in task.citations:
                 source = sources.get(cite.chunk_id)
                 allowed = source is not None and (
-                    step.kind not in {"skill", "foundation_check"} or step.skill_id in source.used_by_skill_ids
+                    step.kind not in {"skill", "completed_skill", "foundation_check"}
+                    or step.skill_id in source.used_by_skill_ids
                 )
                 if allowed and len(_norm(cite.quote)) >= 20 and _norm(cite.quote) in _norm(source.content):
                     kept.append(cite)
@@ -102,11 +140,37 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                     warnings.append(f"{label}: removed a citation to chunk {cite.chunk_id} that did not match its source.")
             task.citations = kept
             if task.task_kind == "learn" and not kept:
-                warnings.append(f"{label}: learn task '{task.title}' has no valid citation.")
+                fatal.append(f"{label}: learn task '{task.title}' has no valid citation.")
 
     if _has_cycle(draft):
         fatal.append("Step dependencies form a cycle.")
     else:
+        step_by_skill = {step.skill_id: step for step in draft.steps
+                         if step.kind in {"skill", "completed_skill"}}
+        check_by_skill = {step.skill_id: step.key for step in draft.steps if step.kind == "foundation_check"}
+        for foundation in context.foundation_mentions:
+            if foundation.confirmed_in_user_profile and foundation.user_level not in (None, "unknown"):
+                continue
+            for relationship in foundation.relationships:
+                if (relationship.runtime_role != "global_ordering"
+                        or relationship.dependency_type != "prerequisite"
+                        or not relationship.blocks_unconditional_progress):
+                    continue
+                target_step = step_by_skill.get(relationship.target_skill_id)
+                if target_step is None or target_step.kind == "completed_skill":
+                    continue
+                target_key = target_step.key
+                foundation_step = step_by_skill.get(foundation.skill_id)
+                prerequisite_keys = {key for key in (
+                    foundation_step.key if foundation_step else None,
+                    check_by_skill.get(foundation.skill_id),
+                ) if key}
+                if not prerequisite_keys:
+                    fatal.append(f"Step '{target_key}' needs a prerequisite check for {foundation.skill_name}.")
+                    continue
+                if not any(_precedes(draft, prerequisite_key, target_key)
+                           for prerequisite_key in prerequisite_keys):
+                    fatal.append(f"Step '{target_key}' must depend on prerequisite {foundation.skill_name}.")
         keys = [step.key for step in draft.steps]
         deps = {step.key: step.depends_on for step in draft.steps}
         needed = {dep for value in deps.values() for dep in value}
@@ -139,6 +203,10 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                 skill_id=skill_id, reason_code="OUTSIDE_TIME_BUDGET",
                 note="Not scheduled in this roadmap. Plan it after the current steps.",
             )
+    missing_completed = set(completed_candidates) - scheduled_completed
+    if missing_completed:
+        fatal.append("The roadmap must include completed profile-skill cards for: " + ", ".join(
+            completed_candidates[skill_id].skill_name for skill_id in sorted(missing_completed)))
     draft.deferred = list(deferred.values())
 
     allowed_confirmations = set(mains) | set(foundations)
@@ -151,6 +219,11 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
         root = next((s for s in draft.steps if not s.depends_on), draft.steps[0])
         warnings.append(f"Next action pointed to an unknown step; it now points to '{root.key}'.")
         draft.next_action.step_key = root.key
+    elif next(step for step in draft.steps if step.key == draft.next_action.step_key).kind == "completed_skill":
+        next_learning = next((step for step in draft.steps if step.kind != "completed_skill"), None)
+        if next_learning is not None:
+            warnings.append(f"Next action pointed to completed skill; it now points to '{next_learning.key}'.")
+            draft.next_action.step_key = next_learning.key
 
     if budget.total_max is not None:
         planned_min = sum(step.hours_min for step in draft.steps)
@@ -180,3 +253,18 @@ def _has_cycle(draft: RoadmapDraft) -> bool:
         return False
 
     return any(visit(key) for key in graph)
+
+
+def _precedes(draft: RoadmapDraft, prerequisite_key: str, target_key: str) -> bool:
+    """True when the target depends directly or indirectly on the prerequisite."""
+    dependencies = {step.key: step.depends_on for step in draft.steps}
+    pending = list(dependencies.get(target_key, ()))
+    seen: set[str] = set()
+    while pending:
+        key = pending.pop()
+        if key == prerequisite_key:
+            return True
+        if key not in seen:
+            seen.add(key)
+            pending.extend(dependencies.get(key, ()))
+    return False
