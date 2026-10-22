@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarDays, FileText, Link2, MapPin, Pencil, Save } from 'lucide-react'
+import { CalendarDays, FileText, Link2, MapPin, Pencil, Save, X } from 'lucide-react'
 import { ApplicationStatusBadge } from './ApplicationStatusBadge'
 import type { ApplicationEntry, ApplicationHistoryEntry, ApplicationStatus } from '../../type'
 
@@ -58,9 +58,14 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
 
   return (
     <section aria-labelledby="application-detail-title" className="space-y-3">
-      <header>
-        <h2 id="application-detail-title" className="text-lg font-bold text-slate-900">Application Detail</h2>
-        <p className="mt-0.5 text-sm text-slate-500">Review the information and status history for this saved application.</p>
+      <header className="flex items-start justify-between gap-3">
+        <div>
+          <h2 id="application-detail-title" className="text-lg font-bold text-slate-900">Application Detail</h2>
+          <p className="mt-0.5 text-sm text-slate-500">Review the information and status history for this saved application.</p>
+        </div>
+        <button type="button" onClick={onEdit} aria-label="Edit application" title="Edit application" className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-white text-blue-700 transition hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
+          <Pencil size={16} aria-hidden="true" />
+        </button>
       </header>
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(260px,0.8fr)_minmax(0,1.65fr)]">
@@ -108,9 +113,6 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
             <p className="mt-1.5 min-h-16 rounded-lg border border-blue-100 bg-blue-50/50 p-2.5 text-xs leading-relaxed text-slate-600">{application.nextStep || 'No notes added.'}</p>
             <p className="mt-1 text-[10px] leading-relaxed text-slate-400">This note is your own entry, not an inferred application outcome.</p>
           </div>
-          <button type="button" onClick={onEdit} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-            <Pencil size={14} aria-hidden="true" /> Edit Application
-          </button>
         </section>
 
         <div className="space-y-3">
@@ -125,7 +127,7 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
             <section className="rounded-xl border border-rose-100 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <div><h3 className="text-base font-bold text-slate-900">Rejection details</h3><p className="mt-1 text-xs text-slate-500">Record only what you know. No reason is inferred.</p></div>
-                <button type="button" onClick={() => { setCategoryDraft(application.rejectionCategory ?? 'not-specified'); setReasonDraft(application.rejectionReason ?? ''); setEditingRejection((value) => !value) }} className="rounded-lg border border-blue-100 bg-blue-50/50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-50">{editingRejection ? 'Cancel' : 'Edit rejection details'}</button>
+                <button type="button" onClick={() => { setCategoryDraft(application.rejectionCategory ?? 'not-specified'); setReasonDraft(application.rejectionReason ?? ''); setEditingRejection((value) => !value) }} aria-label={editingRejection ? 'Cancel rejection details edit' : 'Edit rejection details'} title={editingRejection ? 'Cancel rejection details edit' : 'Edit rejection details'} className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-blue-100 bg-white text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">{editingRejection ? <X size={15} aria-hidden="true" /> : <Pencil size={14} aria-hidden="true" />}</button>
               </div>
               <label className="mt-3 block space-y-1.5 text-xs font-semibold text-slate-800">Category
                 <select disabled={!editingRejection} value={categoryDraft} onChange={(event) => setCategoryDraft(event.target.value)} className="min-h-10 w-full rounded-lg border border-blue-100 bg-white px-3 text-xs font-normal text-slate-700 disabled:bg-slate-50">

@@ -6,6 +6,8 @@ export type ApplicationStatus =
   | 'offer'
   | 'rejected'
 
+export type ApplicationStatusFilter = ApplicationStatus | 'all' | 'in-progress'
+
 export type ApplicationEntry = {
   id: string
   company: string

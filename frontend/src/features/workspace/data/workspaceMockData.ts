@@ -3,9 +3,10 @@ import type {
   MarketUpdate,
   WorkspaceUser,
 } from '../type'
+import { roadmapSummary } from '../../roadmap/data/roadmapMockData'
 
 export const workspaceGoal: CurrentGoalSummary = {
-  title: 'Data Engineer Internship',
+  title: roadmapSummary.targetRole,
   progress: 64,
   statusText: 'On track',
   timeRemaining: '4 months remaining',
@@ -13,7 +14,7 @@ export const workspaceGoal: CurrentGoalSummary = {
 
 export const workspaceMarketUpdate: MarketUpdate = {
   title: 'Market Updates',
-  summary: 'Data engineering internships are up 18% this month.',
+  summary: 'Explore skills and roles across the sample internship openings.',
 }
 
 export const workspaceUser: WorkspaceUser = {

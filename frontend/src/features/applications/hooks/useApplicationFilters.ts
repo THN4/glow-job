@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
-import type { ApplicationDateFilter, ApplicationEntry, ApplicationStatus } from '../type'
+import type { ApplicationDateFilter, ApplicationEntry, ApplicationStatusFilter } from '../type'
 
 export function useApplicationFilters(applications: ApplicationEntry[]) {
   const [query, setQuery] = useState('')
-  const [status, setStatus] = useState<ApplicationStatus | 'all'>('all')
+  const [status, setStatus] = useState<ApplicationStatusFilter>('all')
   const [dateFilter, setDateFilter] = useState<ApplicationDateFilter>('all')
 
   const filteredApplications = useMemo(() => {
@@ -18,7 +18,10 @@ export function useApplicationFilters(applications: ApplicationEntry[]) {
     return applications.filter((application) => {
       const matchesQuery = !normalizedQuery
         || `${application.company} ${application.role}`.toLowerCase().includes(normalizedQuery)
-      const matchesStatus = status === 'all' || application.status === status
+      const matchesStatus = status === 'all'
+        || (status === 'in-progress'
+          ? ['applied', 'screening', 'interview'].includes(application.status)
+          : application.status === status)
       const applicationDate = new Date(`${application.relevantDateISO}T00:00:00`)
       const matchesDate = !cutoff || applicationDate >= cutoff
 

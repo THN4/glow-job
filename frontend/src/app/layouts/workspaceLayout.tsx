@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import { PanelLeftOpen } from 'lucide-react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
+import { useRoadmapCounts } from '../../features/roadmap/useRoadmapCounts'
 import type {
   CurrentGoalSummary,
   MarketUpdate,
@@ -12,7 +13,6 @@ type WorkspaceLayoutProps = {
   goal: CurrentGoalSummary
   marketUpdate: MarketUpdate
   user: WorkspaceUser
-  onViewInsights: () => void
   onHelpClick: () => void
   onProfileClick: () => void
 }
@@ -21,27 +21,33 @@ export function WorkspaceLayout({
   goal,
   marketUpdate,
   user,
-  onViewInsights,
   onHelpClick,
   onProfileClick,
 }: WorkspaceLayoutProps) {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const roadmap = useRoadmapCounts()
   const isRoadmapPage = pathname.startsWith('/app/roadmap')
   const scrollRef = useRef<HTMLDivElement>(null)
   // Every page shares this scroll box, so start each page at the top. Without this the roadmap page,
   // which cannot scroll, keeps the previous page's offset and shows up cut off.
   useLayoutEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [pathname])
+  const currentGoal = {
+    ...goal,
+    progress: roadmap.completionPercent,
+    statusText: roadmap.completionPercent === 100 ? 'Completed' : roadmap.completionPercent === 0 ? 'Ready to start' : 'On track',
+  }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
       <WorkspaceSidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        goal={goal}
+        goal={currentGoal}
         marketUpdate={marketUpdate}
         user={user}
-        onViewInsights={onViewInsights}
+        onViewInsights={() => navigate('/app/market-insights')}
         onHelpClick={onHelpClick}
         onProfileClick={onProfileClick}
       />

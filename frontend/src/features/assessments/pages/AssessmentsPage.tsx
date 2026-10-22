@@ -9,6 +9,7 @@ import { LevelCheckDialog } from '../components/LevelCheckDialog'
 import { StepCheckDialog } from '../components/StepCheckDialog'
 import { capitalize } from '../levels'
 import { nodeSkillId, stepCheckTasks } from '../roadmapLink'
+import { recordStepCheckActivity } from '../stepCheckActivity'
 import type { ActivityEntry, LevelCheckTarget, StepCheckSummary } from '../types'
 import { useAssessmentsOverview } from '../useAssessments'
 
@@ -80,8 +81,7 @@ export function AssessmentsPage() {
   const stepTasks = useMemo(() => (stepNode ? stepCheckTasks(stepNode) : []), [stepNode])
 
   function openStep(nodeId: string) {
-    updateRoadmapSnapshot((current) => ({ ...current, selectedNodeId: nodeId }))
-    navigate('/app/roadmap')
+    navigate(`/app/roadmap?node=${encodeURIComponent(nodeId)}`)
   }
 
   return (
@@ -240,9 +240,12 @@ export function AssessmentsPage() {
       {stepNode && (
         <StepCheckDialog onClose={() => setStepNode(null)} stepKey={stepNode.id} stepTitle={stepNode.title}
           skillId={nodeSkillId(stepNode)} tasks={stepTasks} entryPoint="assessments"
-          onApplied={(verified, review) => updateRoadmapSnapshot((current) => ({
-            ...current, progress: { ...current.progress, nodes: applyStepCheck(current.progress.nodes, stepNode.id, verified, review) },
-          }))} />
+          onApplied={(verified, review) => {
+            updateRoadmapSnapshot((current) => ({
+              ...current, progress: { ...current.progress, nodes: applyStepCheck(current.progress.nodes, stepNode.id, verified, review) },
+            }))
+            recordStepCheckActivity(stepNode, verified.length, review.length)
+          }} />
       )}
       {levelTarget && (
         <LevelCheckDialog onClose={() => setLevelTarget(null)} skillId={levelTarget.skillId} skillName={levelTarget.name} entryPoint="assessments" />
