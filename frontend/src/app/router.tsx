@@ -6,6 +6,7 @@ import {
   workspaceUser,
 } from '../features/workspace/data/workspaceMockData'
 import { WorkspacePlaceholderPage } from '../features/workspace/pages/WorkspacePlaceholderPage'
+import { OverviewPage } from '../features/workspace/pages/OverviewPage'
 import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
 import { SkillProfilePage } from '../features/skill-profile/pages/SkillProfilePage'
 import { ApplicationsPage } from '../features/applications/pages/ApplicationsPage'
@@ -29,7 +30,7 @@ const router = createBrowserRouter([
   },
   {
     path: '/',
-    element: <Navigate to="/app/roadmap" replace />,
+    element: <Navigate to="/app/overview" replace />,
   },
   {
     path: '/app',
@@ -44,6 +45,10 @@ const router = createBrowserRouter([
       />
     ),
     children: [
+      {
+        path: 'overview',
+        element: <OverviewPage />,
+      },
       {
         path: 'roadmap',
         element: <RoadmapPage />,

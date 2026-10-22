@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { OnboardingLayout } from '../components/layout/OnboardingLayout'
 import { UploadCvStep } from '../pages/steps/UploadCvStep'
 import { useOnboarding } from './OnboardingContext'
@@ -209,7 +210,14 @@ export function OnboardingFlow() {
         <section>
           <PageHeader {...onboardingCopy.headers[currentStep]} />
           <p className="mt-2 text-sm text-muted-foreground">{onboardingCopy.placeholder}</p>
-          {goalSaved && <p className="mt-4 text-sm font-medium text-emerald-700" role="status">Career goal and preferences saved.</p>}
+          {goalSaved && (
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <p className="text-sm font-medium text-emerald-700" role="status">Career goal and preferences saved.</p>
+              <Link to="/app/overview" className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:opacity-90">
+                Go to your overview
+              </Link>
+            </div>
+          )}
           {saveError && <p className="mt-4 text-sm text-destructive" role="alert">{saveError}</p>}
         </section>
       )}
