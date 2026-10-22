@@ -1,4 +1,4 @@
-import { ArrowRight, CheckCircle2, Circle, Container, Link2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Compass, Container, Link2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { SkillChecklistItem, SkillEvidenceSource, SkillProfileSkill } from '../type'
 import { EvidencePanel } from './EvidencePanel'
@@ -37,7 +37,7 @@ export function InProgressSkillCard({
           <div>
             <h3 className="text-base font-bold text-slate-900">{skill.title}</h3>
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-              <Circle size={8} aria-hidden="true" /> In progress
+              <Compass size={13} aria-hidden="true" /> In progress
             </span>
           </div>
         </div>
