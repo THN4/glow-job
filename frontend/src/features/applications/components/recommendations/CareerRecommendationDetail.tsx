@@ -3,12 +3,12 @@ import { ArrowLeft, ArrowRight, CheckCircle2, Info, Layers3, TrendingUp } from '
 import { Link } from 'react-router-dom'
 import type { CareerPathRecommendation } from '../../type'
 import type { RoadmapNodeData } from '../../../roadmap/type'
-import { roadmapSummary } from '../../../roadmap/data/roadmapMockData'
 import { CareerPathIcon } from './CareerPathIcon'
 
 type CareerRecommendationDetailProps = {
   path: CareerPathRecommendation
   roadmapNodes: RoadmapNodeData[]
+  primaryTargetRole: string | null
   onBack: () => void
 }
 
@@ -17,7 +17,7 @@ const relatedNodeId: Record<string, string> = {
   'data transformation': 'etl-pipelines',
 }
 
-export function CareerRecommendationDetail({ path, roadmapNodes, onBack }: CareerRecommendationDetailProps) {
+export function CareerRecommendationDetail({ path, roadmapNodes, primaryTargetRole, onBack }: CareerRecommendationDetailProps) {
   const [secondaryGoal, setSecondaryGoal] = useState(false)
   const developingSkills = roadmapNodes.filter((node) => node.kind === 'skill' && node.status !== 'completed')
 
@@ -27,7 +27,7 @@ export function CareerRecommendationDetail({ path, roadmapNodes, onBack }: Caree
       <article className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-colors hover:border-blue-400 focus-within:border-blue-400">
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50 text-violet-600"><CareerPathIcon pathId={path.id} size={16} /></span>Why this path is worth exploring</h2>
         <p className="mt-2 text-xs leading-relaxed text-slate-600">{path.whyExplore}</p>
-        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Typical work: {path.developmentAreas.slice(0, 3).join(', ')} and collaborate with analysts on trustworthy metrics.</p>
+        <p className="mt-2 text-[10px] leading-relaxed text-slate-500">Market sample: {path.totalJobs} postings · {path.marketStatus.replaceAll('_', ' ')} data.</p>
       </article>
 
       <div className="grid items-start gap-3 md:grid-cols-2">
@@ -69,7 +69,7 @@ export function CareerRecommendationDetail({ path, roadmapNodes, onBack }: Caree
 
       <div className="flex items-start gap-2 rounded-lg border border-slate-200 bg-blue-50/70 p-3 text-xs text-blue-800">
         <Info size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
-        <p><span className="font-semibold">{roadmapSummary.targetRole} stays your primary goal.</span> Exploring this path does not create an application.</p>
+        <p><span className="font-semibold">{primaryTargetRole ? `${primaryTargetRole} stays your primary goal.` : 'Your saved primary goal is not available.'}</span> Exploring this path does not create an application.</p>
       </div>
       {secondaryGoal && <p role="status" className="text-xs text-emerald-700">{path.title} marked as a secondary goal for this session. Your primary goal is unchanged.</p>}
       <div className="flex flex-wrap gap-2">

@@ -55,8 +55,14 @@ export type ApplicationDateFilter = 'all' | '30-days' | 'this-year'
 
 export type CareerPathRecommendation = {
   id: string
+  careerProfileId: number
+  careerName: string
   title: string
+  seniorityLevel: string
   summary: string
+  scorePct: number | null
+  totalJobs: number
+  marketStatus: string
   transferableSkills: string[]
   developmentAreas: string[]
   iconTone: 'blue' | 'violet' | 'emerald'

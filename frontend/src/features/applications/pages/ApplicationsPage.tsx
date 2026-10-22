@@ -52,6 +52,13 @@ export function ApplicationsPage() {
     retry: false,
     staleTime: 60_000,
   })
+  const careerRecommendationsQuery = useQuery({
+    queryKey: ['career-recommendations', profileId],
+    queryFn: applicationsApi.careerRecommendations,
+    enabled: activeTab === 'recommendations' && hasProfile,
+    retry: false,
+    staleTime: 60_000,
+  })
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingApplication, setEditingApplication] = useState(false)
   const [selectedApplication, setSelectedApplication] = useState<ApplicationEntry | null>(null)
@@ -209,7 +216,19 @@ export function ApplicationsPage() {
             onEdit={() => { setEditingApplication(true); setShowAddForm(true) }}
           />
         )}
-        {activeTab === 'recommendations' && <CareerRecommendationsTab selectedPath={selectedCareerPath} onSelectPath={setSelectedCareerPath} roadmapNodes={roadmap.nodes} />}
+        {activeTab === 'recommendations' && !hasProfile && <div className="rounded-xl border border-blue-100 bg-white p-8 text-center shadow-sm"><h2 className="text-lg font-bold text-slate-900">Save your profile to see career recommendations</h2><p className="mt-2 text-sm text-slate-600">Recommendations compare your confirmed skills with market skill demand.</p><Link to="/onboarding" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Go to onboarding</Link></div>}
+        {activeTab === 'recommendations' && hasProfile && <CareerRecommendationsTab
+          selectedPath={selectedCareerPath}
+          onSelectPath={setSelectedCareerPath}
+          roadmapNodes={roadmap.nodes}
+          targetRole={careerRecommendationsQuery.data?.targetRole ?? null}
+          recommendations={careerRecommendationsQuery.data?.recommendations ?? []}
+          isLoading={careerRecommendationsQuery.isLoading}
+          error={careerRecommendationsQuery.isError
+            ? careerRecommendationsQuery.error instanceof Error ? careerRecommendationsQuery.error.message : 'Could not load career recommendations.'
+            : null}
+          onRetry={() => careerRecommendationsQuery.refetch()}
+        />}
         {activeTab === 'companies' && <>
           {companySaveError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{companySaveError}</p>}
           {companyOpeningsQuery.isLoading && <p role="status" className="rounded-xl border border-blue-100 bg-white p-8 text-center text-sm text-slate-600">Loading job postings…</p>}
