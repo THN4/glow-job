@@ -3,6 +3,34 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+.application-form-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.application-form-description {
+  border-top: 1px solid #bfdbfe;
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .application-form-layout {
+    grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);
+    gap: 0;
+  }
+
+  .application-form-info {
+    padding-right: 1.5rem;
+  }
+
+  .application-form-description {
+    border-top: 0;
+    border-left: 1px solid #bfdbfe;
+    padding-top: 0;
+    padding-left: 1.5rem;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @keyframes roadmap-flow {
