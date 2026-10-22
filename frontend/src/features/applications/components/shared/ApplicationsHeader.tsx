@@ -24,25 +24,25 @@ export function ApplicationsHeader({ onAddApplication, formOpen = false, detailO
   return (
     <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-blue-600">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
           Data Engineer Internship · 4 months
         </p>
-        <h1 className="mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
+        <h1 className="mt-1 text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl xl:text-[28px]">
           {titleOverride ?? currentPageTitle}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
           {subtitleOverride ?? (detailOpen ? `Your saved record · ${detailLabel}` : currentPageSubtitle)}
         </p>
       </div>
       {backLabel && !formOpen ? (
-        <button type="button" onClick={onBack} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-blue-100 bg-white px-4 text-sm font-semibold text-blue-700 transition hover:bg-blue-50">
+        <button type="button" onClick={onBack} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-primary transition hover:bg-accent">
           <ArrowLeft size={16} aria-hidden="true" /> {backLabel}
         </button>
       ) : !formOpen && activeTab === 'my-applications' && (
         <button
           type="button"
           onClick={onAddApplication}
-          className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+          className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
         >
           <Plus size={16} aria-hidden="true" />
           Add Application
