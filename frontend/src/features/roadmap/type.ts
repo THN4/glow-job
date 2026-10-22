@@ -2,6 +2,15 @@ export type RoadmapNodeKind = 'skill' | 'project' | 'career-activity' | 'goal'
 
 export type RoadmapNodeStatus = 'completed' | 'in-progress' | 'upcoming'
 
+export type RoadmapEvidence = {
+  id: string
+  type: 'GitHub project' | 'Certificate' | 'Self report'
+  title: string
+  url?: string
+  notes: string
+  photo?: string
+}
+
 export type RoadmapNodePosition = {
   row: number
   column: number
@@ -11,10 +20,14 @@ export type RoadmapChecklistItem = {
   id: string
   label: string
   completed: boolean
+  kind?: 'learn' | 'practice'
+  sourceId?: string
 }
 
 export type RoadmapNodeData = {
   id: string
+  /** Canonical core.skills ID used by document retrieval; never infer from the UI slug. */
+  skillId?: number
   title: string
   kind: RoadmapNodeKind
   status: RoadmapNodeStatus

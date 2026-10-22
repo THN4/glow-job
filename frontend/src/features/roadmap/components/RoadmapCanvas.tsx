@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { ArrowDown } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { arrowColors, isConnectionDashed } from '../connectionAppearance'
 import type {
   RoadmapConnection,
   RoadmapNodeData,
@@ -18,10 +18,10 @@ type RoadmapCanvasProps = {
 }
 
 const GRAPH_WIDTH = 1000
-const NODE_HEIGHT = 50
+const NODE_HEIGHT = 60
 const GRAPH_VERTICAL_INSET = 18
 const MIN_NODE_WIDTH = 96
-const MAX_NODE_WIDTH = 190
+const MAX_NODE_WIDTH = 216
 
 type GraphSize = {
   width: number
@@ -75,17 +75,18 @@ export function RoadmapCanvas({
   detailsOpen = false,
   progressSummary,
 }: RoadmapCanvasProps) {
+  const arrowId = useId()
   const nodesById = new Map(nodes.map((node) => [node.id, node]))
   const rows = [...new Set(nodes.map((node) => node.position.row))]
     .sort((first, second) => first - second)
   const graphRef = useRef<HTMLDivElement>(null)
   const [graphSize, setGraphSize] = useState<GraphSize>({
     width: GRAPH_WIDTH,
-    height: 576,
+    height: 660,
   })
   const nodeWidth = Math.max(
     detailsOpen ? MIN_NODE_WIDTH : 120,
-    Math.min(MAX_NODE_WIDTH, graphSize.width / 4 - (detailsOpen ? 28 : 30)),
+    Math.min(MAX_NODE_WIDTH, graphSize.width / 4 - 24),
   )
 
   useEffect(() => {
@@ -102,14 +103,12 @@ export function RoadmapCanvas({
   }, [])
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[#DCE8F7] bg-white shadow-sm">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#DCE8F7] bg-white shadow-sm">
       <div className="shrink-0 border-b border-[#E4ECF8] bg-white px-4 py-3 sm:px-5 [@media(max-height:760px)]:py-2">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold text-slate-800">Your path to data engineering</h2>
-            <p className="mt-0.5 text-[10px] text-slate-500">
-              Follow the recommended route or explore upcoming branches.
-            </p>
+            <p className="mt-0.5 text-[10px] text-slate-500">Follow the recommended route or explore upcoming branches.</p>
           </div>
           {progressSummary && (
             <div className="hidden shrink-0 xl:block">
@@ -121,9 +120,9 @@ export function RoadmapCanvas({
           )}
         </div>
       </div>
-      <div className="min-h-0 flex-1 bg-[#F4F8FF] p-3 sm:p-4">
+      <div className="min-h-0 flex-1 bg-white p-3 sm:p-4">
         <div className="h-full overflow-y-auto overscroll-contain min-[640px]:hidden">
-          <ol className="mx-auto max-w-xl space-y-1 px-1 py-2">
+          <ol className="mx-auto w-[92%] max-w-xs space-y-3 px-1 py-4">
             {rows.map((row, rowIndex) => {
               const rowNodes = nodes
                 .filter((node) => node.position.row === row)
@@ -137,79 +136,131 @@ export function RoadmapCanvas({
                     </span>
                     <span className="h-px flex-1 bg-blue-100" aria-hidden="true" />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-4">
                     {rowNodes.map((node) => (
+                      <div key={node.id}>
                       <RoadmapNode
-                        key={node.id}
+                        compact
                         node={node}
                         width="100%"
                         selected={selectedNodeId === node.id}
                         onSelect={onSelectNode}
                       />
+                      <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+                        {connections.filter((edge) => edge.from === node.id).map((edge) => {
+                          const target = nodesById.get(edge.to)
+                          if (!target) return null
+                          return (
+                            <button
+                              key={edge.to}
+                              type="button"
+                              onClick={() => onSelectNode(target)}
+                              aria-label={`From ${node.title} to ${target.title}${edge.optional ? ', optional path' : ''}`}
+                              className="inline-flex min-h-9 items-center gap-1 rounded px-1 text-[10px] focus-visible:outline-2 focus-visible:outline-primary"
+                              style={{ color: arrowColors[target.status] }}
+                            >
+                              <svg width="22" height="28" viewBox="0 0 22 28" fill="none" aria-hidden="true">
+                                <path d="M11 2 V23" stroke="currentColor" strokeWidth="2" strokeDasharray={isConnectionDashed(edge, target.status) ? '3 3' : undefined} />
+                                <path d="M6 18 L11 23 L16 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              {target.title}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      </div>
                     ))}
                   </div>
-                  {rowIndex < rows.length - 1 && (
-                    <div className="flex h-8 items-center justify-center text-blue-400" aria-hidden="true">
-                      <ArrowDown size={16} />
-                    </div>
-                  )}
                 </li>
               )
             })}
           </ol>
         </div>
 
-        <div className="hidden h-full min-h-0 overflow-x-auto overflow-y-hidden min-[640px]:block">
+        <div className="hidden h-full min-h-0 overflow-auto overscroll-contain min-[640px]:block">
           <div
             ref={graphRef}
-            className="relative mx-auto h-full min-h-0 w-full max-w-[1000px]"
+            className="relative mx-auto h-full min-h-[660px] w-full min-w-[576px] max-w-[1000px]"
           >
           <svg
             viewBox={`0 0 ${graphSize.width} ${graphSize.height}`}
             className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-            aria-hidden="true"
+            role="group"
+            aria-label="Roadmap connections"
           >
             <defs>
+              {Object.entries(arrowColors).map(([status, color]) => (
               <marker
-                id="roadmap-arrow"
+                key={status}
+                id={`${arrowId}-${status}`}
                 markerWidth="6"
                 markerHeight="6"
                 refX="5"
                 refY="3"
                 orient="auto"
               >
-                <path d="M0,0 L6,3 L0,6 Z" fill="#8bb1ff" />
+                <path d="M0,0 L6,3 L0,6 Z" fill={color} />
               </marker>
+              ))}
             </defs>
             {connections.map((connection) => {
               const from = nodesById.get(connection.from)
               const to = nodesById.get(connection.to)
               if (!from || !to) return null
+              const arrowStatus = to.status
+              const markerEnd = `url(#${arrowId}-${arrowStatus})`
 
               return (
-                <path
+                <g
                   key={`${connection.from}-${connection.to}`}
+                  tabIndex={0}
+                  role="img"
+                  aria-label={`${from.title} to ${to.title}${connection.optional ? ', optional path' : ''}`}
+                  className="roadmap-connection pointer-events-auto outline-none"
+                  style={{ color: arrowColors[arrowStatus] }}
+                >
+                  <title>{from.title} → {to.title}{connection.optional ? ' (optional)' : ''}</title>
+                  <path
+                    d={getConnectionPath(from, to, graphSize, nodeWidth)}
+                    fill="none"
+                    stroke="transparent"
+                    strokeWidth="16"
+                    pointerEvents="stroke"
+                  />
+                  <path
+                  className="roadmap-connection-line"
                   d={getConnectionPath(from, to, graphSize, nodeWidth)}
                   fill="none"
-                  stroke={connection.optional ? '#a8b8d1' : '#8bb1ff'}
+                  stroke="currentColor"
                   strokeWidth={to.status === 'in-progress' ? '2.5' : '1.75'}
-                  strokeDasharray={connection.optional ? '5 5' : undefined}
+                  strokeDasharray={isConnectionDashed(connection, to.status) ? '5 5' : undefined}
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  markerEnd="url(#roadmap-arrow)"
+                  markerEnd={markerEnd}
                 />
+                  <path
+                    className="roadmap-connection-flow"
+                    d={getConnectionPath(from, to, graphSize, nodeWidth)}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray="6 9"
+                    strokeLinecap="round"
+                    pointerEvents="none"
+                  />
+                </g>
               )
             })}
           </svg>
 
           <div
-            className="absolute inset-x-0 grid grid-cols-4 grid-rows-6"
+            className="pointer-events-none absolute inset-x-0 grid grid-cols-4 grid-rows-6"
             style={{ top: Math.min(GRAPH_VERTICAL_INSET, graphSize.height * 0.08), bottom: Math.min(GRAPH_VERTICAL_INSET, graphSize.height * 0.08) }}
           >
             {nodes.map((node) => (
               <div
                 key={node.id}
-                className="flex items-center justify-center"
+                className="flex items-center justify-center [&>div]:pointer-events-auto"
                 style={{
                   gridColumn: node.position.column,
                   gridRow: node.position.row,
