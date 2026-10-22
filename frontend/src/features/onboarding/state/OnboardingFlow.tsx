@@ -17,6 +17,7 @@ import { AnalyzingCvStep } from '../pages/steps/AnalyzingCvStep'
 import { AnalysisNavigation } from '../components/analysis/AnalysisNavigation'
 import { hasRequiredSkillLevels, markProfileReviewed } from '../../../lib/profileReview'
 import { focusField } from '../../../lib/focusField'
+import { hasProfileInformation } from '../profileFromCv'
 
 export function OnboardingFlow() {
   const {
@@ -145,6 +146,7 @@ export function OnboardingFlow() {
           onContinue={handleContinue} onBack={previousStep} />
       ) : currentStep === 3 ? (
         <CareerGoalStep targetRole={data.targetRole} deadline={data.deadline}
+          hasProfileInformation={hasProfileInformation(data.profile)}
           showValidation={goalValidationAttempted}
           customDeadlineDate={data.customDeadlineDate}
           onRoleChange={(targetRole) => updateData({ targetRole })}

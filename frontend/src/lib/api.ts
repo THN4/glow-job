@@ -1,7 +1,8 @@
 import type { RoleRecommendation, RoleSearchResult } from '../features/onboarding/types'
 import { goalCopy, MOCK_ROLE_RECOMMENDATIONS } from './goalConstants'
 import { profileSchema, type Profile } from '../features/onboarding/types'
-import { MOCK_PROFILE } from './profileConstants'
+import { extractCv } from '../features/resume/api'
+import { profileFromCv } from '../features/onboarding/profileFromCv'
 import { validateCvFile } from './cv'
 import type { AnalysisProgress, AnalysisTask } from '../features/onboarding/analysisTypes'
 import { DEMO_ANALYSIS_STEP_MIN_MS } from './analysisConstants'
@@ -26,9 +27,7 @@ export function createEmptyProfile(): Profile {
   return { education: null, skills: [], projects: [], experience: [], certifications: [], user_confirmed: false }
 }
 
-// Demo adapter: reads the real file, then prepares the reference profile.
-// Replace each operation with a backend task/event when the analysis API is ready.
-// Demo tasks remain visible briefly; success still requires the operation to finish.
+// Extract the uploaded document; never substitute a demo profile for missing data.
 export async function analyzeCv(file: File, options: { onProgress?: AnalysisProgress; signal?: AbortSignal } = {}): Promise<Profile> {
   const { onProgress, signal } = options
   async function run<T>(task: AnalysisTask, action: () => T | Promise<T>): Promise<T> {
@@ -55,10 +54,11 @@ export async function analyzeCv(file: File, options: { onProgress?: AnalysisProg
     const buffer = await file.arrayBuffer()
     if (buffer.byteLength !== file.size) throw new Error('Incomplete CV read')
   })
-  const skills = await run('skills', () => profileSchema.shape.skills.parse(structuredClone(MOCK_PROFILE.skills)))
-  const education = await run('education', () => profileSchema.shape.education.parse(structuredClone(MOCK_PROFILE.education)))
+  const extracted = await run('skills', async () => profileFromCv((await extractCv(file, () => {}, signal)).profile))
+  const skills = profileSchema.shape.skills.parse(extracted.skills)
+  const education = await run('education', () => profileSchema.shape.education.parse(extracted.education))
   const sections = await run('experience', () => profileSchema.pick({ projects: true, experience: true, certifications: true })
-    .parse(structuredClone({ projects: MOCK_PROFILE.projects, experience: MOCK_PROFILE.experience, certifications: MOCK_PROFILE.certifications })))
+    .parse({ projects: extracted.projects, experience: extracted.experience, certifications: extracted.certifications }))
   return run('profile', () => profileSchema.parse({ ...createEmptyProfile(), skills, education, ...sections }))
 }
 
