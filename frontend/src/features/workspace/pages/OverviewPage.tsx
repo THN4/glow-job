@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -10,13 +11,13 @@ import {
   Target,
   Zap,
 } from 'lucide-react'
-import { workspaceGoal } from '../data/workspaceMockData'
+import { loadSavedCareerMatch, type CareerMatchResult, type SavedCareerGoal } from '../../resume/api'
 
 const metrics = [
-  { label: 'Career Readiness', value: `${workspaceGoal.progress}%`, icon: Target, tone: 'blue', progress: workspaceGoal.progress },
-  { label: 'Skills Completed', value: '3 / 6', icon: CircleCheck, tone: 'green' },
-  { label: 'Skills to Build', value: '3', icon: Layers3, tone: 'amber' },
-  { label: 'Weekly Hours', value: '8 hrs', icon: Clock3, tone: 'purple' },
+  { key: 'coreSkillMatchPct', label: 'Core Top 20 coverage', detail: 'Weighted top skills · cutoff ties included', icon: Target, tone: 'blue' },
+  { key: 'marketSkillCoveragePct', label: 'All career skills coverage', detail: 'All usable market skills', icon: CircleCheck, tone: 'green' },
+  { key: 'proficiencyAlignmentPct', label: 'Proficiency alignment', detail: 'Weighted level match where assessed', icon: Layers3, tone: 'amber' },
+  { key: 'assessmentCoveragePct', label: 'Assessment coverage', detail: 'Share of market weight assessed', icon: Clock3, tone: 'purple' },
 ] as const
 
 const milestones = [
@@ -29,49 +30,86 @@ const milestones = [
   { label: 'Goal', state: 'goal' },
 ] as const
 
-function MetricCard({ metric }: { metric: (typeof metrics)[number] }) {
+function MetricCard({ metric, value }: { metric: (typeof metrics)[number]; value: number | null }) {
   const Icon = metric.icon
-  const isReadiness = metric.label === 'Career Readiness'
+  const formattedValue = value === null ? '—' : `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`
 
   return (
-    <article className="flex min-h-[104px] flex-col rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-sm sm:min-h-[116px] sm:py-4">
+    <article className="flex min-h-[120px] flex-col rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-sm sm:min-h-[132px] sm:py-4">
       <Icon className={`size-5 ${metric.tone === 'blue' ? 'text-blue-600' : metric.tone === 'green' ? 'text-emerald-600' : metric.tone === 'amber' ? 'text-amber-500' : 'text-violet-500'}`} aria-hidden="true" />
       <p className={`mt-2 text-2xl font-bold leading-none tracking-tight ${metric.tone === 'blue' ? 'text-blue-600' : metric.tone === 'green' ? 'text-emerald-600' : metric.tone === 'amber' ? 'text-amber-500' : 'text-violet-500'}`}>
-        {metric.value}
+        {formattedValue}
       </p>
-      <p className="mt-1 text-xs text-slate-500">{metric.label}</p>
-      {isReadiness && (
-        <div
-          role="progressbar"
-          aria-label="Career readiness"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={metric.progress}
-          aria-valuetext={`${metric.progress}% ready`}
-          className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100"
-        >
-          <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${metric.progress}%` }} />
-        </div>
-      )}
+      <p className="mt-1 text-xs font-medium text-slate-700">{metric.label}</p>
+      <p className="mt-0.5 text-[11px] text-slate-500">{metric.detail}</p>
+      <div
+        role="progressbar"
+        aria-label={metric.label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={value ?? undefined}
+        aria-valuetext={`${formattedValue} · ${metric.detail}`}
+        className="mt-auto h-1.5 overflow-hidden rounded-full bg-blue-100"
+      >
+        <div className={`h-full rounded-full transition-all ${metric.tone === 'blue' ? 'bg-blue-600' : metric.tone === 'green' ? 'bg-emerald-500' : metric.tone === 'amber' ? 'bg-amber-500' : 'bg-violet-500'}`} style={{ width: `${value ?? 0}%` }} />
+      </div>
     </article>
   )
 }
 
 export function OverviewPage() {
+  const [careerMatch, setCareerMatch] = useState<{ goal: SavedCareerGoal; match: CareerMatchResult } | null>(null)
+  const [loadingMatch, setLoadingMatch] = useState(true)
+  const [matchError, setMatchError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    loadSavedCareerMatch().then((result) => {
+      if (active) setCareerMatch(result)
+    }).catch((error: unknown) => {
+      if (active) setMatchError(error instanceof Error ? error.message : 'Unable to load career match scores.')
+    }).finally(() => {
+      if (active) setLoadingMatch(false)
+    })
+    return () => { active = false }
+  }, [])
+
+  const match = careerMatch?.match
+  const scores = match?.scores
+  const skillSummary = match?.skillSummary
+
   return (
     <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-6 sm:space-y-6">
       <header className="relative overflow-hidden py-1 sm:py-2">
         <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-28 size-64 rounded-full bg-blue-100/45 sm:-right-2 sm:-top-40 sm:size-80" />
         <p className="relative text-[11px] font-semibold uppercase tracking-wide text-blue-600 sm:text-xs">Good morning, Alex · September 18</p>
-        <h1 id="overview-title" className="relative mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">{workspaceGoal.title}</h1>
+        <h1 id="overview-title" className="relative mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">{careerMatch?.goal.targetRoleTitle ?? 'Career Overview'}</h1>
         <p className="relative mt-1 text-sm text-slate-500 sm:text-base">
-          Target: Within {workspaceGoal.timeRemaining.split(' ')[0]} months · You’re making solid progress — keep it up.
+          {careerMatch ? `Target: ${careerMatch.goal.readinessTimeframe.replaceAll('_', ' ')} · Career match scores are based on your confirmed profile.` : 'Career match scores are based on your confirmed profile and target role.'}
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
-        {metrics.map((metric) => <MetricCard key={metric.label} metric={metric} />)}
-      </div>
+      <section aria-labelledby="career-match-title" className="space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id="career-match-title" className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Career Match</h2>
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">Scores use separate market skill sets and describe profile coverage, not job readiness.</p>
+          </div>
+          {match && <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${match.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{match.status === 'ready' ? 'Market data ready' : 'Estimated · review notes'}</span>}
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+          {metrics.map((metric) => <MetricCard key={metric.label} metric={metric} value={scores?.[metric.key] ?? null} />)}
+        </div>
+        {loadingMatch && <p role="status" className="text-xs text-slate-500">Loading your career match…</p>}
+        {!loadingMatch && matchError && <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{matchError}</p>}
+        {!loadingMatch && !matchError && !careerMatch && <p className="rounded-lg border border-blue-100 bg-white/70 px-4 py-3 text-xs text-slate-600">Complete onboarding and choose a target role available in the career catalog to calculate these scores.</p>}
+        {skillSummary && careerMatch && <div aria-label="Profile skills and availability" className="flex flex-wrap gap-x-5 gap-y-1 rounded-xl border border-blue-100 bg-white/70 px-4 py-2.5 text-xs text-slate-600">
+          <span><strong className="font-semibold text-slate-900">{skillSummary.covered} / {skillSummary.considered}</strong> market skills in profile</span>
+          <span><strong className="font-semibold text-slate-900">{skillSummary.missingFromProfile}</strong> skills missing</span>
+          {careerMatch.goal.availableHoursPerWeek !== null && <span><strong className="font-semibold text-slate-900">{careerMatch.goal.availableHoursPerWeek} hrs</strong> per week</span>}
+        </div>}
+        {match?.warnings.map((warning) => <p key={warning} className="text-xs text-amber-700">{warning}</p>)}
+      </section>
 
       <article className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-white via-sky-50 to-blue-100/80 p-4 shadow-sm sm:p-5 lg:p-6">
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-20 size-72 rounded-full border-[32px] border-white/45" />

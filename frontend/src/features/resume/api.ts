@@ -94,6 +94,20 @@ export type CareerMatchResult = {
   warnings: string[]
 }
 
+export type SavedCareerGoal = {
+  goalId: number
+  careerId: number
+  careerProfileId: number
+  targetRoleTitle: string
+  readinessTimeframe: string
+  targetDate: string | null
+  weeklyAvailability: string
+  availableHoursPerWeek: number | null
+  preferredLearningStyle: string
+  additionalContext: string | null
+  updatedAt: string
+}
+
 type ApiErrorBody = { error?: { code?: string; message?: string; retryable?: boolean } }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -224,6 +238,26 @@ export async function saveCareerGoal(goal: CareerGoalPreferences): Promise<void>
   })
 }
 
+/** Persist the selected market career profile alongside the preferences captured in onboarding. */
+export async function saveMatchedCareerGoal(goal: {
+  careerProfileId: number
+  targetRoleTitle: string
+  readinessTimeframe: 'three_months' | 'six_months' | 'one_year' | 'no_fixed_deadline'
+  targetDate: string | null
+  weeklyAvailability: 'under_2_hours' | 'hours_2_to_5' | 'hours_5_to_10' | 'hours_10_plus'
+  availableHoursPerWeek: number
+  preferredLearningStyle: 'structured_courses' | 'hands_on_projects' | 'reading_articles' | 'videos_tutorials'
+  additionalContext: string
+}): Promise<void> {
+  const profileId = localStorage.getItem(PROFILE_ID_KEY)
+  if (!profileId) throw new Error('ไม่พบโปรไฟล์ที่บันทึกไว้ กรุณากลับไปยืนยันโปรไฟล์ก่อน')
+  await request<{ goal: SavedCareerGoal }>(`/profiles/${encodeURIComponent(profileId)}/goal`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Session-Id': getSessionId() },
+    body: JSON.stringify(goal),
+  })
+}
+
 export async function loadSavedProfile(): Promise<{ profileId: string; profile: CvProfile } | null> {
   const profileId = localStorage.getItem(PROFILE_ID_KEY)
   if (!profileId) return null
@@ -243,4 +277,16 @@ export async function loadCareerMatch(profileId: string, careerProfileId: number
   return request<CareerMatchResult>(`/profiles/${encodeURIComponent(profileId)}/career-match?careerProfileId=${careerProfileId}`, {
     headers: { 'X-Session-Id': getSessionId() },
   })
+}
+
+/** Load the saved onboarding target and calculate its current market scores. */
+export async function loadSavedCareerMatch(): Promise<{ goal: SavedCareerGoal; match: CareerMatchResult } | null> {
+  const profileId = localStorage.getItem(PROFILE_ID_KEY)
+  if (!profileId) return null
+  const result = await request<{ goal: SavedCareerGoal | null }>(`/profiles/${encodeURIComponent(profileId)}/goal`, {
+    headers: { 'X-Session-Id': getSessionId() },
+  })
+  if (!result.goal) return null
+  const match = await loadCareerMatch(profileId, result.goal.careerProfileId)
+  return { goal: result.goal, match }
 }
