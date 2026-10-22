@@ -44,6 +44,7 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "APPLICATIONS_UNAVAILABLE": (503, True, "Applications need the shared database."),
     "JOB_POSTING_NOT_FOUND": (404, False, "The job posting was not found."),
     "SKILL_NOT_FOUND": (404, False, "The skill was not found."),
+    "EVIDENCE_NOT_FOUND": (404, False, "The skill evidence was not found."),
     "NO_CHECK_QUESTIONS": (409, False, "There are no questions for these tasks yet."),
     "INTERNAL_ERROR": (500, True, "Something went wrong."),
 }

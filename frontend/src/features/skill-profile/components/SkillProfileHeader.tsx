@@ -17,7 +17,7 @@ export function SkillProfileHeader({ targetRole, duration }: SkillProfileHeaderP
           Skill Profile
         </h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
-          Track your learning progress and supporting evidence along your roadmap.
+          Track your learning progress across skills and projects in your saved roadmap.
         </p>
       </div>
       <Link
