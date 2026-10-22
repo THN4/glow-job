@@ -17,12 +17,12 @@ export function WorkspacePlaceholderPage() {
   const title = pageNames[currentPath] ?? 'Workspace'
 
   return (
-    <section className="rounded-2xl border border-blue-100 bg-white p-6 sm:p-8">
-      <p className="text-xs font-medium uppercase tracking-wide text-blue-600">
+    <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
+      <p className="text-xs font-medium uppercase tracking-wide text-primary">
         GlowJob Workspace
       </p>
-      <h1 className="mt-2 text-2xl font-bold text-slate-900">{title}</h1>
-      <p className="mt-2 text-sm text-slate-600">
+      <h1 className="mt-2 text-2xl font-bold text-foreground">{title}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">
         This page is ready for the next feature.
       </p>
     </section>

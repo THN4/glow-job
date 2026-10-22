@@ -17,9 +17,10 @@ type CareerGoalStepProps = {
   onDeadlineChange: (deadline: Deadline) => void
   onCustomDeadlineDateChange: (date: string) => void
   showValidation?: boolean
+  hasProfileInformation: boolean
 }
 
-export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false }: CareerGoalStepProps) {
+export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRoleChange, onDeadlineChange, onCustomDeadlineDateChange, showValidation = false, hasProfileInformation }: CareerGoalStepProps) {
   const validation = careerGoalSchema.safeParse({ targetRole, deadline, customDeadlineDate })
   const issues = showValidation && !validation.success ? validation.error.issues : []
   const roleError = issues.find((issue) => issue.path[0] === 'targetRole')?.message
@@ -35,7 +36,9 @@ export function CareerGoalStep({ targetRole, deadline, customDeadlineDate, onRol
           </div>
         </SectionCard>
         <SectionCard icon={Sparkles} layout="stacked" title={goalCopy.recommendations.title} description={goalCopy.recommendations.description}>
-          {({ titleId }) => <RoleRecommendations selectedRole={targetRole} onSelect={onRoleChange} labelledBy={titleId} />}
+          {({ titleId }) => hasProfileInformation
+            ? <RoleRecommendations selectedRole={targetRole} onSelect={onRoleChange} labelledBy={titleId} />
+            : <p className="py-6 text-sm text-muted-foreground">No profile information is available for career recommendations. Add your details or choose a career goal manually.</p>}
         </SectionCard>
         <SectionCard icon={Clock3} layout="stacked" title={goalCopy.deadline.title} description={goalCopy.deadline.description} invalid={Boolean(dateError)}>
           {({ titleId, descriptionId }) => <DeadlineSelector value={deadline} customDate={customDeadlineDate}

@@ -1,25 +1,42 @@
-import type { RoadmapNodeKind } from '../type'
-
-const legendItems: { kind: RoadmapNodeKind | 'upcoming'; label: string; color: string }[] = [
-  { kind: 'skill', label: 'Skill', color: 'bg-blue-600' },
-  { kind: 'project', label: 'Project', color: 'bg-emerald-500' },
-  { kind: 'career-activity', label: 'Career Activity', color: 'bg-orange-500' },
-  { kind: 'upcoming', label: 'Upcoming', color: 'border border-slate-400 bg-white' },
+import { BriefcaseBusiness, Code2, Package, Star } from 'lucide-react'
+import { CurrentStepBorder } from './CurrentStepBorder'
+import { nodeIconColors } from '../nodeAppearance'
+const typeItems = [
+  { label: 'Skill', icon: Code2, color: nodeIconColors.skill },
+  { label: 'Project', icon: Package, color: nodeIconColors.project },
+  { label: 'Career Activity', icon: BriefcaseBusiness, color: nodeIconColors['career-activity'] },
+  { label: 'Goal', icon: Star, color: nodeIconColors.goal },
+]
+const legendItems = [
+  { kind: 'completed', label: 'Completed', color: 'border border-emerald-500 bg-emerald-200' },
+  { kind: 'in-progress', label: 'In progress', color: 'border border-blue-500 bg-blue-100' },
+  { kind: 'upcoming', label: 'Upcoming', color: 'border border-slate-400 bg-slate-200' },
 ]
 
 export function RoadmapLegend() {
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[9px] text-slate-500 sm:gap-x-5 sm:gap-y-2 sm:text-[11px]">
+      {typeItems.map(({ label, icon: Icon, color }) => (
+        <span key={label} className="inline-flex items-center gap-1.5">
+          <span className={`inline-flex size-6 items-center justify-center rounded-full ${color}`}>
+            <Icon size={15} aria-hidden="true" />
+          </span>
+          {label}
+        </span>
+      ))}
       {legendItems.map(({ kind, label, color }) => (
         <span key={kind} className="inline-flex items-center gap-1.5">
           <span className={`h-2.5 w-2.5 rounded-full ${color}`} aria-hidden="true" />
           {label}
         </span>
       ))}
-      <span className="hidden items-center gap-1.5 min-[640px]:inline-flex">
-        <span className="w-5 border-t border-dashed border-slate-400" aria-hidden="true" />
-        Optional path
+      <span className="inline-flex items-center gap-1.5">
+        <span className="relative inline-flex h-5 w-8 rounded-xl bg-blue-50">
+          <CurrentStepBorder />
+        </span>
+        Current step
       </span>
+
     </div>
   )
 }

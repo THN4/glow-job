@@ -1,63 +1,55 @@
 import {
-  Award,
-  BriefcaseBusiness,
   Check,
   CheckCircle2,
   Database,
-  FileText,
   Lightbulb,
   Link2,
   ListChecks,
-  Package,
   Star,
   X,
 } from 'lucide-react'
-import { useState } from 'react'
-import type { RoadmapNodeData } from '../type'
+import type { RoadmapEvidence, RoadmapNodeData } from '../type'
+import { EvidenceForm } from './EvidenceForm'
+import { skillLearningResources } from '../data/skillLearningResources'
+import { LearningSources } from './LearningSources'
+import { RoadmapNodeIcon } from './RoadmapNodeIcon'
+import { nodeIconColors } from '../nodeAppearance'
+import type { LearningSourcesLoader } from '../learningSources'
+import { canCompleteNode } from '../progress'
 
 type NodeDetailPanelProps = {
   node: RoadmapNodeData
   nodes: RoadmapNodeData[]
   onClose: () => void
+  loadSources?: LearningSourcesLoader
+  onComplete: () => void
+  canStart: boolean
+  onStart: () => void
+  canUncomplete: boolean
+  onUncomplete: () => void
+  onChecklistChange: (id: string, completed: boolean) => void
+  evidenceItems: RoadmapEvidence[]
+  onAddEvidence: (evidence: RoadmapEvidence) => void
+  onRemoveEvidence: (id: string) => void
 }
 
-const evidenceOptions = [
-  { label: 'GitHub project', icon: 'project' },
-  { label: 'Certificate', icon: 'certificate' },
-  { label: 'Self report', icon: 'self-report' },
-] as const
-
-function renderNodeIcon(node: RoadmapNodeData) {
-  if (node.kind === 'project') return <Package size={20} aria-hidden="true" />
-  if (node.kind === 'career-activity') return <BriefcaseBusiness size={20} aria-hidden="true" />
-  if (node.kind === 'goal') return <Star size={20} aria-hidden="true" />
-  if (node.status === 'completed') return <Check size={22} aria-hidden="true" />
-  return <Database size={20} aria-hidden="true" />
-}
-
-function renderEvidenceIcon(icon: (typeof evidenceOptions)[number]['icon']) {
-  if (icon === 'project') return <BriefcaseBusiness size={11} aria-hidden="true" />
-  if (icon === 'certificate') return <Award size={11} aria-hidden="true" />
-  return <FileText size={11} aria-hidden="true" />
-}
-
-export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) {
-  const [evidenceItems, setEvidenceItems] = useState<string[]>([])
-  const [reviewed, setReviewed] = useState(false)
+export function NodeDetailPanel({ node, nodes, onClose, loadSources, onComplete, canStart, onStart, canUncomplete, onUncomplete, onChecklistChange, evidenceItems, onAddEvidence, onRemoveEvidence }: NodeDetailPanelProps) {
   const nodeById = new Map(nodes.map((item) => [item.id, item]))
   const unlockedNodes = (node.unlockIds ?? [])
     .map((id) => nodeById.get(id))
     .filter((item): item is RoadmapNodeData => Boolean(item))
+  const resources = skillLearningResources[node.id]
+  const sources = resources?.sources ?? []
   const checklist = node.checklist ?? []
   const completedCount = checklist.filter((item) => item.completed).length
   const isCompleted = node.status === 'completed'
 
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+    <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-blue-100 bg-white shadow-sm">
       <header className="flex shrink-0 items-start justify-between gap-2 px-3.5 pt-3.5 pb-2">
         <div className="flex min-w-0 items-center gap-2.5">
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm">
-            {renderNodeIcon(node)}
+          <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full shadow-sm ${nodeIconColors[node.kind]}`}>
+            <RoadmapNodeIcon node={node} size={28} />
           </span>
           <div className="min-w-0">
             <h2 className="truncate text-lg font-bold text-slate-900">{node.title}</h2>
@@ -92,7 +84,7 @@ export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) 
           <p className="mt-1.5 text-[11px] leading-[1.45] text-slate-600">{node.description}</p>
         </section>
 
-        <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+        <section className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
           <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
             <Lightbulb size={15} className="text-blue-600" aria-hidden="true" />
             Why it matters
@@ -102,7 +94,7 @@ export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) 
           </ul>
         </section>
 
-        <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+        <section className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
           <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
             <Link2 size={15} className="text-blue-600" aria-hidden="true" />
             What this unlocks
@@ -122,7 +114,7 @@ export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) 
           )}
         </section>
 
-        <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+        <section className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
               <ListChecks size={15} className="text-blue-600" aria-hidden="true" />
@@ -135,11 +127,26 @@ export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) 
           {checklist.length > 0 ? (
             <ul className="mt-1.5 space-y-1">
               {checklist.map((item) => (
-                <li key={item.id} className="flex items-center gap-1.5 text-[10px] text-slate-600">
-                  <span className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[3px] ${item.completed ? 'bg-blue-600 text-white' : 'border border-slate-300 bg-white'}`}>
-                    {item.completed && <Check size={10} aria-hidden="true" />}
-                  </span>
-                  {item.label}
+                <li key={item.id} className="flex items-start gap-2 text-xs leading-5 text-foreground">
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                    <input
+                      type="checkbox"
+                      checked={item.completed}
+                      disabled={node.status !== 'in-progress'}
+                      onChange={(event) => {
+                        const completed = event.target.checked
+                        onChecklistChange(item.id, completed)
+                      }}
+                      className="mt-1 size-4 shrink-0 accent-primary"
+                    />
+                    <span>
+                      {item.label}
+                      {item.kind && <span className="ml-1 rounded border border-border px-1 text-[9px] uppercase tracking-wide text-muted-foreground">{item.kind}</span>}
+                    </span>
+                  </label>
+                  {item.sourceId && sources.some((source) => source.id === item.sourceId) && !(loadSources && node.skillId) && (
+                    <a href={`#learning-source-${item.sourceId}`} className="shrink-0 text-primary underline underline-offset-2">Source</a>
+                  )}
                 </li>
               ))}
             </ul>
@@ -148,7 +155,13 @@ export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) 
           )}
         </section>
 
-        <section id="evidence-options" className="scroll-mt-3 rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+        <LearningSources
+          topic={node.title}
+          skillId={node.skillId}
+          loadSources={loadSources}
+          fallbackSources={sources}
+        />
+        <section id="evidence-options" className="scroll-mt-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
           <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
             <Star size={14} className="text-amber-500" aria-hidden="true" />
             Evidence you can add
@@ -158,49 +171,36 @@ export function NodeDetailPanel({ node, nodes, onClose }: NodeDetailPanelProps) 
               ? `${evidenceItems.length} evidence item${evidenceItems.length === 1 ? '' : 's'} added`
               : `No evidence added · Optional for this ${isCompleted ? 'completed skill' : 'step'}`}
           </p>
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {evidenceOptions.map(({ label, icon }) => {
-              const added = evidenceItems.includes(label)
-              return (
-                <button
-                  key={label}
-                  type="button"
-                  aria-pressed={added}
-                  onClick={() => setEvidenceItems((current) => (
-                    added ? current.filter((item) => item !== label) : [...current, label]
-                  ))}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] transition ${added ? 'border-blue-200 bg-blue-100 text-blue-700' : 'border-blue-100 bg-white text-slate-600 hover:bg-blue-50'}`}
-                >
-                  {renderEvidenceIcon(icon)}
-                  {label}
-                </button>
-              )
-            })}
-          </div>
-        </section>
+          <ul className="mt-2 space-y-2">
+            {evidenceItems.map((item) => (
+              <li key={item.id} className="rounded-lg border border-border bg-white p-2 text-xs">
+                <p className="text-[10px] text-muted-foreground">{item.type}</p>
+                {item.url ? <a href={item.url} target="_blank" rel="noopener noreferrer" className="font-medium text-primary underline [overflow-wrap:anywhere]">{item.title}<span className="sr-only"> (opens in a new tab)</span></a> : <p className="font-medium">{item.title}</p>}
+                {item.notes && <p className="mt-1 whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">{item.notes}</p>}
+                {item.photo && <a href={item.photo} download={`${item.title}.image`} className="mt-2 block text-primary"><img src={item.photo} alt={`Certificate: ${item.title}`} className="max-h-48 w-full rounded object-contain" /><span className="mt-1 block underline">Download photo</span></a>}
+                <button type="button" onClick={() => onRemoveEvidence(item.id)} className="mt-1 min-h-8 text-destructive underline" aria-label={`Remove ${item.title}`}>Remove</button>
+              </li>
+            ))}
+          </ul>        </section>
       </div>
 
       <footer className="z-10 shrink-0 border-t border-slate-100 bg-white p-3 shadow-[0_-4px_12px_rgba(15,23,42,0.04)]">
+        {node.status === 'upcoming' && <p className="mb-2 text-xs text-muted-foreground">{canStart ? 'This branch is available. Choose it to continue here.' : 'Complete the required preceding steps to unlock this checklist.'}</p>}
         <p className="mb-2 flex items-center gap-1.5 text-[10px] text-slate-500">
           <CheckCircle2 size={13} className="text-emerald-600" aria-hidden="true" />
           {isCompleted ? 'Learning complete · Review at your own pace' : 'Keep learning · Update your progress as you go'}
         </p>
-        {reviewed && <p className="mb-2 text-[10px] text-emerald-700">Skill marked as reviewed.</p>}
         <div className="grid grid-cols-2 gap-1.5">
           <button
             type="button"
-            onClick={() => setReviewed(true)}
-            className="min-h-9 rounded-lg bg-blue-600 px-2 text-[10px] font-semibold text-white hover:bg-blue-700"
+            onClick={canUncomplete ? onUncomplete : canStart ? onStart : onComplete}
+            disabled={!canUncomplete && !canStart && !canCompleteNode(node)}
+            title={canUncomplete ? 'Return this step to in progress' : canStart ? 'Continue on this available branch' : isCompleted ? 'Only the latest completed step can be reopened' : node.status === 'upcoming' ? 'Complete the required preceding steps first' : 'Check every checklist item to complete this step'}
+            className={`min-h-9 rounded-lg px-2 text-[10px] font-semibold text-white disabled:cursor-not-allowed ${isCompleted ? 'bg-emerald-700' : 'bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400'}`}
           >
-            {reviewed ? 'Reviewed' : 'Review skill'}
+            {canUncomplete ? 'Reopen' : canStart ? 'Choose branch' : isCompleted ? 'Completed' : 'Review skill'}
           </button>
-          <button
-            type="button"
-            onClick={() => document.getElementById('evidence-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-            className="min-h-9 rounded-lg border border-blue-200 px-2 text-[10px] font-semibold text-blue-700 hover:bg-blue-50"
-          >
-            Manage evidence
-          </button>
+          <EvidenceForm key={node.id} topic={node.title} onSave={onAddEvidence} />
         </div>
       </footer>
     </aside>

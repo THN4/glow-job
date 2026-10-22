@@ -15,7 +15,7 @@ export function CompletedSkillsSection({ skills, evidenceBySkill, onAddEvidence 
   return (
     <section aria-labelledby="completed-heading">
       <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <h2 id="completed-heading" className="flex items-center gap-1.5 text-base font-bold text-slate-900">
+        <h2 id="completed-heading" className="flex items-center gap-1.5 text-base font-bold text-emerald-600">
           <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
           Completed on roadmap
         </h2>

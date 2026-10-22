@@ -18,10 +18,10 @@ export function RoadmapHeader({ summary, showProgress = true }: RoadmapHeaderPro
           />
         </div>
       )}
-      <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">
+      <h1 className="text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl xl:text-[28px]">
         Your Career Roadmap
       </h1>
-      <p className="mt-1 text-xs text-blue-700/80 sm:text-sm">
+      <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
         {summary.targetRole} · {summary.duration} · Click any step to explore
       </p>
       <div className="mt-2 sm:mt-3 [@media(max-height:760px)]:mt-1.5">

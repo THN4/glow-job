@@ -89,7 +89,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${API_BASE}${path}`, init)
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error
-    throw new Error('ติดต่อ Backend ไม่ได้ ตรวจว่า Backend กำลังทำงานและตั้ง VITE_API_BASE_URL ถูกต้อง')
+    throw new Error('ติดต่อ Backend ไม่ได้ ตรวจว่า Backend กำลังทำงานและตั้ง VITE_API_BASE_URL ถูกต้อง', { cause: error })
   }
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as ApiErrorBody

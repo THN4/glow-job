@@ -8,12 +8,12 @@ export function CurrentGoalCard({ goal }: CurrentGoalCardProps) {
   const progress = Math.max(0, Math.min(100, goal.progress))
 
   return (
-    <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-3 [@media(max-height:900px)]:p-2.5">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-blue-600">
+    <section className="rounded-xl border border-border bg-card p-3 [@media(max-height:900px)]:p-2.5">
+      <p className="text-xs font-medium uppercase tracking-wide text-primary">
         Current goal
       </p>
 
-      <h2 className="mt-1 text-sm font-semibold text-slate-900 [@media(max-height:900px)]:text-[13px]">
+      <h2 className="mt-1 text-base font-semibold leading-6 text-foreground">
         {goal.title}
       </h2>
 
@@ -25,20 +25,20 @@ export function CurrentGoalCard({ goal }: CurrentGoalCardProps) {
           aria-valuemax={100}
           aria-valuenow={progress}
           aria-valuetext={`${progress}% complete`}
-          className="h-1.5 flex-1 overflow-hidden rounded-full bg-blue-100"
+          className="h-2.5 flex-1 overflow-hidden rounded-full bg-input/80"
         >
           <div
-            className="h-full rounded-full bg-blue-600 transition-all"
+            className="h-full rounded-full bg-primary transition-all"
             style={{ width: `${progress}%` }}
           />
         </div>
 
-        <span className="text-[11px] font-semibold text-blue-700">
+        <span className="text-xs font-semibold text-primary">
           {progress}%
         </span>
       </div>
 
-      <p className="mt-2 text-[11px] text-slate-500 [@media(max-height:900px)]:mt-1">
+      <p className="mt-2 text-xs text-muted-foreground [@media(max-height:900px)]:mt-1">
         {goal.statusText} · {goal.timeRemaining}
       </p>
     </section>
