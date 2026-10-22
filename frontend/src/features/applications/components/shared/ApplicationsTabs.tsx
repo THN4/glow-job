@@ -10,8 +10,8 @@ type ApplicationsTabsProps = {
 
 const tabs: { id: ApplicationTabKey; label: string; icon: typeof BriefcaseBusiness }[] = [
   { id: 'my-applications', label: 'My Applications', icon: BriefcaseBusiness },
-  { id: 'recommendations', label: 'Recommendations', icon: GitBranch },
   { id: 'companies', label: 'Companies', icon: Building2 },
+  { id: 'recommendations', label: 'Recommendations', icon: GitBranch },
 ]
 
 export function ApplicationsTabs({ activeTab, onChange, showAddApplication, onAddApplication }: ApplicationsTabsProps) {
