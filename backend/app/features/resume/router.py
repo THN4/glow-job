@@ -10,17 +10,19 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from datetime import date
+from typing import Any, Awaitable, Callable, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
-from pydantic import Field, ValidationError
+from pydantic import ConfigDict, Field, ValidationError, model_validator
 
 from app.features.resume.errors import AppError
 from app.features.resume.services import Services, get_services
 from app.features.resume.storage import Job, StoredProfile, now_iso
+from app.features.resume.profiles import DatabaseProfilesRepo
 from src.resume.normalization.postprocess import confirm_profile, count_review
 from src.resume.normalization.catalog import resolve_profile_catalog_matches
 from src.resume.parsing.preprocess import ALLOWED_MIME, detect_mime
@@ -77,6 +79,26 @@ class SaveProfileBody(Camel):
     session_id: str = Field(min_length=1, max_length=100)
     profile_id: str | None = Field(default=None, max_length=100)
     profile: Any
+
+
+class SaveCareerGoalBody(Camel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    target_role: str = Field(min_length=1, max_length=120)
+    deadline: Literal["3_months", "6_months", "1_year", "custom"]
+    custom_deadline_date: date | None = None
+    hours_per_week: Literal["under_2", "2_to_5", "5_to_10", "over_10"]
+    learning_style: Literal["courses", "projects", "reading", "videos"]
+    situation: Literal["student", "full_time", "part_time", "between_opportunities", "other"]
+    notes: str = Field(default="", max_length=500)
+
+    @model_validator(mode="after")
+    def validate_custom_deadline(self) -> "SaveCareerGoalBody":
+        if self.deadline == "custom" and self.custom_deadline_date is None:
+            raise ValueError("customDeadlineDate is required for a custom deadline")
+        if self.custom_deadline_date is not None and self.custom_deadline_date < date.today():
+            raise ValueError("customDeadlineDate must be today or later")
+        return self
 
 
 # --------------------------------------------------------------------------- uploads
@@ -199,12 +221,56 @@ async def save_profile(request: Request, svc: Services = Depends(get_services)) 
     return {"profileId": profile_id, "updatedAt": now}
 
 
+@router.put("/profiles/{profile_id}/career-goal")
+async def save_career_goal(
+    profile_id: str,
+    body: SaveCareerGoalBody,
+    session_id: str = Header(alias="X-Session-Id", min_length=1, max_length=100),
+    svc: Services = Depends(get_services),
+) -> dict[str, bool]:
+    """Persist onboarding career goal and preferences for an owned profile."""
+    if not isinstance(svc.profiles, DatabaseProfilesRepo):
+        raise AppError("PROFILE_STORE_UNAVAILABLE")
+    await svc.profiles.save_career_goal(
+        profile_id,
+        session_id,
+        body.model_dump(mode="json", by_alias=False),
+    )
+    return {"saved": True}
+
+
 @router.get("/profiles/{profile_id}")
 async def get_profile(profile_id: str, svc: Services = Depends(get_services)) -> dict[str, Any]:
     stored = await svc.profiles.get(profile_id)
     if stored is None:
         raise AppError("PROFILE_NOT_FOUND")
     return {"profileId": stored.profile_id, "updatedAt": stored.updated_at, "profile": stored.profile}
+
+
+@router.get("/profiles/{profile_id}/versions")
+async def list_profile_versions(
+    profile_id: str,
+    session_id: str = Header(alias="X-Session-Id", min_length=1, max_length=100),
+    svc: Services = Depends(get_services),
+) -> dict[str, Any]:
+    if not isinstance(svc.profiles, DatabaseProfilesRepo):
+        raise AppError("PROFILE_STORE_UNAVAILABLE")
+    return {"versions": await svc.profiles.list_versions(profile_id, session_id)}
+
+
+@router.post("/profiles/{profile_id}/versions/{version_id}/restore")
+async def restore_profile_version(
+    profile_id: str,
+    version_id: int,
+    session_id: str = Header(alias="X-Session-Id", min_length=1, max_length=100),
+    svc: Services = Depends(get_services),
+) -> dict[str, Any]:
+    if not isinstance(svc.profiles, DatabaseProfilesRepo):
+        raise AppError("PROFILE_STORE_UNAVAILABLE")
+    restored = await svc.profiles.restore_version(profile_id, version_id, session_id)
+    if restored is None:
+        raise AppError("PROFILE_NOT_FOUND")
+    return {"profileId": restored.profile_id, "updatedAt": restored.updated_at}
 
 
 @router.get("/career-profiles")

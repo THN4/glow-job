@@ -15,6 +15,7 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "UPLOAD_NOT_FOUND": (404, False, "The upload was not found or has expired."),
     "JOB_NOT_FOUND": (404, False, "The extraction job was not found or has expired."),
     "PROFILE_NOT_FOUND": (404, False, "The profile was not found."),
+    "PROFILE_ALREADY_EXISTS": (409, False, "A profile already exists for this anonymous session."),
     "NOT_FOUND": (404, False, "Not found."),
     "DAILY_LIMIT_REACHED": (429, False, "Today's extraction limit has been reached."),
     "TOO_MANY_PAGES": (422, False, "The PDF has too many pages."),

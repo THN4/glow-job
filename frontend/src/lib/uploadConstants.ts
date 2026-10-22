@@ -1,5 +1,5 @@
 export const CV_MAX_SIZE = 10 * 1024 * 1024
-export const CV_ACCEPT = '.pdf,.doc,.docx'
+export const CV_ACCEPT = '.pdf,.jpg,.jpeg,.png,.webp'
 
 export const uploadCopy = {
   dropTitle: 'Drop your CV here',
@@ -7,14 +7,14 @@ export const uploadCopy = {
   browse: 'click to browse',
   replace: 'click to replace your CV',
   dropNow: 'Release to select your CV',
-  fileHint: 'PDF, DOC, DOCX · Max 10 MB',
+  fileHint: 'PDF, JPG, PNG, WEBP · Max 10 MB',
   fileInputLabel: 'Choose a CV file',
   upload: 'Upload CV',
   skip: 'Continue without CV',
   remove: 'Remove CV',
   privacy: 'Your CV is only used to build your career profile.',
   errors: {
-    type: 'Please choose a PDF, DOC, or DOCX file.',
+    type: 'Please choose a PDF, JPG, PNG, or WEBP file.',
     size: 'The file must be 10 MB or smaller.',
     empty: 'This file is empty. Please choose a CV with content.',
     multiple: 'Please upload one CV at a time.',
