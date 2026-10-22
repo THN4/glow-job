@@ -6,7 +6,6 @@ import { ApplicationDetailsPanel } from '../components/shared/ApplicationDetails
 import { ApplicationsHeader } from '../components/shared/ApplicationsHeader'
 import { ApplicationsTabs } from '../components/shared/ApplicationsTabs'
 import { CompaniesTab } from '../components/companies/CompaniesTab'
-import type { CompanyOpening } from '../data/companyOpenings'
 import { MyApplicationsTab } from '../components/my-applications/MyApplicationsTab'
 import { CareerRecommendationsTab } from '../components/recommendations/CareerRecommendationsTab'
 import { useRoadmapCounts } from '../../roadmap/useRoadmapCounts'
@@ -14,7 +13,7 @@ import { roadmapSummary } from '../../roadmap/data/roadmapMockData'
 import { useApplicationFilters } from '../hooks/useApplicationFilters'
 import { applicationsApi, applicationsKey, type ApplicationInput } from '../api'
 import { getSavedProfileId } from '../../resume/api'
-import type { ApplicationEntry, ApplicationTabKey, CareerPathRecommendation } from '../type'
+import type { ApplicationEntry, ApplicationTabKey, CareerPathRecommendation, CompanyOpening } from '../type'
 
 function toInput(application: NewApplicationInput | ApplicationEntry): ApplicationInput {
   return {
@@ -46,6 +45,13 @@ export function ApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get('tab')
   const activeTab: ApplicationTabKey = requestedTab === 'companies' || requestedTab === 'recommendations' ? requestedTab : 'my-applications'
+  const companyOpeningsQuery = useQuery({
+    queryKey: ['company-job-postings'],
+    queryFn: applicationsApi.jobPostings,
+    enabled: activeTab === 'companies',
+    retry: false,
+    staleTime: 60_000,
+  })
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingApplication, setEditingApplication] = useState(false)
   const [selectedApplication, setSelectedApplication] = useState<ApplicationEntry | null>(null)
@@ -61,6 +67,10 @@ export function ApplicationsPage() {
   })
   const updateMutation = useMutation({
     mutationFn: ({ id, input }: { id: string; input: ApplicationInput }) => applicationsApi.update(id, input),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: applicationsKey() }),
+  })
+  const saveJobMutation = useMutation({
+    mutationFn: applicationsApi.saveJobPosting,
     onSuccess: async () => queryClient.invalidateQueries({ queryKey: applicationsKey() }),
   })
   const selectedRecord = selectedApplication
@@ -87,21 +97,16 @@ export function ApplicationsPage() {
 
   async function addCompanyOpening(opening: CompanyOpening) {
     setCompanySaveError(null)
-    if (applications.some((application) => application.company === opening.company && application.role === opening.role)) {
+    if (!hasProfile) {
+      setCompanySaveError('Complete onboarding and save your profile before adding a posting.')
+      return
+    }
+    if (applications.some((application) => application.jobId === String(opening.jobId))) {
       setSearchParams({}, { replace: true })
       return
     }
     try {
-      const saved = await createMutation.mutateAsync(toInput({
-        company: opening.company,
-        role: opening.role,
-        status: 'wishlist',
-        nextStep: '',
-        jobUrl: '',
-        applicationDate: '',
-        jobDescription: '',
-        location: opening.location === 'Not specified' ? '' : opening.location,
-      }))
+      const saved = await saveJobMutation.mutateAsync(opening.jobId)
       setSelectedApplication(saved)
       setSearchParams({}, { replace: true })
     } catch (error) {
@@ -207,7 +212,18 @@ export function ApplicationsPage() {
         {activeTab === 'recommendations' && <CareerRecommendationsTab selectedPath={selectedCareerPath} onSelectPath={setSelectedCareerPath} roadmapNodes={roadmap.nodes} />}
         {activeTab === 'companies' && <>
           {companySaveError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{companySaveError}</p>}
-          <CompaniesTab applications={applications} selectedOpening={selectedCompanyOpening} onSelectedOpeningChange={setSelectedCompanyOpening} onAddOpening={addCompanyOpening} roadmapNodes={roadmap.nodes} />
+          {companyOpeningsQuery.isLoading && <p role="status" className="rounded-xl border border-blue-100 bg-white p-8 text-center text-sm text-slate-600">Loading job postings…</p>}
+          {companyOpeningsQuery.isError && <div role="alert" className="rounded-xl border border-rose-200 bg-white p-8 text-center"><p className="text-sm text-rose-700">{companyOpeningsQuery.error instanceof Error ? companyOpeningsQuery.error.message : 'Could not load job postings.'}</p><button type="button" onClick={() => companyOpeningsQuery.refetch()} className="mt-3 rounded-lg border border-blue-200 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50">Try again</button></div>}
+          {companyOpeningsQuery.isSuccess && <CompaniesTab
+            applications={applications}
+            openings={companyOpeningsQuery.data}
+            selectedOpening={selectedCompanyOpening}
+            onSelectedOpeningChange={setSelectedCompanyOpening}
+            onAddOpening={addCompanyOpening}
+            roadmapNodes={roadmap.nodes}
+            canSave={hasProfile}
+            isSaving={saveJobMutation.isPending}
+          />}
         </>}
       </div>
     </section>
