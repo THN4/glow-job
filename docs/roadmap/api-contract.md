@@ -85,6 +85,9 @@ The fields below were shaped to the Figma Roadmap frames. See
   `progress.percent` and `progress.label` ("2 of 9 tasks done").
 - Estimated time: `estimatedHours` with `summary.weeklyHours`, for example "8 to 14 hours at
   2 to 5 hrs/week".
+- Checklist items carry `verified` (ticked by a step check), `needsReview` (a step check failed it) and
+  `questionCount` (reviewed questions for the task, 0 = no step check). Step checks themselves are in the
+  [assessments API](../assessments/api-contract.md).
 - In the detail panel, show `skill.profileLabel` ("Not in your profile yet") where the design
   has "Current confidence". No confidence percentage exists.
 - Show `citations` as source links with the quote. Do not show a source that is not in

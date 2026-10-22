@@ -4,25 +4,16 @@ import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
 import {
   roadmapConnections,
-  roadmapNodes,
   roadmapSummary,
 } from '../data/roadmapMockData'
 import type { RoadmapEvidence, RoadmapNodeData } from '../type'
 import type { LearningSourcesLoader } from '../learningSources'
-import { skillLearningResources } from '../data/skillLearningResources'
-import { canStartNode, completeRoadmapNode, startRoadmapNode, uncompleteLatestNode } from '../progress'
+import { roadmapDefaults } from '../defaults'
+import { applyStepCheck, canStartNode, completeRoadmapNode, startRoadmapNode, uncompleteLatestNode } from '../progress'
 import { loadRoadmap, ROADMAP_STORAGE_KEY, serializeRoadmap } from '../storage'
 
 export function RoadmapPage({ loadSources }: { loadSources?: LearningSourcesLoader }) {
-  const [initial] = useState(() => loadRoadmap({ progress: {
-    history: roadmapNodes.filter((node) => node.status === 'completed').map((node) => node.id),
-    nodes: roadmapNodes.map((node): RoadmapNodeData => ({
-    ...node,
-    checklist: node.checklist?.length ? node.checklist
-      : skillLearningResources[node.id]?.checklist.length ? skillLearningResources[node.id].checklist
-      : [{ id: `${node.id}-task`, label: node.description, completed: node.status === 'completed' }],
-    })),
-  }, selectedNodeId: null, evidenceByNode: {} }))
+  const [initial] = useState(() => loadRoadmap(roadmapDefaults()))
   const [progress, setProgress] = useState(initial.progress)
   const { nodes, history } = progress
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(initial.selectedNodeId)
@@ -88,7 +79,9 @@ export function RoadmapPage({ loadSources }: { loadSources?: LearningSourcesLoad
                 canUncomplete={history.at(-1) === selectedNode.id && selectedNode.status === 'completed'}
                 onUncomplete={() => undoCompletion(selectedNode.id)}
                 onChecklistChange={(itemId, completed) => setProgress((current) => ({ ...current, nodes: current.nodes.map((node) => node.id === selectedNode.id && node.status === 'in-progress'
-                  ? { ...node, checklist: (node.checklist ?? []).map((item) => item.id === itemId ? { ...item, completed } : item) } : node) }))}
+                  ? { ...node, checklist: (node.checklist ?? []).map((item) => item.id === itemId
+                    ? { ...item, completed, verified: false, needsReview: completed ? false : item.needsReview } : item) } : node) }))}
+                onStepCheckApplied={(verifiedIds, reviewIds) => setProgress((current) => ({ ...current, nodes: applyStepCheck(current.nodes, selectedNode.id, verifiedIds, reviewIds) }))}
                 evidenceItems={evidenceByNode[selectedNode.id] ?? []}
                 onAddEvidence={(evidence) => setEvidenceByNode((current) => ({ ...current, [selectedNode.id]: [...current[selectedNode.id] ?? [], evidence] }))}
                 onRemoveEvidence={(id) => setEvidenceByNode((current) => ({ ...current, [selectedNode.id]: (current[selectedNode.id] ?? []).filter((item) => item.id !== id) }))}

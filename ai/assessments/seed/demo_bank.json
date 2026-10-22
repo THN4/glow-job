@@ -1,0 +1,411 @@
+{
+  "schema_version": "assessment-bank-1",
+  "items": [
+    {
+      "skill_id": 103,
+      "chunk_id": 1,
+      "level": "beginner",
+      "stem": "What does the Airflow 101 tutorial walk you through?",
+      "options": [
+        "Installing Airflow on Kubernetes",
+        "The essential concepts, so you can write your first Dag",
+        "Migrating from Airflow 1 to 2",
+        "Writing custom operators in Java"
+      ],
+      "answer_index": 1,
+      "quote": "helping you understand how to write your first Dag",
+      "source_title": "Airflow 101: Building Your First Workflow",
+      "source_heading": "Airflow 101: Building Your First Workflow",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+      "content_hash": "34315e40ec0d4a03026b9cee5068fc921407f2bb9a4debdc250e6b5ee47ea28e",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 2,
+      "level": "beginner",
+      "stem": "In Airflow, what is a Dag?",
+      "options": [
+        "A collection of tasks organized to reflect their relationships and dependencies",
+        "A single Python function that runs once a day",
+        "A database table that stores task logs",
+        "A Docker container that runs the scheduler"
+      ],
+      "answer_index": 0,
+      "quote": "At its core, a Dag is a collection of tasks organized in a way that reflects their relationships and dependencies.",
+      "source_title": "Airflow 101: Building Your First Workflow",
+      "source_heading": "What is a Dag?",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+      "content_hash": "1e2d5c488a47ef2a97f19f0774f1613fce0a08e1d2d1a36d4c480b78afe1b357",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 8,
+      "level": "beginner",
+      "stem": "What does an operator represent in Airflow?",
+      "options": [
+        "A user account in the Airflow UI",
+        "A unit of work",
+        "A schedule such as daily or hourly",
+        "A connection to a database"
+      ],
+      "answer_index": 1,
+      "quote": "An operator represents a unit of work in Airflow.",
+      "source_title": "Airflow 101: Building Your First Workflow",
+      "source_heading": "Understanding Operators",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+      "content_hash": "cdc576bb2241d3c3f782bf62470b9db794974ef76acbc708e282e349b2905505",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 8,
+      "level": "beginner",
+      "stem": "Which class do all Airflow operators derive from?",
+      "options": [
+        "PythonOperator",
+        "DagOperator",
+        "BaseOperator",
+        "TaskOperator"
+      ],
+      "answer_index": 2,
+      "quote": "All operators derive from the BaseOperator, which includes the essential arguments needed to run tasks in Airflow.",
+      "source_title": "Airflow 101: Building Your First Workflow",
+      "source_heading": "Understanding Operators",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+      "content_hash": "cdc576bb2241d3c3f782bf62470b9db794974ef76acbc708e282e349b2905505",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 19,
+      "level": "intermediate",
+      "stem": "How do you define tasks with the TaskFlow API?",
+      "options": [
+        "Write YAML files in the dags/ folder",
+        "Create each task in the Airflow UI",
+        "Subclass BashOperator for every task",
+        "Write plain Python functions and decorate them"
+      ],
+      "answer_index": 3,
+      "quote": "You write plain Python functions, decorate them, and Airflow handles the rest",
+      "source_title": "Pythonic Dags with the TaskFlow API",
+      "source_heading": "Pythonic Dags with the TaskFlow API",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/taskflow.html",
+      "content_hash": "e1582dab4034ce2a4b256024c3405af54abffaff2edf7c52390d0a634168e2cb",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 27,
+      "level": "intermediate",
+      "stem": "With TaskFlow, what does Airflow still use behind the scenes to pass data between tasks?",
+      "options": [
+        "XComs",
+        "Environment variables",
+        "A shared CSV file in the dags/ folder",
+        "Direct function calls with no storage"
+      ],
+      "answer_index": 0,
+      "quote": "Airflow still uses XComs and builds a dependency graph",
+      "source_title": "Pythonic Dags with the TaskFlow API",
+      "source_heading": "The TaskFlow Way",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/taskflow.html",
+      "content_hash": "46bb052a4160cc6252ec1b3a3ae939340e3db3dc3ec00500eb7eee27a9b37188",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 41,
+      "level": "intermediate",
+      "stem": "Which operator does the data pipeline tutorial use to run SQL against Postgres?",
+      "options": [
+        "BashOperator",
+        "SQLExecuteQueryOperator",
+        "PythonOperator",
+        "KubernetesPodOperator"
+      ],
+      "answer_index": 1,
+      "quote": "This tutorial introduces the SQLExecuteQueryOperator, a flexible and modern way to execute SQL in Airflow.",
+      "source_title": "Building a Simple Data Pipeline",
+      "source_heading": "Building a Simple Data Pipeline",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/pipeline.html",
+      "content_hash": "38d69ac199491d1ac6c7bd65eb6840e5f83bd5aa33045b9af79f7158f4d46c8b",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 43,
+      "level": "advanced",
+      "stem": "How do you tell Airflow how to connect to the Postgres database before a pipeline writes to it?",
+      "options": [
+        "Hard-code the password in every task",
+        "Add the database URL to the Dag tags",
+        "Add a connection on the Admin > Connections page",
+        "Set AIRFLOW_UID in the .env file"
+      ],
+      "answer_index": 2,
+      "quote": "In the UI, open the Admin > Connections page and click the + button to add a new connection.",
+      "source_title": "Building a Simple Data Pipeline",
+      "source_heading": "Create a Postgres Connection",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/pipeline.html",
+      "content_hash": "6bef7f69b873e5b87ad77555cf75f03508c872ea6c266dbaf22ca35353b35dcf",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 44,
+      "level": "advanced",
+      "stem": "How can you keep long SQL statements out of your Dag code?",
+      "options": [
+        "Store them in XComs",
+        "Put them in .sql files in the dags/ folder and pass the file path to sql=",
+        "Type them into the Airflow UI at run time",
+        "Put them in docker-compose.yaml"
+      ],
+      "answer_index": 1,
+      "quote": "You can optionally place these SQL statements in .sql files inside your dags/ folder and pass the file path to the sql= argument.",
+      "source_title": "Building a Simple Data Pipeline",
+      "source_heading": "Create tables for staging and final data",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/pipeline.html",
+      "content_hash": "479c3f32f3321b193d49e561fae658c157bdc993b9d377ec0dfad652530cdb3f",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 103,
+      "chunk_id": 50,
+      "level": "advanced",
+      "stem": "Which abstraction does the Object Storage API introduce for reading and writing cloud storage?",
+      "options": [
+        "S3Hook",
+        "CloudFileOperator",
+        "XComBackend",
+        "ObjectStoragePath"
+      ],
+      "answer_index": 3,
+      "quote": "the new ObjectStoragePath abstraction",
+      "source_title": "Cloud-Native Workflows with Object Storage",
+      "source_heading": "Cloud-Native Workflows with Object Storage",
+      "source_url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/objectstorage.html",
+      "content_hash": "077a93506ff147e652da95edfa12ed4f4447d420c2580f9f2d810bcaf5cefa11",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 87,
+      "chunk_id": 389,
+      "level": "beginner",
+      "stem": "Why might you include additional context in a prompt?",
+      "options": [
+        "To make the model respond faster",
+        "To give the model access to data outside its training data",
+        "To lower the cost of every request",
+        "To turn off the model's safety checks"
+      ],
+      "answer_index": 1,
+      "quote": "To give the model access to proprietary data, or any other data outside the data set the model was trained on.",
+      "source_title": "Search the API docs",
+      "source_heading": "Include relevant context information",
+      "source_url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+      "content_hash": "222cffbfe8b8de993beee2448cc0582d0355b6946ba1c58d6cc669c5531b7ecf",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 87,
+      "chunk_id": 389,
+      "level": "beginner",
+      "stem": "What is adding relevant context to a model request sometimes called?",
+      "options": [
+        "Fine-tuning",
+        "Retrieval-augmented generation (RAG)",
+        "Prompt caching",
+        "Distillation"
+      ],
+      "answer_index": 1,
+      "quote": "sometimes called retrieval-augmented generation (RAG)",
+      "source_title": "Search the API docs",
+      "source_heading": "Include relevant context information",
+      "source_url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+      "content_hash": "222cffbfe8b8de993beee2448cc0582d0355b6946ba1c58d6cc669c5531b7ecf",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    },
+    {
+      "skill_id": 87,
+      "chunk_id": 390,
+      "level": "beginner",
+      "stem": "What is the limit on how much data a model can consider in one request called?",
+      "options": [
+        "The context window",
+        "The rate limit",
+        "The batch size",
+        "The temperature"
+      ],
+      "answer_index": 0,
+      "quote": "This memory limit is called a context window, which is defined in terms of tokens",
+      "source_title": "Search the API docs",
+      "source_heading": "Planning for the context window",
+      "source_url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+      "content_hash": "f865f1c3546f7f0f7c065b364a86ad8fd99a8b511f705fe3a420d54bd4c0f809",
+      "status": "approved",
+      "generated_by": "manual-review-2026-10-22"
+    }
+  ],
+  "statements": [
+    {
+      "skill_id": null,
+      "level": "beginner",
+      "position": 1,
+      "text": "I can explain what {skill} is used for."
+    },
+    {
+      "skill_id": null,
+      "level": "beginner",
+      "position": 2,
+      "text": "I have followed a basic {skill} tutorial."
+    },
+    {
+      "skill_id": null,
+      "level": "intermediate",
+      "position": 1,
+      "text": "I can use {skill} in a small project without step-by-step help."
+    },
+    {
+      "skill_id": null,
+      "level": "intermediate",
+      "position": 2,
+      "text": "I can fix common {skill} errors on my own."
+    },
+    {
+      "skill_id": null,
+      "level": "advanced",
+      "position": 1,
+      "text": "I can make design decisions about {skill} in a real project."
+    },
+    {
+      "skill_id": null,
+      "level": "advanced",
+      "position": 2,
+      "text": "I can explain {skill} trade-offs to someone else."
+    },
+    {
+      "skill_id": 103,
+      "level": "beginner",
+      "position": 1,
+      "text": "I can explain what a Dag and a task are."
+    },
+    {
+      "skill_id": 103,
+      "level": "beginner",
+      "position": 2,
+      "text": "I have run a Dag from the Airflow UI."
+    },
+    {
+      "skill_id": 103,
+      "level": "intermediate",
+      "position": 1,
+      "text": "I can write a Dag with the TaskFlow API."
+    },
+    {
+      "skill_id": 103,
+      "level": "intermediate",
+      "position": 2,
+      "text": "I can pass data from one task to another."
+    },
+    {
+      "skill_id": 103,
+      "level": "advanced",
+      "position": 1,
+      "text": "I can connect a Dag to a database through an Airflow connection."
+    },
+    {
+      "skill_id": 103,
+      "level": "advanced",
+      "position": 2,
+      "text": "I can build a pipeline that loads and cleans data in stages."
+    },
+    {
+      "skill_id": 85,
+      "level": "beginner",
+      "position": 1,
+      "text": "I can run a container from an image."
+    },
+    {
+      "skill_id": 85,
+      "level": "beginner",
+      "position": 2,
+      "text": "I can list and stop running containers."
+    },
+    {
+      "skill_id": 85,
+      "level": "intermediate",
+      "position": 1,
+      "text": "I can write a Dockerfile for my own app."
+    },
+    {
+      "skill_id": 85,
+      "level": "intermediate",
+      "position": 2,
+      "text": "I can run several services with Docker Compose."
+    },
+    {
+      "skill_id": 85,
+      "level": "advanced",
+      "position": 1,
+      "text": "I can keep images small and builds fast."
+    },
+    {
+      "skill_id": 85,
+      "level": "advanced",
+      "position": 2,
+      "text": "I can debug networking between containers."
+    },
+    {
+      "skill_id": 94,
+      "level": "beginner",
+      "position": 1,
+      "text": "I can commit changes and write a clear commit message."
+    },
+    {
+      "skill_id": 94,
+      "level": "beginner",
+      "position": 2,
+      "text": "I can clone a repository and pull updates."
+    },
+    {
+      "skill_id": 94,
+      "level": "intermediate",
+      "position": 1,
+      "text": "I can create a branch and open a pull request."
+    },
+    {
+      "skill_id": 94,
+      "level": "intermediate",
+      "position": 2,
+      "text": "I can resolve a merge conflict."
+    },
+    {
+      "skill_id": 94,
+      "level": "advanced",
+      "position": 1,
+      "text": "I can rebase a branch onto the latest main."
+    },
+    {
+      "skill_id": 94,
+      "level": "advanced",
+      "position": 2,
+      "text": "I can find which commit introduced a bug."
+    }
+  ]
+}

@@ -10,6 +10,7 @@ import { RoadmapPage } from '../features/roadmap/pages/RoadmapPage'
 import { SkillProfilePage } from '../features/skill-profile/pages/SkillProfilePage'
 import { ApplicationsPage } from '../features/applications/pages/ApplicationsPage'
 import { CvOnboardingPage } from '../features/resume/pages/CvOnboardingPage'
+import { AssessmentsPage } from '../features/assessments/pages/AssessmentsPage'
 import { OnboardingFlow } from '@/features/onboarding/state/OnboardingFlow'
 import { OnboardingProvider } from '@/features/onboarding/state/OnboardingProvider'
 
@@ -55,6 +56,10 @@ const router = createBrowserRouter([
       {
         path: 'applications',
         element: <ApplicationsPage />,
+      },
+      {
+        path: 'assessments',
+        element: <AssessmentsPage />,
       },
       {
         path: '*',

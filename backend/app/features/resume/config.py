@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
@@ -35,6 +37,12 @@ class CvSettings(ResumeModelSettings):
     MATCH_MAX_MARKET_AGE_DAYS: int = Field(default=180, ge=0)
     MATCH_MIN_LEVEL_OBSERVATIONS: int = Field(default=3, ge=0)
     MATCH_MIN_TARGET_LEVEL_CONFIDENCE: float = Field(default=0.6, ge=0, le=1)
+
+    # Step checks: draft questions with a model when a study task has none (docs/assessments/question-bank.md).
+    # off by default, so nothing calls a model unless it is switched on.
+    ASSESSMENT_AI_GENERATION: Literal["off", "gemini"] = "off"
+    ASSESSMENT_DAILY_GENERATIONS: int = Field(default=50, ge=0)  # chunks per day, about two model calls each
+    ASSESSMENT_GENERATION_TIMEOUT_S: float = Field(default=20, gt=0)
 
     @property
     def database_configured(self) -> bool:

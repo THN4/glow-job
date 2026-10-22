@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { PanelLeftOpen } from 'lucide-react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
@@ -28,6 +28,10 @@ export function WorkspaceLayout({
   const { pathname } = useLocation()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const isRoadmapPage = pathname.startsWith('/app/roadmap')
+  const scrollRef = useRef<HTMLDivElement>(null)
+  // Every page shares this scroll box, so start each page at the top. Without this the roadmap page,
+  // which cannot scroll, keeps the previous page's offset and shows up cut off.
+  useLayoutEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [pathname])
 
   return (
     <div className="flex h-dvh overflow-hidden bg-background">
@@ -56,7 +60,7 @@ export function WorkspaceLayout({
             <PanelLeftOpen size={20} aria-hidden="true" />
           </button>
         </div>}
-        <div className={`min-h-0 flex-1 ${isRoadmapPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <div ref={scrollRef} className={`min-h-0 flex-1 ${isRoadmapPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             className={`mx-auto w-full max-w-[1500px] p-4 sm:p-6 ${
               isRoadmapPage ? 'flex h-full min-h-0 flex-col' : 'min-h-screen'
