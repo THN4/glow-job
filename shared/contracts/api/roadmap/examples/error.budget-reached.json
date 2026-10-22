@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "ROADMAP_BUDGET_REACHED",
+    "message": "Roadmap generation is paused for the rest of this month.",
+    "retryable": false
+  }
+}

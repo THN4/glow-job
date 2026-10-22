@@ -1,0 +1,19 @@
+# Local test of roadmap generation on Amazon Bedrock. Not used in deployment.
+#
+#   docker compose -f compose.yaml -f compose.bedrock-local.yaml up --build -d
+#
+# Each AWS variable below is passed to the container only when it is set in your shell. A variable
+# that is set to an empty string would make the SDK use an empty bearer token, so never write
+# these as ${NAME:-}. On AWS, attach an IAM role to the task or instance and pass none of them.
+services:
+  backend:
+    environment:
+      ROADMAP_PROVIDER: bedrock
+      AWS_REGION: ${ROADMAP_AWS_REGION:?Set ROADMAP_AWS_REGION, for example ap-southeast-1}
+      # One of these, from the shell:
+      #   PowerShell: $env:AWS_BEARER_TOKEN_BEDROCK = "<short-term token>"
+      #   or the keys of an SSO or assumed-role session.
+      AWS_BEARER_TOKEN_BEDROCK:
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:

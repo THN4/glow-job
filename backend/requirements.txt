@@ -8,3 +8,5 @@ pillow>=10.1
 filetype>=1.2
 httpx>=0.27
 psycopg[binary]>=3.2,<4.0
+# Roadmap generation (Claude). The bedrock extra adds AWS request signing.
+anthropic[bedrock]>=1.15,<2

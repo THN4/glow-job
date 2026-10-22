@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "ROADMAP_LIMIT_REACHED",
+    "message": "Today's roadmap limit has been reached. Try again tomorrow.",
+    "retryable": false
+  }
+}
