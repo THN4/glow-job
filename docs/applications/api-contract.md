@@ -18,6 +18,10 @@ reading or changing any application.
   company details and extracted required/preferred skills when available.
 - `POST /api/profiles/{profile_id}/applications/from-job` accepts `{ "jobId": <id> }` and saves
   the selected posting to the owner's tracker with its existing `job_id` relationship.
+- `GET /api/profiles/{profile_id}/career-recommendations` compares the owner's confirmed skills
+  with active market career profiles and returns up to 20 ranked suggestions. Ranking uses weighted
+  market skill coverage; it is a descriptive overlap signal, not a hiring prediction or job-fit score.
+  Skills missing from the saved profile are presented as items to review, not verified gaps.
 
 The response uses the existing frontend `ApplicationEntry` fields: `id`, `company`, `role`,
 `status`, `relevantDate`, `relevantDateISO`, `nextStep`, `jobUrl`, `applicationDate`,

@@ -376,6 +376,123 @@ class CareerMatchRepository:
     async def list_career_profiles(self) -> list[dict[str, Any]]:
         return await asyncio.to_thread(self._list_career_profiles)
 
+    async def recommendations(
+        self, profile_id: str, session_id: str, limit: int = 6
+    ) -> dict[str, Any] | None:
+        return await asyncio.to_thread(
+            self._recommendations, profile_id, session_id, limit
+        )
+
+    def _recommendations(
+        self, profile_id: str, session_id: str, limit: int
+    ) -> dict[str, Any] | None:
+        """Rank available market career profiles by confirmed skill overlap."""
+        with self._connect() as connection:
+            owner = connection.execute(
+                """
+                SELECT goals.target_role_title
+                FROM app.user_profiles AS profiles
+                JOIN app.users AS users USING (user_id)
+                LEFT JOIN app.user_career_goals AS goals
+                  ON goals.user_id = profiles.user_id AND goals.is_primary = true
+                WHERE profiles.profile_id = %s
+                  AND users.auth_provider = 'anonymous'
+                  AND users.auth_subject = %s
+                """,
+                (profile_id, session_id),
+            ).fetchone()
+        if owner is None:
+            return None
+        target_role = owner[0]
+        candidates = self._list_career_profiles()
+        recommendations: list[dict[str, Any]] = []
+
+        for candidate in candidates:
+            result = self._calculate(
+                profile_id, session_id, candidate["careerProfileId"]
+            )
+            if result is None:
+                return None
+            skills = result["skills"]
+            covered = [skill for skill in skills if skill["status"] == "covered"]
+            gaps = [
+                skill for skill in skills
+                if skill["status"] in {"missing_from_profile", "proficiency_gap", "not_assessed"}
+            ]
+            covered.sort(
+                key=lambda skill: (
+                    -(skill["weightedDemandScore"] or 0),
+                    skill["skillName"].casefold(),
+                )
+            )
+            gaps.sort(
+                key=lambda skill: (
+                    skill["priorityRank"] is None,
+                    skill["priorityRank"] or 10_000,
+                    -(skill["weightedDemandScore"] or 0),
+                    skill["skillName"].casefold(),
+                )
+            )
+            coverage = result["scores"]["marketSkillCoveragePct"]
+            recommendations.append({
+                **candidate,
+                "id": str(candidate["careerProfileId"]),
+                "title": candidate["profileName"],
+                "scorePct": coverage,
+                "marketStatus": result["status"],
+                "totalJobs": result["marketSample"]["totalJobs"],
+                "transferableSkills": [skill["skillName"] for skill in covered[:5]],
+                "developmentAreas": [skill["skillName"] for skill in gaps[:5]],
+                "whyExplore": (
+                    f"Your confirmed profile skills cover {coverage:.1f}% of weighted skill demand "
+                    f"in the {result['marketSample']['totalJobs']} posting market sample. "
+                    "This compares skill labels and does not predict hiring outcomes."
+                    if coverage is not None else
+                    "Market skill coverage could not be calculated for this career profile."
+                ),
+                "supportedProfile": [
+                    {
+                        "skill": skill["skillName"],
+                        "detail": (
+                            f"Present in your confirmed profile; listed in "
+                            f"{skill['demandPercentage']:.1f}% of the market sample."
+                        ),
+                    }
+                    for skill in covered[:5]
+                ],
+                "skillsToDevelop": [
+                    {
+                        "skill": skill["skillName"],
+                        "detail": (
+                            f"Listed in {skill['demandPercentage']:.1f}% of the market sample. "
+                            "Confirm your experience before treating this as a skill gap."
+                        ),
+                    }
+                    for skill in gaps[:5]
+                ],
+            })
+
+        recommendations.sort(
+            key=lambda item: (
+                item["scorePct"] is None,
+                -(item["scorePct"] or 0),
+                item["title"].casefold(),
+                item["seniorityLevel"].casefold(),
+            )
+        )
+        for index, item in enumerate(recommendations):
+            item["iconTone"] = ("blue", "violet", "emerald")[index % 3]
+            item["summary"] = (
+                f"{item['totalJobs']} market postings · "
+                f"{item['scorePct']:.1f}% weighted skill coverage"
+                if item["scorePct"] is not None
+                else f"{item['totalJobs']} market postings · coverage unavailable"
+            )
+        return {
+            "targetRole": target_role,
+            "recommendations": recommendations[:limit],
+        }
+
     def _list_career_profiles(self) -> list[dict[str, Any]]:
         try:
             with self._connect() as connection:
