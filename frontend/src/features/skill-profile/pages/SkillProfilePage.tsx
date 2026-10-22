@@ -1,108 +1,65 @@
 import { useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
-import { Clock3 } from 'lucide-react'
-import { CompletedSkillsSection } from '../components/CompletedSkillsSection'
-import { InProgressSkillCard } from '../components/InProgressSkillCard'
+import { useRoadmapCounts } from '../../roadmap/useRoadmapCounts'
 import { SkillProfileHeader } from '../components/SkillProfileHeader'
 import { SkillProfileStats } from '../components/SkillProfileStats'
-import { UpcomingSkillCard } from '../components/UpcomingSkillCard'
 import { skillProfileMockData } from '../data/skillProfileMockData'
-import type { SkillChecklistItem, SkillEvidenceSource } from '../type'
+
+type SkillFilter = 'all' | 'completed' | 'in-progress' | 'upcoming'
+
+const statusLabel = {
+  completed: 'Completed',
+  'in-progress': 'In progress',
+  upcoming: 'Up next',
+} as const
+
+const statusStyle = {
+  completed: 'bg-emerald-50 text-emerald-700',
+  'in-progress': 'bg-blue-50 text-blue-700',
+  upcoming: 'bg-slate-100 text-slate-600',
+} as const
 
 export function SkillProfilePage() {
   const profile = skillProfileMockData
-  const [checklist, setChecklist] = useState<SkillChecklistItem[]>(
-    profile.inProgressSkill.checklist ?? [],
-  )
-  const [completedInProgressSkill, setCompletedInProgressSkill] = useState(false)
-  const [learningStarted, setLearningStarted] = useState(false)
-  const [evidenceBySkill, setEvidenceBySkill] = useState<Record<string, SkillEvidenceSource[]>>({})
-  const [inProgressEvidence, setInProgressEvidence] = useState<SkillEvidenceSource[]>([])
-  const [upcomingEvidence, setUpcomingEvidence] = useState<SkillEvidenceSource[]>([])
-
-  const completedSkills = completedInProgressSkill
-    ? [...profile.completedSkills, profile.inProgressSkill]
-    : profile.completedSkills
-
-  function addDefaultEvidence(skillId: string) {
-    setEvidenceBySkill((current) => ({
-      ...current,
-      [skillId]: current[skillId]?.length ? [] : ['GitHub project'],
-    }))
-  }
-
-  function toggleChecklist(itemId: string) {
-    setChecklist((current) => current.map((item) => (
-      item.id === itemId ? { ...item, completed: !item.completed } : item
-    )))
-  }
-
-  function toggleEvidence(
-    setCurrent: Dispatch<SetStateAction<SkillEvidenceSource[]>>,
-    source: SkillEvidenceSource,
-  ) {
-    setCurrent((current) => current.includes(source)
-      ? current.filter((item) => item !== source)
-      : [...current, source])
-  }
+  const roadmapCounts = useRoadmapCounts()
+  const [selectedFilter, setSelectedFilter] = useState<SkillFilter>('all')
+  const visibleSkills = roadmapCounts.skills.filter((skill) => selectedFilter === 'all' || skill.status === selectedFilter)
+  const visibleLabel = selectedFilter === 'all' ? 'Roadmap skills' : statusLabel[selectedFilter]
 
   return (
     <section aria-label="Skill profile" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 [@media(max-height:960px)]:gap-3">
       <SkillProfileHeader targetRole={profile.targetRole} duration={profile.duration} />
 
       <SkillProfileStats
-        total={5}
-        completed={completedSkills.length}
-        inProgress={completedInProgressSkill ? 0 : 1}
-        upcoming={1}
+        {...roadmapCounts}
+        selected={selectedFilter}
+        onSelect={setSelectedFilter}
       />
 
-      <CompletedSkillsSection
-        skills={completedSkills}
-        evidenceBySkill={evidenceBySkill}
-        onAddEvidence={addDefaultEvidence}
-      />
-
-      <div className={`grid gap-5 [@media(max-height:960px)]:gap-3 ${completedInProgressSkill ? 'grid-cols-1' : 'md:grid-cols-[1.65fr_0.9fr]'}`}>
-        {!completedInProgressSkill && (
-          <section aria-labelledby="in-progress-heading">
-            <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <h2 id="in-progress-heading" className="flex items-center gap-2 text-base font-bold text-slate-900">
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-blue-600 text-blue-600">
-                  <span className="h-2 w-2 rounded-full bg-blue-600" />
-                </span>
-                In progress
-              </h2>
-              <p className="text-xs text-slate-500">Skills you’re currently learning.</p>
-            </div>
-            <InProgressSkillCard
-              skill={profile.inProgressSkill}
-              checklist={checklist}
-              evidence={inProgressEvidence}
-              started={learningStarted}
-              onToggleChecklist={toggleChecklist}
-              onToggleEvidence={(source) => toggleEvidence(setInProgressEvidence, source)}
-              onStart={() => setLearningStarted(true)}
-              onMarkCompleted={() => setCompletedInProgressSkill(true)}
-            />
-          </section>
-        )}
-
-        <section aria-labelledby="up-next-heading">
-          <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <h2 id="up-next-heading" className="flex items-center gap-2 text-base font-bold text-slate-900">
-              <Clock3 size={17} className="text-slate-500" aria-hidden="true" />
-              Up next
-            </h2>
-            <p className="text-xs text-slate-500">Next on your roadmap.</p>
+      <section aria-live="polite" aria-label={`${visibleLabel} details`} className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-slate-800">{visibleLabel}</h2>
+          <span className="text-xs text-slate-500">{visibleSkills.length} {visibleSkills.length === 1 ? 'skill' : 'skills'}</span>
+        </div>
+        {visibleSkills.length ? (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleSkills.map((skill) => (
+              <article key={skill.id} className="rounded-lg border border-slate-100 bg-white p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900">{skill.title}</h3>
+                  <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${statusStyle[skill.status]}`}>
+                    {statusLabel[skill.status]}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{skill.description}</p>
+              </article>
+            ))}
           </div>
-          <UpcomingSkillCard
-            skill={profile.upcomingSkill}
-            evidence={upcomingEvidence}
-            onToggleEvidence={(source) => toggleEvidence(setUpcomingEvidence, source)}
-          />
-        </section>
-      </div>
+        ) : (
+          <p className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500">
+            No {visibleLabel.toLowerCase()} skills yet. Your roadmap progress will appear here.
+          </p>
+        )}
+      </section>
     </section>
   )
 }
