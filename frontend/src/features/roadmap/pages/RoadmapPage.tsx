@@ -24,7 +24,7 @@ export function RoadmapPage() {
     loadCurrentRoadmap(controller.signal)
       .then((loaded) => {
         setView(loaded)
-        if (requestedNodeKey && loaded.nodes.some((node) => node.key === requestedNodeKey)) {
+        if (requestedNodeKey && loaded?.nodes.some((node) => node.key === requestedNodeKey)) {
           setSelectedNodeId(requestedNodeKey)
         }
       })
