@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getSavedProfileId } from '../../resume/api'
 import { NodeDetailPanel } from '../components/NodeDetailPanel'
 import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
 import { generateRoadmap, loadCurrentRoadmap, setRoadmapStep, setRoadmapTask } from '../api'
+import { currentRoadmapKey } from '../useCurrentRoadmap'
 import type { ProgressStatus, RoadmapJob, RoadmapView } from '../api-types'
 import { toRoadmapScreen } from '../adapter'
 
 export function RoadmapPage() {
+  const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const requestedNodeKey = searchParams.get('node')
   const [view, setView] = useState<RoadmapView | null>(null)
@@ -19,11 +22,17 @@ export function RoadmapPage() {
   const [stage, setStage] = useState<RoadmapJob['stage'] | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const updateView = useCallback((next: RoadmapView | null) => {
+    setView(next)
+    const profileId = getSavedProfileId()
+    if (profileId) queryClient.setQueryData(currentRoadmapKey(profileId), next)
+  }, [queryClient])
+
   useEffect(() => {
     const controller = new AbortController()
     loadCurrentRoadmap(controller.signal)
       .then((loaded) => {
-        setView(loaded)
+        updateView(loaded)
         if (requestedNodeKey && loaded?.nodes.some((node) => node.key === requestedNodeKey)) {
           setSelectedNodeId(requestedNodeKey)
         }
@@ -36,7 +45,7 @@ export function RoadmapPage() {
       })
       .finally(() => { if (!controller.signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [requestedNodeKey])
+  }, [requestedNodeKey, updateView])
 
   const screen = useMemo(() => view ? toRoadmapScreen(view) : null, [view])
   const selectedNode = screen?.nodes.find((node) => node.id === selectedNodeId) ?? null
@@ -46,7 +55,7 @@ export function RoadmapPage() {
     setWorking(true)
     setError(null)
     try {
-      setView(await generateRoadmap(setStage, undefined, force))
+      updateView(await generateRoadmap(setStage, undefined, force))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'สร้าง roadmap ไม่สำเร็จ')
     } finally {
@@ -60,7 +69,7 @@ export function RoadmapPage() {
     setWorking(true)
     setError(null)
     try {
-      setView(await setRoadmapTask(view.roadmapId, taskId, completed))
+      updateView(await setRoadmapTask(view.roadmapId, taskId, completed))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'บันทึกความคืบหน้าไม่สำเร็จ')
     } finally {
@@ -73,7 +82,7 @@ export function RoadmapPage() {
     setWorking(true)
     setError(null)
     try {
-      setView(await setRoadmapStep(view.roadmapId, stepKey, status))
+      updateView(await setRoadmapStep(view.roadmapId, stepKey, status))
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'บันทึกความคืบหน้าไม่สำเร็จ')
     } finally {

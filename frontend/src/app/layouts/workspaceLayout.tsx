@@ -1,8 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { PanelLeftOpen } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
-import { useRoadmapCounts } from '../../features/roadmap/useRoadmapCounts'
+import { getSavedProfileId, loadSavedProfile } from '../../features/resume/api'
+import { useCurrentRoadmap } from '../../features/roadmap/useCurrentRoadmap'
+import { applicationsApi } from '../../features/applications/api'
 import type {
   CurrentGoalSummary,
   MarketUpdate,
@@ -10,33 +13,55 @@ import type {
 } from '../../features/workspace/type'
 
 type WorkspaceLayoutProps = {
-  goal: CurrentGoalSummary
-  marketUpdate: MarketUpdate
-  user: WorkspaceUser
   onHelpClick: () => void
   onProfileClick: () => void
 }
 
 export function WorkspaceLayout({
-  goal,
-  marketUpdate,
-  user,
   onHelpClick,
   onProfileClick,
 }: WorkspaceLayoutProps) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const roadmap = useRoadmapCounts()
+  const profileId = getSavedProfileId()
+  const { data: roadmap } = useCurrentRoadmap()
+  const { data: savedProfile } = useQuery({
+    queryKey: ['saved-profile', profileId],
+    queryFn: loadSavedProfile,
+    enabled: Boolean(profileId),
+  })
+  const jobPostingsQuery = useQuery({
+    queryKey: ['job-postings'],
+    queryFn: applicationsApi.jobPostings,
+    staleTime: 5 * 60 * 1000,
+  })
   const isRoadmapPage = pathname.startsWith('/app/roadmap')
   const scrollRef = useRef<HTMLDivElement>(null)
   // Every page shares this scroll box, so start each page at the top. Without this the roadmap page,
   // which cannot scroll, keeps the previous page's offset and shows up cut off.
   useLayoutEffect(() => { scrollRef.current?.scrollTo({ top: 0 }) }, [pathname])
-  const currentGoal = {
-    ...goal,
-    progress: roadmap.completionPercent,
-    statusText: roadmap.completionPercent === 100 ? 'Completed' : roadmap.completionPercent === 0 ? 'Ready to start' : 'On track',
+  const progress = roadmap?.progress.percent ?? 0
+  const currentGoal: CurrentGoalSummary = {
+    title: roadmap?.summary.targetRole ?? (profileId ? 'Choose a career goal' : 'Set your career goal'),
+    progress,
+    statusText: roadmap ? (progress === 100 ? 'Completed' : progress === 0 ? 'Ready to start' : 'In progress')
+      : profileId ? 'Roadmap not created' : 'Complete onboarding',
+    timeRemaining: roadmap?.summary.timeRemainingLabel ?? 'No target date',
+  }
+  const fullName = savedProfile?.profile.personal.fullName?.trim()
+  const headline = savedProfile?.profile.personal.headline?.trim()
+  const user: WorkspaceUser = {
+    name: fullName || 'Your profile',
+    subtitle: headline || (roadmap ? `Goal: ${roadmap.summary.targetRole}` : 'Complete onboarding to personalize your workspace'),
+  }
+  const marketUpdate: MarketUpdate = {
+    title: 'Job Market',
+    summary: jobPostingsQuery.isPending
+      ? 'Loading current job openings...'
+      : jobPostingsQuery.isError
+        ? 'Current job market data is unavailable.'
+        : `${jobPostingsQuery.data.length} job openings are available from the database.`,
   }
 
   return (
