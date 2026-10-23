@@ -1,4 +1,5 @@
 import { CurrentStepBorder } from './CurrentStepBorder'
+import { StatusIcon } from '../../../components/StatusIcon'
 import { RoadmapNodeIcon } from './RoadmapNodeIcon'
 import type { RoadmapNodeData } from '../type'
 import { nodeIconColors } from '../nodeAppearance'
@@ -61,8 +62,9 @@ export function RoadmapNode({ node, width, selected, onSelect, compact = false }
           <span className="line-clamp-2 block break-words text-[10px] font-semibold leading-[1.05] text-slate-900 sm:text-[11px]">
             {node.title}
           </span>
-          <span className={`mt-0.5 block truncate text-[8px] leading-tight ${styles.subtitle} sm:text-[9px]`}>
-            {node.subtitle}
+          <span className={`mt-0.5 flex items-center gap-1 text-[8px] leading-tight ${styles.subtitle} sm:text-[9px]`}>
+            <StatusIcon status={node.status} size={10} className="shrink-0" />
+            <span className="truncate">{node.subtitle}</span>
           </span>
         </span>
       </button>

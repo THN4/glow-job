@@ -1,3 +1,4 @@
+import { StatusIcon } from '../../../components/StatusIcon'
 import { BriefcaseBusiness, Code2, Package, Star } from 'lucide-react'
 import { CurrentStepBorder } from './CurrentStepBorder'
 import { nodeIconColors } from '../nodeAppearance'
@@ -8,9 +9,9 @@ const typeItems = [
   { label: 'Goal', icon: Star, color: nodeIconColors.goal },
 ]
 const legendItems = [
-  { kind: 'completed', label: 'Completed', color: 'border border-emerald-500 bg-emerald-200' },
-  { kind: 'in-progress', label: 'In progress', color: 'border border-blue-500 bg-blue-100' },
-  { kind: 'upcoming', label: 'Upcoming', color: 'border border-slate-400 bg-slate-200' },
+  { kind: 'completed' as const, label: 'Completed', color: 'text-emerald-600' },
+  { kind: 'in-progress' as const, label: 'In progress', color: 'text-blue-600' },
+  { kind: 'upcoming' as const, label: 'Upcoming', color: 'text-slate-500' },
 ]
 
 export function RoadmapLegend() {
@@ -26,7 +27,7 @@ export function RoadmapLegend() {
       ))}
       {legendItems.map(({ kind, label, color }) => (
         <span key={kind} className="inline-flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${color}`} aria-hidden="true" />
+          <StatusIcon status={kind} size={14} className={color} />
           {label}
         </span>
       ))}

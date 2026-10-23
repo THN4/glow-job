@@ -1,19 +1,21 @@
+import { StatCard, StatGrid } from '../../workspace/components/StatCard'
+import { learningStatusIcons } from '../../../components/statusIcons'
 import { useState } from 'react'
-import { ArrowRight, ChartNoAxesCombined, Hammer, Paperclip, Zap } from 'lucide-react'
+import { ArrowRight, ChartNoAxesCombined, Paperclip, Zap } from 'lucide-react'
 import { UpdateReplanDialog } from './UpdateReplanDialog'
 import type { ProgressOverview } from '../progressOverview'
 
 export function UpdateReplanCard({ overview, completedProjects }: { overview: ProgressOverview; completedProjects: number }) {
   const [open, setOpen] = useState(false)
   const stats = [
-    { label: 'Skills in profile', value: overview.skillsInProfile, icon: Zap, color: 'text-orange-500' },
-    { label: 'Projects completed', value: completedProjects, icon: Hammer, color: 'text-amber-600' },
-    { label: 'Evidence items', value: overview.evidenceItems, icon: Paperclip, color: 'text-slate-500' },
-    { label: 'Market scan age', value: overview.marketScanAgeDays === null ? 'Unavailable' : `${overview.marketScanAgeDays} ${overview.marketScanAgeDays === 1 ? 'day' : 'days'}`, icon: ChartNoAxesCombined, color: 'text-violet-500' },
+    { label: 'Skills in profile', value: overview.skillsInProfile, icon: Zap, tone: 'warning' as const },
+    { label: 'Projects completed', value: completedProjects, icon: learningStatusIcons.completed, tone: 'success' as const },
+    { label: 'Evidence items', value: overview.evidenceItems, icon: Paperclip, tone: 'muted' as const },
+    { label: 'Market scan age', value: overview.marketScanAgeDays === null ? 'Unavailable' : `${overview.marketScanAgeDays} ${overview.marketScanAgeDays === 1 ? 'day' : 'days'}`, icon: ChartNoAxesCombined, tone: 'info' as const },
   ]
 
   return (
-    <section aria-labelledby="update-replan-title" className="overflow-hidden rounded-3xl border border-blue-100 bg-white">
+    <section aria-labelledby="update-replan-title" className="overflow-hidden rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-4 px-5 py-6 sm:px-8">
         <div>
           <h2 id="update-replan-title" className="text-lg font-bold text-slate-900">Update Profile &amp; Re-plan</h2>
@@ -26,12 +28,10 @@ export function UpdateReplanCard({ overview, completedProjects }: { overview: Pr
           Update &amp; Re-plan <ArrowRight size={16} aria-hidden="true" />
         </button>
       </div>
-      <div className="grid grid-cols-2 gap-4 border-t border-slate-100 px-5 py-6 sm:grid-cols-4 sm:px-8">
-        {stats.map(({ label, value, icon: Icon, color }) => <div key={label} className="rounded-2xl bg-slate-50 px-2 py-5 text-center">
-          <Icon size={22} className={`mx-auto ${color}`} aria-hidden="true" />
-          <p className="mt-3 text-xl font-bold text-slate-900">{value}</p>
-          <p className="mt-1 text-xs text-slate-500">{label}</p>
-        </div>)}
+      <div className="border-t border-border p-4">
+        <StatGrid label="Profile summary statistics">
+          {stats.map(({ label, value, icon, tone }) => <StatCard key={label} label={label} value={value} icon={icon} tone={tone} />)}
+        </StatGrid>
       </div>
       {open && <UpdateReplanDialog onClose={() => setOpen(false)} />}
     </section>

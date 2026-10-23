@@ -1,4 +1,6 @@
-import { ArrowRight, CheckCircle2, ClipboardList, Compass, Target } from 'lucide-react'
+import { learningStatusIcons } from '../../../components/statusIcons'
+import { StatCard, StatGrid } from '../../workspace/components/StatCard'
+import { ArrowRight, ClipboardList, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { RoadmapNodeIcon } from '../components/RoadmapNodeIcon'
@@ -53,31 +55,16 @@ export function ProgressPage() {
       {overview.isError && <p role="alert" className="text-sm text-red-700">Could not load profile summary and activity: {overview.error.message} <button type="button" onClick={() => void overview.refetch()} className="underline">Try again</button></p>}
       {overview.data && <UpdateReplanCard overview={overview.data} completedProjects={nodes.filter((node) => node.kind === 'project' && node.status === 'completed').length} />}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Target size={16} className="text-blue-600" aria-hidden="true" />Roadmap completion</p>
-          <p className="mt-2 text-3xl font-bold text-blue-700">{completionPercent}%</p>
-          <p className="mt-1 text-xs text-slate-500">{screen.summary.statusText}</p>
-          <div role="progressbar" aria-label="Roadmap completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${completionPercent}%` }} />
-          </div>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />Completed</p>
-          <p className="mt-2 text-3xl font-bold text-emerald-700">{completed}</p>
-          <p className="mt-1 text-xs text-slate-500">Skills, projects, and career steps</p>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Compass size={16} className="text-blue-600" aria-hidden="true" />In progress</p>
-          <p className="mt-2 text-3xl font-bold text-blue-700">{inProgress}</p>
-          <p className="mt-1 text-xs text-slate-500">{upcoming} upcoming · {skipped} skipped</p>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><ClipboardList size={16} className="text-violet-600" aria-hidden="true" />Checklist items</p>
-          <p className="mt-2 text-3xl font-bold text-violet-700">{checkedItems}<span className="text-base font-medium text-slate-400"> / {checklistItems.length}</span></p>
-          <p className="mt-1 text-xs text-slate-500">Checked across your roadmap</p>
-        </section>
-      </div>
+      <StatGrid label="Roadmap progress statistics">
+        <StatCard label="Roadmap completion" value={`${completionPercent}%`} icon={Target}
+          detail={screen.summary.statusText} progress={completionPercent} />
+        <StatCard label="Completed" value={completed} icon={learningStatusIcons.completed} tone="success"
+          detail="Skills, projects, and career steps" />
+        <StatCard label="In progress" value={inProgress} icon={learningStatusIcons['in-progress']}
+          detail={`${upcoming} upcoming · ${skipped} skipped`} />
+        <StatCard label="Checklist items" value={`${checkedItems} / ${checklistItems.length}`} icon={ClipboardList} tone="info"
+          detail="Checked across your roadmap" />
+      </StatGrid>
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -1,11 +1,12 @@
-﻿import { CheckCircle2, ClipboardCheck, Paperclip, Target, WandSparkles } from 'lucide-react'
+import { learningStatusIcons } from '../../../components/statusIcons'
+import { ClipboardCheck, Paperclip, Target, WandSparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { ProgressActivity } from '../progressOverview'
 
 const appearance = {
   goal: { icon: Target, color: 'border-violet-200 bg-violet-50 text-violet-600' },
   replan: { icon: WandSparkles, color: 'border-blue-200 bg-blue-50 text-blue-600' },
-  completed: { icon: CheckCircle2, color: 'border-emerald-200 bg-emerald-50 text-emerald-600' },
+  completed: { icon: learningStatusIcons.completed, color: 'border-emerald-200 bg-emerald-50 text-emerald-600' },
   evidence: { icon: Paperclip, color: 'border-amber-200 bg-amber-50 text-amber-600' },
   assessment: { icon: ClipboardCheck, color: 'border-emerald-200 bg-emerald-50 text-emerald-600' },
 }
