@@ -7,7 +7,6 @@ const pageNames: Record<string, string> = {
   'market-insights': 'Market Insights',
   applications: 'Applications',
   progress: 'Progress',
-  assessments: 'Assessments',
 }
 
 export function WorkspacePlaceholderPage() {

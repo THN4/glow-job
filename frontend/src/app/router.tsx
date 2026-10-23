@@ -8,7 +8,6 @@ import { ApplicationsPage } from '../features/applications/pages/ApplicationsPag
 import { MarketInsightsPage } from '../features/applications/pages/MarketInsightsPage'
 import { ProgressPage } from '../features/roadmap/pages/ProgressPage'
 import { CvOnboardingPage } from '../features/resume/pages/CvOnboardingPage'
-import { AssessmentsPage } from '../features/assessments/pages/AssessmentsPage'
 import { OnboardingFlow } from '@/features/onboarding/state/OnboardingFlow'
 import { OnboardingProvider } from '@/features/onboarding/state/OnboardingProvider'
 
@@ -65,7 +64,7 @@ const router = createBrowserRouter([
       },
       {
         path: 'assessments',
-        element: <AssessmentsPage />,
+        element: <Navigate to="/app/skill-profile" replace />,
       },
       {
         path: '*',
