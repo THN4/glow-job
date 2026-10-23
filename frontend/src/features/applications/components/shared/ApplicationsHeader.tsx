@@ -16,12 +16,12 @@ type ApplicationsHeaderProps = {
 
 export function ApplicationsHeader({ formOpen = false, detailOpen = false, detailLabel, onBack, activeTab = 'my-applications', titleOverride, subtitleOverride, backLabel, targetRole, duration }: ApplicationsHeaderProps) {
   const companiesTab = activeTab === 'companies'
-  const currentPageTitle = activeTab === 'my-applications' ? 'Applications' : companiesTab ? 'Companies' : 'Career Recommendations'
+  const currentPageTitle = activeTab === 'my-applications' ? 'Applications' : companiesTab ? 'Companies' : 'Recommendations'
   const currentPageSubtitle = activeTab === 'my-applications'
     ? 'Manage your applications, explore career paths and browse company openings.'
     : companiesTab
       ? 'Browse sample openings from the app’s job database—not your application records.'
-      : 'Explore broad career paths grounded in your skills, experience and current goal.'
+      : 'Find jobs for your skills or explore career paths based on your saved profile.'
   const isRecommendationDetail = activeTab === 'recommendations' && Boolean(titleOverride)
   const backButton = backLabel && !formOpen && (
     <button type="button" onClick={onBack} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-primary transition hover:bg-accent">
@@ -32,7 +32,7 @@ export function ApplicationsHeader({ formOpen = false, detailOpen = false, detai
     <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-          {targetRole} · {duration}
+          {targetRole}{duration ? ` · ${duration}` : ''}
         </p>
         <h1 className="mt-1 text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl xl:text-[28px]">
           {isRecommendationDetail ? currentPageTitle : titleOverride ?? currentPageTitle}
