@@ -14,8 +14,10 @@ import { canStartNode } from '../progress'
 import { recordRoadmapActivity } from '../activity'
 import { loadEvidenceByNode, saveEvidenceByNode } from '../storage'
 import type { RoadmapEvidence, RoadmapNodeData } from '../type'
+import { useRoadmapFullscreen } from '../useRoadmapFullscreen'
 
 export function RoadmapPage() {
+  const { ref: fullscreenRef, isFullscreen, toggleFullscreen, onFullscreenKeyDown } = useRoadmapFullscreen()
   const [searchParams] = useSearchParams()
   const requestedNodeKey = searchParams.get('node')
   const queryClient = useQueryClient()
@@ -123,20 +125,26 @@ export function RoadmapPage() {
   )
 
   return (
-    <section aria-label="Career roadmap" className="mx-auto flex min-h-0 min-w-0 w-full max-w-[1500px] flex-1 flex-col">
+    <section ref={fullscreenRef} aria-label="Career roadmap"
+      role={isFullscreen ? 'dialog' : undefined}
+      aria-modal={isFullscreen || undefined}
+      onKeyDown={onFullscreenKeyDown}
+      className={`flex min-h-0 min-w-0 flex-col ${isFullscreen ? 'fixed inset-0 z-40 h-dvh w-screen overflow-hidden bg-background p-3 sm:p-5' : 'mx-auto w-full max-w-[1500px] flex-1'}`}>
       {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       <div className="relative flex min-h-0 min-w-0 flex-1 gap-4 min-[1200px]:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <RoadmapHeader summary={screen.summary} showProgress={!selectedNode}
-            onRegenerate={() => createRoadmap(true)} regenerating={working} />
+          {!isFullscreen && <RoadmapHeader summary={screen.summary} />}
           <RoadmapCanvas
             targetRole={screen.summary.targetRole}
             nodes={screen.nodes}
             connections={screen.connections}
             selectedNodeId={selectedNodeId}
             onSelectNode={(node) => setSelectedNodeId(node.id)}
-            detailsOpen={Boolean(selectedNode)}
-            progressSummary={selectedNode ? screen.summary : undefined}
+            progressSummary={screen.summary}
+            onRegenerate={() => createRoadmap(true)}
+            regenerating={working}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
         </div>
         {selectedNode && (
