@@ -9,6 +9,7 @@ import { CompaniesTab } from '../components/companies/CompaniesTab'
 import { MyApplicationsTab } from '../components/my-applications/MyApplicationsTab'
 import { CareerRecommendationsTab } from '../components/recommendations/CareerRecommendationsTab'
 import { JobsForYouTab } from '../components/recommendations/JobsForYouTab'
+import { jobFilterParams, readJobFilters } from '../jobFilters'
 import { useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
 import { toRoadmapScreen } from '../../roadmap/adapter'
 import { useApplicationFilters } from '../hooks/useApplicationFilters'
@@ -47,6 +48,7 @@ export function ApplicationsPage() {
   const requestedTab = searchParams.get('tab')
   const activeTab: ApplicationTabKey = requestedTab === 'companies' || requestedTab === 'recommendations' ? requestedTab : 'my-applications'
   const recommendationView = searchParams.get('view') === 'careers' ? 'careers' : 'jobs'
+  const jobFilters = readJobFilters(searchParams)
   const companyOpeningsQuery = useQuery({
     queryKey: ['company-job-postings'],
     queryFn: applicationsApi.jobPostings,
@@ -62,8 +64,9 @@ export function ApplicationsPage() {
     staleTime: 60_000,
   })
   const jobRecommendationsQuery = useQuery({
-    queryKey: ['job-recommendations', profileId],
-    queryFn: applicationsApi.jobRecommendations,
+    queryKey: ['job-recommendations', profileId, jobFilters],
+    queryFn: () => applicationsApi.jobRecommendations(jobFilters),
+    placeholderData: (previousData, previousQuery) => previousQuery?.queryKey[1] === profileId ? previousData : undefined,
     enabled: activeTab === 'recommendations' && recommendationView === 'jobs' && hasProfile,
     retry: false,
     staleTime: 60_000,
@@ -233,12 +236,15 @@ export function ApplicationsPage() {
         {activeTab === 'recommendations' && <nav aria-label="Recommendation views" className="mb-4 flex flex-wrap gap-2">
           {([{ id: 'jobs', label: 'Jobs for you' }, { id: 'careers', label: 'Career paths' }] as const).map((view) =>
             <button key={view.id} type="button" aria-pressed={recommendationView === view.id}
-              onClick={() => { setSearchParams({ tab: 'recommendations', view: view.id }); setSelectedCareerPath(null) }}
+              onClick={() => { setSearchParams((current) => { const next = new URLSearchParams(current); next.set('tab', 'recommendations'); next.set('view', view.id); return next }); setSelectedCareerPath(null) }}
               className="min-h-10 rounded-full border border-blue-100 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-blue-50 aria-pressed:border-blue-600 aria-pressed:bg-blue-600 aria-pressed:text-white">
               {view.label}
             </button>)}
         </nav>}
         {activeTab === 'recommendations' && hasProfile && recommendationView === 'jobs' && <JobsForYouTab
+          key={`${profileId}:${JSON.stringify(jobFilters)}`}
+          filters={jobFilters}
+          onFiltersChange={(filters) => setSearchParams(jobFilterParams(filters, searchParams))}
           data={jobRecommendationsQuery.data}
           isLoading={jobRecommendationsQuery.isLoading}
           isRefreshing={jobRecommendationsQuery.isFetching}

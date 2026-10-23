@@ -51,6 +51,35 @@ canonical market.job_skills.
   visible and do not mark the job as saved.
 - Refresh matches fetches a new comparison after profile changes.
 
+### Filtering and sorting
+
+Query parameters: sort=coverage|recent (default coverage), location (up to 300
+characters), employmentType (up to 100 characters), skillId (positive canonical
+ID). Location/employment comparison trims whitespace and ignores case. Skill
+filtering means the posting lists that required/preferred skill, not that the
+learner must have it. All filters combine with AND, before applying limit.
+Employment uses the posting's employment_type, exposed as experience in the
+existing CompanyOpening contract. This is not a comparison of years of experience.
+
+Newest sorts actual postedAt timestamps descending, unknown dates last, retaining
+coverage ordering for equal dates. It never substitutes collection date for an
+unknown publication date.
+
+Response additions: totalMatched before filters, filteredCount after filters,
+returnedCount after limit, and filterOptions.locations/employmentTypes/skills.
+Dropdown options come from all matching postings before filters and limit, so
+zero results do not erase available choices. unscoredPostings is catalog-wide
+and specifically means no classified required/preferred skills, not every kind
+of incomplete posting.
+
+The toolbar keeps filters in the URL, survives refresh/back navigation, and
+retains the previous results disabled while fetching updated matches. Clear
+filters removes the four filter parameters while keeping the current view.
+How matching works opens a keyboard-accessible dialog.
+
+Frontend URL checks: from frontend run
+`node --experimental-strip-types --test tests/jobFilters.test.mjs`.
+
 ## Verification
 
 From backend:

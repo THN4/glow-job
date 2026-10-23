@@ -1,5 +1,6 @@
 import { getSavedProfileId, getSessionId } from '../resume/api'
-import type { ApplicationEntry, ApplicationStatus, CareerPathRecommendation, CompanyOpening, JobRecommendationsResponse } from './type'
+import type { ApplicationEntry, ApplicationStatus, CareerPathRecommendation, CompanyOpening, JobRecommendationsResponse, JobFilters } from './type'
+import { jobFilterParams } from './jobFilters'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
 
@@ -85,7 +86,7 @@ async function profileCall<T>(path: string): Promise<T> {
 }
 
 export const applicationsApi = {
-  jobRecommendations: () => profileCall<JobRecommendationsResponse>('/job-recommendations'),
+  jobRecommendations: (filters: JobFilters) => profileCall<JobRecommendationsResponse>(`/job-recommendations?${jobFilterParams(filters)}`),
   list: async () => (await call<{ applications: ApplicationEntry[] }>()).applications,
   jobPostings: async () => (await publicCall<{ jobPostings: CompanyOpening[] }>('/job-postings')).jobPostings,
   careerRecommendations: async () => profileCall<{

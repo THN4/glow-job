@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { ArrowRight, Building2, CheckCircle2, MapPin, RefreshCw, Target } from 'lucide-react'
+import { ArrowRight, Building2, CheckCircle2, MapPin, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import type { CompanyOpening, JobRecommendation, JobRecommendationsResponse } from '../../type'
+import type { CompanyOpening, JobFilters, JobRecommendation, JobRecommendationsResponse } from '../../type'
+import { JobRecommendationsToolbar } from './JobRecommendationsToolbar'
 import type { RoadmapNodeData } from '../../../roadmap/type'
 import { CompanyOpeningDetail } from '../companies/CompanyOpeningDetail'
 
 type JobsForYouTabProps = {
+  filters: JobFilters
+  onFiltersChange: (filters: JobFilters) => void
   data?: JobRecommendationsResponse
   isLoading: boolean
   error: string | null
@@ -37,7 +40,7 @@ function MatchFacts({ job }: { job: JobRecommendation }) {
   </>
 }
 
-export function JobsForYouTab({ data, isLoading, error, isRefreshing, onRetry, applications, onAddOpening, isSaving, saveError, roadmapNodes }: JobsForYouTabProps) {
+export function JobsForYouTab({ data, filters, onFiltersChange, isLoading, error, isRefreshing, onRetry, applications, onAddOpening, isSaving, saveError, roadmapNodes }: JobsForYouTabProps) {
   const [selected, setSelected] = useState<JobRecommendation | null>(null)
   const saved = (jobId: number) => applications.some((application) => application.jobId === String(jobId))
   const [localError, setLocalError] = useState<string | null>(null)
@@ -71,24 +74,14 @@ export function JobsForYouTab({ data, isLoading, error, isRefreshing, onRetry, a
         onAddToApplications={() => onAddOpening(selected)} onBack={() => setSelected(null)}
         backLabel="Back to Jobs for you" roadmapNodes={roadmapNodes} canSave isSaving={isSaving} />
     </> : <>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white p-4">
-        <div><h2 className="text-base font-semibold text-slate-900">Jobs for your skills</h2>
-          <p className="mt-1 text-sm text-slate-600">{data.targetRole ? `Saved goal: ${data.targetRole}.` : 'No primary career goal saved.'} Ranked by confirmed skill overlap; goal alignment breaks equal scores.</p>
-        </div>
-        <button type="button" disabled={isRefreshing} onClick={onRetry} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700 disabled:opacity-50"><RefreshCw className={`size-4 ${isRefreshing ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />Refresh matches</button>
-      </div>
-      <details className="rounded-xl border border-slate-200 bg-white p-4 text-xs leading-6 text-slate-600">
-        <summary className="cursor-pointer font-semibold text-slate-800">How these matches are scored</summary>
-        <ul className="mt-2 list-inside list-disc">{data.limitations.map((limitation) => <li key={limitation}>{limitation}</li>)}</ul>
-      </details>
+      <JobRecommendationsToolbar data={data} filters={filters} isRefreshing={isRefreshing} onRefresh={onRetry} onChange={onFiltersChange} />
       {!data.recommendations.length ? <div className="rounded-xl border border-dashed border-blue-200 bg-white p-8 text-center">
-        <h3 className="font-semibold text-slate-900">{!data.totalCandidates ? 'No job postings are available yet' : !data.hasConfirmedSkills ? 'Confirm your skills to find matching jobs' : data.unscoredPostings === data.totalCandidates ? 'Job skill requirements are not ready to score yet' : 'No scored skill matches were found'}</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">Matches need at least one confirmed skill in common with a posting’s required or preferred skills. Review your profile or explore other openings.</p>
+        <h3 className="font-semibold text-slate-900">{data.totalMatched > 0 ? 'No jobs match these filters' : !data.totalCandidates ? 'No job postings are available yet' : !data.hasConfirmedSkills ? 'Confirm your skills to find matching jobs' : data.unscoredPostings === data.totalCandidates ? 'Job skill requirements are not ready to score yet' : 'No scored skill matches were found'}</h3>
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{data.totalMatched > 0 ? 'Try another location, employment type, or skill, or clear your filters to see all matches.' : 'Matches need at least one confirmed skill in common with a posting’s required or preferred skills. Review your profile or explore other openings.'}</p>
         <p className="mt-2 text-xs text-slate-500">{data.totalCandidates} postings checked; {data.unscoredPostings} have no classified required or preferred skills.</p>
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm font-semibold text-blue-700"><Link to="/app/skill-profile">Review Skill Profile</Link><Link to="/app/applications?tab=companies">Browse Companies</Link></div>
       </div> : <>
-        <p className="text-xs text-slate-500">Showing {data.recommendations.length} matching postings from {data.totalCandidates} catalog postings. {data.unscoredPostings} have no classified required or preferred skills to score.</p>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div aria-busy={isRefreshing} className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-3 ${isRefreshing ? 'opacity-60' : ''}`}>
           {data.recommendations.map((job) => <article key={job.jobId} className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Building2 className="size-5" aria-hidden="true" /></span>
               <div className="min-w-0"><h3 className="text-sm font-bold text-slate-900">{job.role}</h3><p className="mt-1 text-xs text-slate-600">{job.company}</p></div>
@@ -97,8 +90,8 @@ export function JobsForYouTab({ data, isLoading, error, isRefreshing, onRetry, a
             <MatchFacts job={job} />
             <p className="mt-3 text-xs leading-5 text-slate-500">{job.reasons[0]}</p>
             <div className="mt-auto flex flex-wrap gap-2 pt-4">
-              <button type="button" onClick={() => { setSelected(job); setLocalError(null) }} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700">View job <ArrowRight className="size-3" aria-hidden="true" /></button>
-              <button type="button" onClick={() => addJob(job)} disabled={saved(job.jobId) || isSaving} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:bg-slate-100 disabled:text-slate-500">{saved(job.jobId) ? <><CheckCircle2 className="size-3" aria-hidden="true" />Saved</> : isSaving ? 'Saving…' : 'Save to My Applications'}</button>
+              <button type="button" disabled={isRefreshing} onClick={() => { setSelected(job); setLocalError(null) }} className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700 disabled:opacity-50">View job <ArrowRight className="size-3" aria-hidden="true" /></button>
+              <button type="button" onClick={() => addJob(job)} disabled={saved(job.jobId) || isSaving || isRefreshing} className="inline-flex min-h-10 items-center gap-1 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white disabled:bg-slate-100 disabled:text-slate-500">{saved(job.jobId) ? <><CheckCircle2 className="size-3" aria-hidden="true" />Saved</> : isSaving ? 'Saving…' : 'Save to My Applications'}</button>
             </div>
           </article>)}
         </div>

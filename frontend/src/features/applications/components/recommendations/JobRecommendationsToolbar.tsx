@@ -32,7 +32,7 @@ export function JobRecommendationsToolbar({ data, filters, isRefreshing, onRefre
   const hasFilters = Boolean(filters.location || filters.employmentType || filters.skillId || filters.sort !== 'coverage')
   return <div className="space-y-3">
     <div className="flex flex-wrap items-center gap-x-5 gap-y-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-sky-50 via-white to-blue-100/60 p-4 shadow-sm">
-      <div className="flex min-w-0 flex-1 items-center gap-3">
+      <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-100/70 text-blue-600"><Sparkles className="size-6" aria-hidden="true" /></span>
         <div><h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Recommended for you</h2>
           <p className="mt-0.5 text-xs leading-5 text-slate-500">Jobs matched to your confirmed skills and saved career goal.</p></div>
@@ -43,6 +43,7 @@ export function JobRecommendationsToolbar({ data, filters, isRefreshing, onRefre
         <DialogContent className="max-h-[85dvh] overflow-y-auto">
           <DialogHeader><DialogTitle>How matching works</DialogTitle><DialogDescription>Skill coverage helps you explore relevant openings. It is not a hiring prediction.</DialogDescription></DialogHeader>
           <ul className="list-inside list-disc space-y-3 text-sm leading-6 text-slate-600">{data.limitations.map((item) => <li key={item}>{item}</li>)}</ul>
+          <p className="text-sm leading-6 text-slate-600">Coverage is matched weighted skill points divided by all scored skill points. Equal coverage scores are ordered by target career, then required skill overlap.</p>
           <p className="text-sm leading-6 text-slate-600">Location, employment type, and skills narrow your results. The Skills filter looks for that required or preferred skill in the posting. These filters do not add points to the score.</p>
         </DialogContent>
       </Dialog>
