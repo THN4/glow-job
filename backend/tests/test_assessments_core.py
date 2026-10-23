@@ -49,13 +49,14 @@ def test_staircase_paths(start, batches, expected_levels, result):
 
 def test_confidence_rules():
     tested = {"beginner": True, "intermediate": True, "advanced": False}
-    assert level_outcome(tested, {"intermediate": 3}, 1, quiz=True).confidence == "high"
+    assert level_outcome(tested, {"intermediate": 3}, 1, quiz=True).confidence == "medium"
     assert level_outcome(tested, {"intermediate": 2}, 1, quiz=True).confidence == "medium"
-    # passing far above the self-check is kept as medium, not high
+    # Even a perfect top-level batch is at most medium confidence.
     top = {"beginner": True, "intermediate": True, "advanced": True}
     assert level_outcome(top, {"advanced": 3}, 0, quiz=True).confidence == "medium"
     none = level_outcome({"beginner": False}, {}, 0, quiz=True)
-    assert (none.level, none.method) == ("beginner", "quiz") and "Basics not confirmed" in none.note
+    assert (none.level, none.confidence, none.method) == (None, "low", "quiz")
+    assert "Foundations not yet confirmed" in none.note
     self_only = level_outcome({}, {}, 2, quiz=False)
     assert (self_only.level, self_only.confidence, self_only.method) == ("advanced", "low", "self_check")
 
@@ -77,6 +78,11 @@ def test_step_items_two_per_task_no_reuse_and_capped():
 def test_unseen_questions_come_first():
     picked = pick_level_items([1, 2, 3, 4], {1, 2}, random.Random(0), 2)
     assert set(picked) == {3, 4}
+
+
+def test_overlapping_chunks_do_not_repeat_a_question_within_a_task():
+    picks = pick_step_items([("a", [1, 2])], {1: [10], 2: [10, 11]}, set(), random.Random(0))
+    assert len(picks) == 2 and {item for _, item in picks} == {10, 11}
 
 
 def test_full_quiz_needs_three_questions_at_every_level():

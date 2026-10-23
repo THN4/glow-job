@@ -127,6 +127,13 @@ export function StepCheckDialog({ onClose, stepKey, stepTitle, skillId, tasks, e
                 </li>
               ))}
             </ul>
+            {(phase.result.unassessedTasks ?? []).length > 0 && (
+              <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                <p className="font-semibold">Not assessed in this check</p>
+                <ul>{phase.result.unassessedTasks.map((task) => <li key={task.taskId}>{task.label}</li>)}</ul>
+                <p>These tasks remain unchanged. Questions may be unavailable or the check reached its question limit.</p>
+              </div>
+            )}
             <p className="text-[11px] text-slate-500">This checks knowledge from the step’s sources. It does not test hands-on work. Practice tasks stay yours to tick.</p>
             <div className="flex flex-wrap gap-2">
               <button type="button" disabled={applying} onClick={() => void finish(true)}

@@ -1,5 +1,6 @@
 import { ArrowRight, CheckCircle2, Compass, Container, Link2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { SkillIcon } from '../../../components/SkillIcon'
 import type { SkillChecklistItem, SkillEvidenceSource, SkillProfileSkill } from '../type'
 import { EvidencePanel } from './EvidencePanel'
 import { LearningChecklist } from './LearningChecklist'
@@ -32,7 +33,7 @@ export function InProgressSkillCard({
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4 [@media(max-height:960px)]:pb-2.5">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm">
-            <Container size={20} aria-hidden="true" />
+            <SkillIcon name={skill.title} size={20} />
           </span>
           <div>
             <h3 className="text-base font-bold text-slate-900">{skill.title}</h3>

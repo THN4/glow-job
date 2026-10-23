@@ -1,9 +1,9 @@
 """Apply kept assessment results to the learner's skill rows.
 
 Saving a profile deletes and recreates ``app.user_skills`` from the profile JSON, so assessed
-levels cannot live only in those rows. The latest accepted level check or quick question per
-skill is the source of truth, and this function writes it back into ``app.user_skills`` (and one
-assessment evidence row). It runs after every profile save and after a learner keeps a result,
+levels cannot live only in those rows. The latest accepted quiz per skill takes priority over
+self-ratings; otherwise the latest accepted self-rating is used. This function writes it into
+``app.user_skills`` (and one assessment evidence row). It runs after every profile save and after a learner keeps a result,
 inside the caller's transaction.
 """
 
@@ -21,7 +21,7 @@ def assessments_ready(connection: Any) -> bool:
 
 
 def apply_accepted_assessments(connection: Any, user_id: int, skill_id: int | None = None) -> int:
-    """Write the latest kept result per skill into app.user_skills. Returns rows written."""
+    """Write the strongest kept evidence per skill into app.user_skills. Returns rows written."""
     if not assessments_ready(connection):
         return 0
     rows = connection.execute(
@@ -33,7 +33,7 @@ def apply_accepted_assessments(connection: Any, user_id: int, skill_id: int | No
         WHERE a.user_id = %s AND a.decision = 'accepted' AND a.result_level IS NOT NULL
           AND a.kind IN ('level_check', 'quick_question')
           AND (%s::bigint IS NULL OR a.skill_id = %s::bigint)
-        ORDER BY a.skill_id, a.decided_at DESC, a.assessment_id DESC
+        ORDER BY a.skill_id, (a.method = 'quiz') DESC, a.decided_at DESC, a.assessment_id DESC
         """,
         (user_id, skill_id, skill_id),
     ).fetchall()
@@ -49,6 +49,8 @@ def apply_accepted_assessments(connection: Any, user_id: int, skill_id: int | No
                 proficiency_level = EXCLUDED.proficiency_level,
                 proficiency_basis = EXCLUDED.proficiency_basis,
                 verification_type = EXCLUDED.verification_type,
+                source = EXCLUDED.source,
+                confidence = EXCLUDED.confidence,
                 user_confirmed = true,
                 updated_at = now()
             RETURNING user_skill_id

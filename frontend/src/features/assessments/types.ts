@@ -32,6 +32,7 @@ export type AnswerReview = {
 export type StepCheckStart = { assessmentId: number; stepKey: string; taskCount: number; questions: Question[] }
 
 export type StepCheckResult = {
+  unassessedTasks: Array<{ taskId: string; label: string }>
   assessmentId: number
   stepKey: string
   decision: Decision
@@ -55,7 +56,7 @@ export type LevelCheckStart = {
 export type LevelResult = {
   assessmentId: number
   skill: { skillId: number; name: string }
-  level: Level
+  level: Level | null
   confidence: 'high' | 'medium' | 'low'
   method: 'quiz' | 'self_check'
   note: string

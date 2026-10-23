@@ -1,4 +1,5 @@
-import { ArrowDown, ArrowRight, Clock3, Container, Wind } from 'lucide-react'
+import { ArrowDown, ArrowRight, Clock3, Container } from 'lucide-react'
+import { SkillIcon } from '../../../components/SkillIcon'
 import { Link } from 'react-router-dom'
 import type { SkillEvidenceSource, SkillProfileSkill } from '../type'
 import { EvidencePanel } from './EvidencePanel'
@@ -15,7 +16,7 @@ export function UpcomingSkillCard({ skill, evidence, onToggleEvidence }: Upcomin
       <header className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-400">
-            <Wind size={20} aria-hidden="true" />
+            <SkillIcon name={skill.title} size={20} />
           </span>
           <div>
             <h3 className="text-base font-bold text-slate-900">{skill.title}</h3>

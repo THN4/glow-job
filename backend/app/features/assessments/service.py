@@ -76,6 +76,8 @@ class AssessmentService:
         labels = {t["task_id"]: t["label"] for t in tasks}
         checked_tasks = list(dict.fromkeys(task_id for task_id, _ in picks))
         state = {"tasks": [{"taskId": t, "label": labels[t]} for t in checked_tasks],
+                 "unassessedTasks": [{"taskId": t["task_id"], "label": t["label"]}
+                                     for t in tasks if t["task_id"] not in checked_tasks],
                  "questions": [[task_id, item_id] for task_id, item_id in picks]}
         assessment_id = await self._run(
             self.repo.create, user_id, skill_id=skill_id, kind="step_check", scoring_version=SCORING_VERSION,
@@ -137,6 +139,7 @@ class AssessmentService:
             "assessmentId": record["assessment_id"], "kind": "step_check", "stepKey": record["step_key"],
             "decision": record["decision"], "verifiedCount": summary.get("verified", 0),
             "taskCount": len(summary.get("tasks", [])),
+            "unassessedTasks": record["state"].get("unassessedTasks", []),
             "tasks": [{"taskId": t["taskId"], "label": t["label"], "verified": t["verified"],
                        "questions": by_task.get(t["taskId"], [])} for t in summary.get("tasks", [])],
         }
@@ -256,10 +259,11 @@ class AssessmentService:
         record = await self._load(user_id, assessment_id, "level_check")
         if record["status"] != "completed" or record["decision"] != "pending":
             raise AppError("ASSESSMENT_STATE_INVALID", "This result cannot be changed now.")
+        if decision == "accepted" and record["result_level"] is None:
+            raise AppError("ASSESSMENT_STATE_INVALID", "No skill level was confirmed. Review the sources and try again.")
         await self._run(self.repo.decide, assessment_id, user_id, decision, apply_level=True)
         return {"assessmentId": assessment_id, "decision": decision,
-                "profileLevel": {"skillId": record["skill_id"], "level": record["result_level"],
-                                 "basis": "assessed" if record["method"] == "quiz" else "self_reported"}
+                "profileLevel": await self._run(self.repo.profile_level, user_id, record["skill_id"])
                 if decision == "accepted" else None}
 
     # ------------------------------------------------------------------ quick question
@@ -275,7 +279,7 @@ class AssessmentService:
             result_level=level, confidence="low", summary={"answer": answer}, completed_at="now()")
         await self._run(self.repo.decide, assessment_id, user_id, "accepted", apply_level=True)
         return {"assessmentId": assessment_id, "decision": "accepted",
-                "profileLevel": {"skillId": skill_id, "level": level, "basis": "self_reported"}}
+                "profileLevel": await self._run(self.repo.profile_level, user_id, skill_id)}
 
     # ------------------------------------------------------------------ read
 
@@ -346,7 +350,7 @@ def _activity(a: dict[str, Any]) -> dict[str, Any]:
     elif a["kind"] == "quick_question":
         text = f"Quick question: {summary.get('answer', '')} → {a['result_level']}"
     else:
-        text = f"{(a['result_level'] or '').capitalize()} · {a['confidence']} confidence" + (
+        text = f"{(a['result_level'] or 'Foundations not yet confirmed').capitalize()} · {a['confidence']} confidence" + (
             " · self-check only" if a["method"] == "self_check" else "")
     return {"assessmentId": a["assessment_id"], "kind": a["kind"], "skillId": a["skill_id"],
             "skillName": a.get("skill_name"), "stepKey": a["step_key"], "text": text, "decision": a["decision"],
