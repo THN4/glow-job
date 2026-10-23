@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../workspaceStyles'
 import { learningStatusIcons } from '../../../components/statusIcons'
 import { StatusIcon } from '../../../components/StatusIcon'
 import { StatCard, StatGrid } from '../components/StatCard'
@@ -72,7 +73,7 @@ function CareerMatchSection({ careerMatch, loading, error }: {
     <section aria-labelledby="career-match-title" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 id="career-match-title" className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Career Match</h2>
+          <h2 id="career-match-title" className={workspaceStyles.sectionTitle}>Career Match</h2>
           <p className="mt-1 text-xs text-slate-500 sm:text-sm">Scores use separate market skill sets and describe profile coverage, not job readiness.</p>
         </div>
         {match && <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${match.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
@@ -110,10 +111,10 @@ function RoadmapMilestones({ view }: { view: RoadmapView }) {
   }, [view.nodes])
 
   return (
-    <article className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Career Roadmap</h2>
+          <h2 className={workspaceStyles.sectionTitle}>Career Roadmap</h2>
           <p className="mt-1 text-xs text-slate-500">{progressLabel}</p>
         </div>
         <Link to="/app/roadmap" className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-800 sm:text-sm">
@@ -227,36 +228,36 @@ export function OverviewPage() {
     : view ? `Target: ${view.summary.timeRemainingLabel} · ${toRoadmapScreen(view).summary.statusText}`
       : 'Career match scores are based on your confirmed profile and target role.'
 
-  if (hasProfile && isLoading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your overview...</p>
+  if (hasProfile && isLoading) return <p role="status" className={workspaceStyles.loading}>Loading your overview...</p>
   if (error) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
-      <h1 className="text-xl font-bold text-slate-900">Could not load your overview</h1>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Could not load your overview</h1>
       <p role="alert" className="mt-3 text-sm text-red-700">{error.message}</p>
       <button type="button" onClick={() => void refetch()}
-        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button>
     </section>
   )
 
   return (
-    <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-6 sm:space-y-6">
-      <header className="relative overflow-hidden py-1 sm:py-2">
+    <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-4">
+      <header className="relative overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-28 size-64 rounded-full bg-blue-100/45 sm:-right-2 sm:-top-40 sm:size-80" />
-        <p className="relative text-[11px] font-semibold uppercase tracking-wide text-blue-600 sm:text-xs">
+        <p className={`relative ${workspaceStyles.pageContext}`}>
           {new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
         </p>
-        <h1 id="overview-title" className="relative mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">{targetRole}</h1>
-        <p className="relative mt-1 text-sm text-slate-500 sm:text-base">{goalSubtitle}</p>
+        <h1 id="overview-title" className={`relative ${workspaceStyles.pageTitle}`}>{targetRole}</h1>
+        <p className={`relative ${workspaceStyles.pageDescription}`}>{goalSubtitle}</p>
       </header>
       <CareerMatchSection careerMatch={careerMatch} loading={loadingMatch} error={matchError} />
       {view ? <RoadmapContent view={view} /> : (
         <section className="rounded-2xl border border-blue-100 bg-white p-8 text-center">
-          <h2 className="text-xl font-bold text-slate-900">Your roadmap is not ready yet</h2>
-          <p className="mt-3 text-sm text-slate-600">
+          <h2 className={workspaceStyles.sectionTitle}>Your roadmap is not ready yet</h2>
+          <p className={workspaceStyles.stateDescription}>
             {hasProfile ? 'Create a roadmap to see your learning progress and next action here.'
               : 'Save your profile and career goal to see a personalized overview.'}
           </p>
           <Link to={hasProfile ? '/app/roadmap' : '/onboarding'}
-            className="mt-5 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">
+            className={`mt-5 ${workspaceStyles.primaryAction}`}>
             {hasProfile ? 'Open roadmap' : 'Start onboarding'}
           </Link>
         </section>

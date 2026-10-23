@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { learningStatusIcons } from '../../../components/statusIcons'
 import { StatCard, StatGrid } from '../../workspace/components/StatCard'
 import { ArrowRight, ClipboardList, Target } from 'lucide-react'
@@ -23,9 +24,9 @@ const roadmapLink = (nodeId: string) => `/app/roadmap?node=${encodeURIComponent(
 export function ProgressPage() {
   const roadmap = useCurrentRoadmap()
   const overview = useProgressOverview()
-  if (roadmap.isPending) return <p role="status" className="p-6 text-sm text-slate-600">Loading your progress…</p>
-  if (roadmap.isError) return <section className="p-6"><p role="alert">{roadmap.error.message}</p><button type="button" onClick={() => void roadmap.refetch()} className="mt-3 text-blue-700">Try again</button></section>
-  if (!roadmap.data) return <section className="p-6"><h1 className="text-2xl font-bold">Progress</h1><p className="mt-3">Create your roadmap to start tracking progress.</p><Link to="/app/roadmap" className="mt-3 inline-block text-blue-700">Open My Roadmap</Link></section>
+  if (roadmap.isPending) return <p role="status" className={workspaceStyles.loading}>Loading your progress…</p>
+  if (roadmap.isError) return <section className={workspaceStyles.statePanel}><h1 className={workspaceStyles.pageTitle}>Could not load your progress</h1><p role="alert" className="mt-3 text-sm leading-6 text-destructive">{roadmap.error.message}</p><button type="button" onClick={() => void roadmap.refetch()} className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button></section>
+  if (!roadmap.data) return <section className={workspaceStyles.statePanel}><h1 className={workspaceStyles.pageTitle}>Progress</h1><p className={workspaceStyles.stateDescription}>Create your roadmap to start tracking progress.</p><Link to="/app/roadmap" className={`mt-5 ${workspaceStyles.primaryAction}`}>Open My Roadmap</Link></section>
   const view = roadmap.data
   const screen = toRoadmapScreen(view)
   const { nodes } = screen
@@ -67,8 +68,8 @@ export function ProgressPage() {
       </StatGrid>
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-base font-bold text-slate-900">{currentStep ? 'Your current step' : focusStep ? 'Your next step' : completionPercent === 100 ? 'Roadmap complete' : 'Review your roadmap'}</h2>
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h2 className={workspaceStyles.sectionTitle}>{currentStep ? 'Your current step' : focusStep ? 'Your next step' : completionPercent === 100 ? 'Roadmap complete' : 'Review your roadmap'}</h2>
           {focusStep ? (
             <>
               <div className="mt-3 flex items-start gap-3">
@@ -79,15 +80,15 @@ export function ProgressPage() {
                 </div>
               </div>
               {focusChecklist.length > 0 && <p className="mt-3 text-xs text-slate-600">{focusChecked} of {focusChecklist.length} checklist items checked</p>}
-              <Link to={roadmapLink(focusStep.id)} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700">Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
+              <Link to={roadmapLink(focusStep.id)} className={`mt-4 ${workspaceStyles.primaryAction}`}>Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">{completionPercent === 100 ? 'Every task on your roadmap is complete.' : view.nextAction.text}</p>
+            <p className={workspaceStyles.stateDescription}>{completionPercent === 100 ? 'Every task on your roadmap is complete.' : view.nextAction.text}</p>
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-base font-bold text-slate-900">Coming up</h2>
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h2 className={workspaceStyles.sectionTitle}>Coming up</h2>
           {nextSteps.length ? (
             <ul className="mt-2 divide-y divide-slate-100">
               {nextSteps.map((node) => (
@@ -104,9 +105,9 @@ export function ProgressPage() {
         </section>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-slate-900">Progress by type</h2>
+          <h2 className={workspaceStyles.sectionTitle}>Progress by type</h2>
           <Link to="/app/skill-profile" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">View Skill Profile <ArrowRight size={13} aria-hidden="true" /></Link>
         </div>
         <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">

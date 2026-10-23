@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../../workspace/workspaceStyles'
 import { Search } from 'lucide-react'
 import type { ApplicationDateFilter, ApplicationStatusFilter } from '../../type'
 
@@ -36,7 +37,7 @@ export function ApplicationToolbar({
         id="application-status-filter"
         value={status}
         onChange={(event) => onStatusChange(event.target.value as ApplicationStatusFilter)}
-        className="min-h-10 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400"
+        className={workspaceStyles.filter}
       >
         <option value="all">Status: All</option>
         <option value="in-progress">Status: In Progress</option>
@@ -52,7 +53,7 @@ export function ApplicationToolbar({
         id="application-date-filter"
         value={dateFilter}
         onChange={(event) => onDateChange(event.target.value as ApplicationDateFilter)}
-        className="min-h-10 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 shadow-sm outline-none focus:border-blue-400"
+        className={workspaceStyles.filter}
       >
         <option value="all">Date: All time</option>
         <option value="30-days">Date: Last 30 days</option>

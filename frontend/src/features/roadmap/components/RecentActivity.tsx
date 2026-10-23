@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { learningStatusIcons } from '../../../components/statusIcons'
 import { ClipboardCheck, Paperclip, Target, WandSparkles } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -14,7 +15,7 @@ const appearance = {
 export function RecentActivity({ activities, roadmapId }: { activities: ProgressActivity[]; roadmapId: number | null }) {
   return (
     <section aria-labelledby="recent-activity-title" className="recent-activity-timeline rounded-2xl bg-blue-50/60 p-5 sm:p-6">
-      <h2 id="recent-activity-title" className="text-lg font-bold text-slate-700">Recent activity</h2>
+      <h2 id="recent-activity-title" className={workspaceStyles.sectionTitle}>Recent activity</h2>
       {!activities.length ? <p className="mt-4 text-sm text-slate-600">No saved activity yet.</p> : <ol className="mt-6">
         {activities.map((activity, index) => {
           const { icon: Icon, color } = appearance[activity.kind]

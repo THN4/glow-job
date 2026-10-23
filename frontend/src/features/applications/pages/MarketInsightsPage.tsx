@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { StatCard, StatGrid } from '../../workspace/components/StatCard'
 import { BriefcaseBusiness, Layers3, Target } from 'lucide-react'
 import { useState } from 'react'
@@ -29,7 +30,7 @@ export function MarketInsightsPage() {
         <div className="mt-6 border-b border-slate-100 pb-6">
           <label className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-700">
             Career profile
-            <select value={careerProfileId ?? ''} onChange={(event) => setSelection(event.target.value)} className="min-h-10 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+            <select value={careerProfileId ?? ''} onChange={(event) => setSelection(event.target.value)} className={workspaceStyles.filter}>
               <option value="" disabled>Select a career profile</option>
               {savedGoal && !careers.data?.some((career) => career.careerProfileId === savedGoal.careerProfileId) && <option value={savedGoal.careerProfileId}>{savedGoal.targetRoleTitle}</option>}
               {careers.data?.map((career) => <option key={career.careerProfileId} value={career.careerProfileId}>{career.profileName}</option>)}
@@ -63,8 +64,8 @@ export function MarketInsightsPage() {
             ].map(({ label, value, detail, icon }) => <StatCard key={label} label={label} value={value} detail={detail} icon={icon} />)}
           </StatGrid>
         </>}
-          <section className="my-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
-            <h2 className="text-base font-bold text-slate-900">Skill frequency in job postings</h2>
+          <section className="my-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <h2 className={workspaceStyles.sectionTitle}>Skill frequency in job postings</h2>
             <p className="mt-1 text-xs text-slate-500">Top 10 skills by share of collected postings for the selected career profile.</p>
             {careerProfileSelector}
             {!careerProfileId && <p className="mt-4 text-sm text-slate-600">Choose a career profile to view its market data.</p>}

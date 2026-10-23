@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -97,25 +98,25 @@ export function RoadmapPage() {
       description: evidence.title, nodeId: node.id })
   }
 
-  if (loading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your roadmap...</p>
+  if (loading) return <p role="status" className={workspaceStyles.loading}>Loading your roadmap...</p>
   if (loadFailed) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
-      <h1 className="text-xl font-bold text-slate-900">Could not load your roadmap</h1>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Could not load your roadmap</h1>
       <p role="alert" className="mt-3 text-sm text-red-700">{loadError?.message}</p>
       <button type="button" onClick={() => window.location.reload()}
-        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button>
     </section>
   )
   if (!screen) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-blue-100 bg-white p-8 text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Your Career Roadmap</h1>
-      <p className="mt-3 text-sm text-slate-600">Your roadmap has not been created yet. Complete onboarding, then create your plan.</p>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Your Career Roadmap</h1>
+      <p className={workspaceStyles.stateDescription}>Your roadmap has not been created yet. Complete onboarding, then create your plan.</p>
       {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
       {getSavedProfileId() ? <button type="button" disabled={working} onClick={() => createRoadmap()}
-        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>
         {working ? `Creating roadmap: ${stage ?? 'queued'}...` : 'Create my roadmap'}
       </button> : <Link to="/onboarding"
-        className="mt-5 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>
         Start onboarding
       </Link>}
     </section>

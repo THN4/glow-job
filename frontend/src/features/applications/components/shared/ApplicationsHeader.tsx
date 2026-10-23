@@ -1,4 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
+import { workspaceStyles } from '../../../workspace/workspaceStyles'
 import { WorkspacePageHeader } from '../../../workspace/components/WorkspacePageHeader'
 import type { ApplicationTabKey } from '../../type'
 
@@ -23,7 +24,7 @@ export function ApplicationsHeader({ formOpen = false, detailOpen = false, detai
       : 'Explore broad career paths grounded in your skills, experience and current goal.'
   const isRecommendationDetail = activeTab === 'recommendations' && Boolean(titleOverride)
   const backButton = backLabel && !formOpen && (
-    <button type="button" onClick={onBack} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-primary transition hover:bg-accent">
+    <button type="button" onClick={onBack} className={workspaceStyles.outlineAction}>
       <ArrowLeft size={16} aria-hidden="true" /> {backLabel}
     </button>
   )

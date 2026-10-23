@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { learningStatusIcons } from '../../../components/statusIcons'
 import { StatusIcon } from '../../../components/StatusIcon'
 import { AlertCircle, BadgeCheck, ChevronRight, CircleDashed, ClipboardCheck, FileText, History, ListChecks } from 'lucide-react'
@@ -57,8 +58,8 @@ const STEP_STATE: Record<RoadmapNodeStatus, { label: string; row: string; bar: s
 }
 type StepFilter = 'all' | RoadmapNodeStatus
 const STEP_FILTERS: StepFilter[] = ['all', 'completed', 'in-progress', 'upcoming']
-const BADGE = 'inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[10px] font-semibold'
-const ACTION = 'inline-flex h-7 w-24 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold'
+const BADGE = 'inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-xs font-semibold'
+const ACTION = 'inline-flex h-7 w-24 shrink-0 items-center justify-center rounded-md text-xs font-semibold'
 const STATE_ICON = learningStatusIcons
 
 function stepStatus(node: RoadmapNodeData, summary: StepCheckSummary | undefined, hasCheck: boolean) {
@@ -89,7 +90,7 @@ export function AssessmentsPage() {
   }
 
   return (
-    <section aria-label="Assessments" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-6">
+    <section aria-label="Assessments" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4">
       <WorkspacePageHeader
         title="Assessments"
         description="Check your roadmap learning and skill levels."
@@ -100,7 +101,7 @@ export function AssessmentsPage() {
             <button type="button" onClick={() => setActivityOpen(true)} aria-haspopup="dialog"
               className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-white px-3 py-1.5 font-semibold text-blue-700 hover:bg-blue-50">
               <History size={13} aria-hidden="true" /> Activity
-              <span className="rounded-full bg-blue-100 px-1.5 text-[11px] tabular-nums">{data.activity.length}</span>
+              <span className="rounded-full bg-blue-100 px-1.5 text-xs tabular-nums">{data.activity.length}</span>
             </button>
           </div>
         )}
@@ -124,7 +125,7 @@ export function AssessmentsPage() {
       {data && (
         <>
           <section aria-labelledby="step-checks" className="space-y-2.5">
-            <h2 id="step-checks" className="text-base font-bold text-slate-800">Roadmap steps</h2>
+            <h2 id="step-checks" className={workspaceStyles.sectionTitle}>Roadmap steps</h2>
             <nav aria-label="Filter steps by status" role="tablist" className="flex shrink-0 gap-2 overflow-x-auto border-b border-blue-100">
               {STEP_FILTERS.map((filter) => {
                 const Icon = filter === 'all' ? ListChecks : STATE_ICON[filter]
@@ -136,7 +137,7 @@ export function AssessmentsPage() {
                     className={`inline-flex min-h-10 shrink-0 items-center gap-2 border-b-2 px-3 text-sm transition ${active ? 'border-blue-600 font-semibold text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
                     <Icon size={15} aria-hidden="true" />
                     {filter === 'all' ? 'All steps' : STEP_STATE[filter].label}
-                    <span className={`rounded-full px-1.5 text-[11px] tabular-nums ${active ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
+                    <span className={`rounded-full px-1.5 text-xs tabular-nums ${active ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
                   </button>
                 )
               })}
@@ -162,7 +163,7 @@ export function AssessmentsPage() {
                           <span className="truncate group-hover:underline">{node.title}</span>
                           <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-slate-400 group-hover:text-blue-700" />
                         </button>
-                        <p className="text-[11px] text-slate-500">Step {index + 1} · {node.kind === 'project' ? 'Project' : 'Skill'}</p>
+                        <p className="text-xs text-slate-500">Step {index + 1} · {node.kind === 'project' ? 'Project' : 'Skill'}</p>
                       </div>
                       <span className={`${BADGE} ${state.badge}`}><Icon size={11} aria-hidden="true" /> {state.label}</span>
                     </div>
@@ -187,7 +188,7 @@ export function AssessmentsPage() {
           </section>
 
           <section aria-labelledby="level-checks" className="space-y-2.5">
-            <h2 id="level-checks" className="text-base font-bold text-slate-800">Level checks</h2>
+            <h2 id="level-checks" className={workspaceStyles.sectionTitle}>Level checks</h2>
             <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
               {data.levelChecks.map((target) => (
                 <article key={target.skillId} className="flex flex-col gap-2 rounded-xl border border-blue-100 bg-white p-3">
@@ -195,10 +196,10 @@ export function AssessmentsPage() {
                     <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><SkillIcon name={target.name} skillId={target.skillId} size={18} />{target.name}</h3>
                     <p className="text-xs text-slate-500">{target.level ? `${capitalize(target.level)} · ${target.reason}` : target.reason}</p>
                   </div>
-                  <span className={`self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${target.hasQuiz ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-800'}`}>
+                  <span className={`self-start rounded-full px-2 py-0.5 text-xs font-semibold ${target.hasQuiz ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-800'}`}>
                     {target.hasQuiz ? 'Quiz · about 5 min' : 'Self-check · about 1 min'}
                   </span>
-                  <button type="button" onClick={() => setLevelTarget(target)} className="mt-auto min-h-8 rounded-lg bg-blue-600 px-3 text-[11px] font-semibold text-white hover:bg-blue-700">
+                  <button type="button" onClick={() => setLevelTarget(target)} className="mt-auto min-h-8 rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white hover:bg-blue-700">
                     {target.level ? 'Re-check level' : 'Start level check'}
                   </button>
                 </article>
@@ -222,12 +223,12 @@ export function AssessmentsPage() {
                   const step = entry.stepKey ? snapshot.progress.nodes.find((node) => node.id === entry.stepKey) : undefined
                   return (
                     <li key={entry.assessmentId} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-xs">
-                      <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${KIND_STYLE[entry.kind]}`}>{KIND_LABEL[entry.kind]}</span>
+                      <span className={`rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide ${KIND_STYLE[entry.kind]}`}>{KIND_LABEL[entry.kind]}</span>
                       <div className="min-w-0">
                         <p className="font-semibold text-slate-900">{entry.kind === 'step_check' ? step?.title ?? entry.stepKey : entry.skillName}</p>
                         <p className="text-slate-600">{entry.text}</p>
                       </div>
-                      <span className="whitespace-nowrap text-[11px] text-slate-500">
+                      <span className="whitespace-nowrap text-xs text-slate-500">
                         {entry.decision === 'accepted' ? (entry.kind === 'step_check' ? 'Applied' : 'Kept') : entry.decision === 'declined' ? 'Not kept' : 'Pending'}
                         {entry.at ? ` · ${new Date(entry.at).toLocaleDateString()}` : ''}
                       </span>

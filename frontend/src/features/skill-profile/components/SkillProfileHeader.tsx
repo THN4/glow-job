@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Map } from 'lucide-react'
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 
 export function SkillProfileHeader() {
@@ -10,9 +11,9 @@ export function SkillProfileHeader() {
       actions={<Link
         to="/app/roadmap"
         aria-label="View my roadmap"
-        className="inline-flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg border border-border bg-card px-4 py-2 text-xs font-semibold text-primary shadow-sm transition hover:border-primary/40 hover:bg-accent"
+        className={workspaceStyles.outlineAction}
       >
-        <Map size={22} aria-hidden="true" />
+        <Map size={16} aria-hidden="true" />
         <span>View</span>
       </Link>}
     />
