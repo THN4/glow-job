@@ -1,13 +1,14 @@
 """Explainable skill-presence matching; no model calls or hiring predictions."""
 
 from typing import Any
+from datetime import datetime, timezone
 
 POLICY = "skill-presence-required-2-preferred-1-v1"
 WEIGHTS = {"required": 2, "preferred": 1}
 
 
 def rank_jobs(jobs: list[dict[str, Any]], user_skill_ids: set[int],
-              goal_career_id: int | None, limit: int) -> list[dict[str, Any]]:
+              goal_career_id: int | None, limit: int | None) -> list[dict[str, Any]]:
     ranked = []
     for job in jobs:
         # Canonical IDs, not display-name similarity. Avoid double-counting a skill.
@@ -46,3 +47,54 @@ def rank_jobs(jobs: list[dict[str, Any]], user_skill_ids: set[int],
         -item["matchedWeight"] / item["totalWeight"],
         not item["matchesGoal"], -len(item["requiredMatches"]), -item["jobId"]))
     return ranked[:limit]
+
+
+def filter_job_matches(data: dict[str, Any], limit: int, *, sort: str = "coverage",
+                       location: str | None = None, employment_type: str | None = None,
+                       skill_id: int | None = None) -> dict[str, Any]:
+    matches = rank_jobs(data["jobs"], data["userSkillIds"], data["goalCareerId"], None)
+    requirements = {job["opening"]["jobId"]: job["requirements"] for job in data["jobs"]}
+    skills = {
+        skill["skillId"]: skill["name"]
+        for job in matches for skill in requirements[job["jobId"]]
+        if skill["type"] in WEIGHTS
+    }
+
+    def normalize(value: str | None) -> str:
+        return (value or "").strip().casefold()
+
+    def options(field: str) -> list[str]:
+        values = {}
+        for job in matches:
+            value = job.get(field, "").strip()
+            if value and normalize(value) != "not specified":
+                values.setdefault(normalize(value), value)
+        return sorted(values.values(), key=str.casefold)
+
+    filtered = [
+        job for job in matches
+        if (not location or normalize(job.get("location")) == normalize(location))
+        and (not employment_type or normalize(job.get("experience")) == normalize(employment_type))
+        and (skill_id is None or any(
+            skill["skillId"] == skill_id and skill["type"] in WEIGHTS
+            for skill in requirements[job["jobId"]]))
+    ]
+    if sort == "recent":
+        def timestamp(job: dict[str, Any]) -> float:
+            value = job.get("postedAt")
+            if not value:
+                return float("-inf")
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            return (parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)).timestamp()
+        # Stable sort preserves coverage/goal tie-breaking for equal dates.
+        filtered.sort(key=timestamp, reverse=True)
+    return {
+        "totalMatched": len(matches), "filteredCount": len(filtered),
+        "returnedCount": min(limit, len(filtered)),
+        "recommendations": filtered[:limit],
+        "filterOptions": {
+            "locations": options("location"), "employmentTypes": options("experience"),
+            "skills": [{"skillId": key, "name": value} for key, value in
+                       sorted(skills.items(), key=lambda pair: (pair[1].casefold(), pair[0]))],
+        },
+    }

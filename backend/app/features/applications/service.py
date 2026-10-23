@@ -6,7 +6,7 @@ import asyncio
 from typing import Any
 
 from app.features.resume.errors import AppError
-from app.features.applications.job_matching import POLICY, WEIGHTS, rank_jobs
+from app.features.applications.job_matching import POLICY, WEIGHTS, filter_job_matches
 
 
 class ApplicationsService:
@@ -28,7 +28,9 @@ class ApplicationsService:
         jobs = await asyncio.to_thread(self.repository.list_job_postings, limit)
         return {"jobPostings": jobs}
 
-    async def job_recommendations(self, profile_id: str, session_id: str, limit: int) -> dict[str, Any]:
+    async def job_recommendations(self, profile_id: str, session_id: str, limit: int, *,
+                                  sort: str = "coverage", location: str | None = None,
+                                  employment_type: str | None = None, skill_id: int | None = None) -> dict[str, Any]:
         user_id = await self._owner(profile_id, session_id)
         data = await asyncio.to_thread(self.repository.job_matching_inputs, user_id)
         jobs = data["jobs"]
@@ -38,7 +40,8 @@ class ApplicationsService:
             "hasConfirmedSkills": bool(data["userSkillIds"]),
             "totalCandidates": len(jobs),
             "unscoredPostings": sum(not any(skill["type"] in WEIGHTS for skill in job["requirements"]) for job in jobs),
-            "recommendations": rank_jobs(jobs, data["userSkillIds"], data["goalCareerId"], limit),
+            **filter_job_matches(data, limit, sort=sort, location=location,
+                                 employment_type=employment_type, skill_id=skill_id),
             "limitations": [
                 "Scores compare confirmed skill presence, not proficiency or hiring probability.",
                 "Required skills count twice as much as preferred skills. Optional and unclassified skills are excluded.",

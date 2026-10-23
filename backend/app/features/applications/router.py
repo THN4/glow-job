@@ -98,8 +98,13 @@ async def list_job_postings(limit: int = Query(default=60, gt=0, le=100),
 @router.get("/profiles/{profile_id}/job-recommendations")
 async def job_recommendations(profile_id: str, session_id: str = SessionId,
                               limit: int = Query(default=30, gt=0, le=100),
+                              sort: Literal["coverage", "recent"] = Query(default="coverage"),
+                              location: str | None = Query(default=None, min_length=1, max_length=300),
+                              employment_type: str | None = Query(default=None, alias="employmentType", min_length=1, max_length=100),
+                              skill_id: int | None = Query(default=None, alias="skillId", gt=0),
                               svc: ApplicationsService = Depends(get_applications_service)) -> dict[str, Any]:
-    return await svc.job_recommendations(profile_id, session_id, limit)
+    return await svc.job_recommendations(profile_id, session_id, limit, sort=sort,
+                                          location=location, employment_type=employment_type, skill_id=skill_id)
 
 
 @router.post("/profiles/{profile_id}/applications/from-job", status_code=201)

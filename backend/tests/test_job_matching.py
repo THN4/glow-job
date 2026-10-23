@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import MagicMock
 from fastapi import FastAPI
 
-from app.features.applications.job_matching import rank_jobs
+from app.features.applications.job_matching import filter_job_matches, rank_jobs
 from app.features.applications.router import get_applications_service, router
 from app.features.applications.service import ApplicationsService
 from app.features.resume.career_matching import CareerMatchRepository
@@ -57,6 +57,33 @@ def test_rank_before_limit_goal_only_breaks_ties_and_empty_profile_has_no_matche
 def test_duplicate_skill_counts_once_with_required_precedence():
     candidate = job(1, [(1, "Python", "preferred"), (1, "Python", "required"), (2, "SQL", "preferred")])
     assert rank_jobs([candidate], {1}, None, 1)[0]["scorePct"] == 66.7
+
+
+def test_filters_run_before_limit_options_cover_all_matches_and_empty_results_keep_counts():
+    jobs = [job(i, [(1, "Python", "required")]) for i in range(1, 42)]
+    for item in jobs:
+        item["opening"].update(location="Bangkok", experience="Full-time")
+    jobs[0]["opening"].update(location=" Chiang Mai ", experience="Internship")
+    jobs[0]["requirements"].append({"skillId": 2, "name": "SQL", "type": "preferred"})
+    data = {"jobs": jobs, "userSkillIds": {1}, "goalCareerId": None}
+    result = filter_job_matches(data, 1, location="chiang mai", employment_type="internship", skill_id=2)
+    assert [item["jobId"] for item in result["recommendations"]] == [1]
+    assert result["totalMatched"] == 41 and result["filteredCount"] == 1
+    assert result["returnedCount"] == 1
+    assert result["filterOptions"]["locations"] == ["Bangkok", "Chiang Mai"]
+    assert result["filterOptions"]["skills"] == [{"skillId": 1, "name": "Python"}, {"skillId": 2, "name": "SQL"}]
+    empty = filter_job_matches(data, 30, skill_id=999)
+    assert empty["filteredCount"] == 0 and empty["totalMatched"] == 41
+    assert empty["filterOptions"] == result["filterOptions"]
+
+
+def test_recent_sort_uses_dates_nulls_last_and_does_not_override_matching():
+    jobs = [job(i, [(1, "Python", "required")]) for i in range(1, 5)]
+    for item, posted in zip(jobs, ["2026-01-01T00:00:00Z", None, "2026-03-01T07:00:00+07:00", "2026-03-01T00:00:00Z"]):
+        item["opening"]["postedAt"] = posted
+    data = {"jobs": jobs, "userSkillIds": {1}, "goalCareerId": None}
+    assert [item["jobId"] for item in filter_job_matches(data, 4, sort="recent")["recommendations"]] == [4, 3, 1, 2]
+    assert filter_job_matches({**data, "userSkillIds": set()}, 4, sort="recent")["recommendations"] == []
 
 
 def test_career_cards_show_present_skills_even_when_level_is_unknown(monkeypatch):
@@ -120,3 +147,11 @@ async def test_api_requires_ownership_and_returns_explanations():
         assert body["recommendations"][0]["matchesGoal"] is True
         assert body["recommendations"][0]["reasons"]
         assert body["limitations"] and body["policy"].endswith("-v1")
+        assert body["totalMatched"] == body["filteredCount"] == body["returnedCount"] == 1
+        filtered = await client.get(url + "?location=Elsewhere&employmentType=Internship&skillId=1",
+                                    headers={"X-Session-Id": "session-1"})
+        assert filtered.status_code == 200 and filtered.json()["filteredCount"] == 0
+        assert filtered.json()["totalMatched"] == 1
+        for query in ("sort=invalid", "skillId=0", "skillId=SQL", "location="):
+            invalid = await client.get(url + "?" + query, headers={"X-Session-Id": "session-1"})
+            assert invalid.status_code == 400
