@@ -37,6 +37,78 @@ current roadmap. A real model call takes about 30-120 seconds; the mock returns 
   for an explicit "Regenerate" action.
 - Stages: `queued` -> `preparing` -> `generating` -> `saving` -> `done`.
 
+### Re-plan after a saved application rejection
+
+The application must belong to the signed-in profile, have status `rejected`, and
+have rejection category `skill-gap`. The category and reason are recorded by the
+user; they do not establish the employer's actual decision criteria. An existing
+roadmap is required before creating a revised one.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/profiles/{profileId}/applications/{applicationId}/replan-options` | none | `RejectionReplanOptions` |
+| POST | `/profiles/{profileId}/roadmaps` | `{"rejectionApplicationId": 42, "focusSkillIds": [103]}` | `202 RoadmapJob` |
+| GET | `/profiles/{profileId}/roadmaps/history` | none | `{"roadmaps": RoadmapHistoryEntry[]}` |
+| GET | `/profiles/{profileId}/roadmaps/{roadmapId}` | none | `{"roadmap": RoadmapView}` |
+
+The preview first matches explicit canonical skill names and catalog aliases in
+the saved reason. For example, a reason containing `SQL` and `Python` proposes
+those skills, including a skill completed in an earlier roadmap or confirmed in
+the profile. It does not infer SQL from `JOIN` alone. If the reason contains no
+recognized skill name, the preview returns no unrelated market suggestions;
+the user can edit the reason. With an empty reason, the preview falls back to
+at most 12 ranked market gaps; a linked posting narrows this fallback to its
+saved required/preferred skills. `matchingMode` explains which path was used.
+Each option includes `skillId`, `name`, `gapStatus`, nullable `priorityRank`,
+`source`, `requirementType`, `alreadyPlanned`, `completedInRoadmap`, `inProfile`,
+`alreadyCompleted`, and `learningContentAvailable`. The user selects one to
+three distinct IDs with learning content. The server rechecks ownership,
+rejection status, career goal, skill eligibility, and document availability when
+the request starts and again when the queued job builds its Agent Context.
+`force` cannot be combined with a rejection re-plan. No skill is added to the
+user profile by this request.
+
+The successful generation has reason `application_rejection`, stores the source
+event in the Agent Context, and links the prior roadmap with
+`previousRoadmapId`. The previous version is readable but cannot be edited.
+Selected focus skills begin a new learning/review step; a previous completion
+remains visible in the old version and is not copied into that step. Other
+completed checklist items carry forward only when the canonical skill ID,
+target level, task label, description, and kind match exactly. `RoadmapHistoryEntry`
+includes `roadmapId`, `version`, `status`, `generationReason`,
+`previousRoadmapId`, `generatedAt`, and `replanTrigger` (or `null`). The trigger
+contains `kind`, `application_id`, `job_title`, `rejection_category`,
+`reason_summary`, `focus_skill_ids`, `review_skill_ids`, and `source`.
+
+### Demo re-plan from market snapshot
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/profiles/{profileId}/market-replan-options` | none | `MarketReplanOptions` |
+| POST | `/profiles/{profileId}/roadmaps` | `{"marketFocusSkillIds": [103]}` | `202 RoadmapJob` |
+
+The market preview uses the active Agent Context's saved career market snapshot
+and returns skills not already represented in the active roadmap. Each option
+includes the observed demand count, percentage, snapshot date range, current gap
+status, `alreadyInAgentContext`, `learningContentAvailable`, and an `alertDetail`
+story. The sidebar's **News alerts** card links directly to the preselected story.
+The UI labels it as a **Demo**: one snapshot can show frequency, but cannot establish
+that demand is rising or that a skill is newly trending.
+
+The user selects one skill, whether or not learning documents are currently
+available. If the skill already exists in the saved Agent Context, its reviewed
+evidence is reused. Otherwise the backend retrieves and reviews evidence only for
+that selected skill, then appends its candidate, citations, and verified foundation
+links to a copy of the existing context. The user's saved profile, market
+assessments, scores, and existing candidates remain from the prior snapshot. If no
+reviewed teaching evidence exists, the selected skill can still appear in the new
+Roadmap as a placeholder explaining that content is not ready. The backend
+revalidates the skill and market window when the queued job starts. The trigger is
+saved as `market_update` with `is_demo`, `market_window`, `source`, and selected
+focus IDs. It does not change the user profile, market statistics, or match score.
+Matching progress carries forward only when canonical skill ID, target level, and
+checklist item details match the prior version.
+
 Errors returned by POST: `GOAL_NOT_FOUND` (409), `ROADMAP_LIMIT_REACHED` (429),
 `ROADMAP_BUDGET_REACHED` (429), `PROFILE_NOT_FOUND` (404), `ROADMAP_UNAVAILABLE` (503).
 Errors reported on a failed job: `KNOWLEDGE_NOT_READY`, `ROADMAP_CONTEXT_FAILED`,
