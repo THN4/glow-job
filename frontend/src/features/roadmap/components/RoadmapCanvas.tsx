@@ -354,7 +354,7 @@ export function RoadmapCanvas({
 
   return (
     <section aria-label="Roadmap container" className="@container/roadmap flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm">
-      <header className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:px-5">
+      <header className="grid shrink-0 grid-cols-1 items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:px-5">
         <div className="col-start-1 row-start-1 min-w-0">
           <h2 className="text-sm font-semibold text-foreground">Your roadmap relationships</h2>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
@@ -362,14 +362,14 @@ export function RoadmapCanvas({
             <span className="hidden min-[640px]:inline">Your path to {targetRole}. Select a step to explore; drag to arrange.</span>
           </p>
         </div>
-        {progressSummary && <div className="col-span-2 row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1">
+        {progressSummary && <div className="row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1">
           <RoadmapProgressBadge completion={progressSummary.completion} statusText={progressSummary.statusText} />
         </div>}
         {onToggleFullscreen && <button type="button" onClick={onToggleFullscreen}
           aria-label={isFullscreen ? 'Exit fullscreen roadmap' : 'Enter fullscreen roadmap'}
           aria-pressed={isFullscreen}
           title={isFullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
-          className="col-start-2 row-start-1 inline-flex size-10 items-center justify-center rounded-lg border border-border bg-white text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:col-start-3">
+          className="col-start-2 row-start-1 hidden size-10 items-center justify-center rounded-lg border border-border bg-white text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:col-start-3 sm:inline-flex">
           {isFullscreen ? <Shrink size={18} aria-hidden="true" /> : <Expand size={18} aria-hidden="true" />}
         </button>}
       </header>
