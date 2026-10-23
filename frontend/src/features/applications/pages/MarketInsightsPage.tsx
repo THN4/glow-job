@@ -1,3 +1,5 @@
+import { StatCard, StatGrid } from '../../workspace/components/StatCard'
+import { BriefcaseBusiness, Layers3, Target } from 'lucide-react'
 import { useState } from 'react'
 import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { useQuery } from '@tanstack/react-query'
@@ -53,17 +55,13 @@ export function MarketInsightsPage() {
             <p className="mt-1">{data.marketSample.lastUpdated ? `Last updated: ${new Date(data.marketSample.lastUpdated).toLocaleString()}` : 'Last update unavailable.'}</p>
             {data.warnings.length > 0 && <ul className="mt-2 list-inside list-disc">{data.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <StatGrid columns={3} label="Market statistics">
             {[
-              { label: 'Job postings', value: data.marketSample.totalJobs, detail: 'Collected for the selected career profile' },
-              { label: 'Skills analysed', value: skills.length, detail: 'Skills returned by the market comparison' },
-              { label: 'Core skill match', value: percent(data.scores.coreSkillMatchPct), detail: `${data.skillSummary.coreCovered} of ${data.skillSummary.coreConsidered} core skills covered in your profile` },
-            ].map(({ label, value, detail }) => <section key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold text-slate-600">{label}</p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-              <p className="mt-1 text-xs text-slate-500">{detail}</p>
-            </section>)}
-          </div>
+              { icon: BriefcaseBusiness, label: 'Job postings', value: data.marketSample.totalJobs, detail: 'Collected for the selected career profile' },
+              { icon: Layers3, label: 'Skills analysed', value: skills.length, detail: 'Skills returned by the market comparison' },
+              { icon: Target, label: 'Core skill match', value: percent(data.scores.coreSkillMatchPct), detail: `${data.skillSummary.coreCovered} of ${data.skillSummary.coreConsidered} core skills covered in your profile` },
+            ].map(({ label, value, detail, icon }) => <StatCard key={label} label={label} value={value} detail={detail} icon={icon} />)}
+          </StatGrid>
         </>}
           <section className="my-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
             <h2 className="text-base font-bold text-slate-900">Skill frequency in job postings</h2>

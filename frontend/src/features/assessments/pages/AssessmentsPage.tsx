@@ -1,4 +1,6 @@
-import { AlertCircle, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDashed, ClipboardCheck, Clock3, FileText, History, ListChecks, PlayCircle } from 'lucide-react'
+import { learningStatusIcons } from '../../../components/statusIcons'
+import { StatusIcon } from '../../../components/StatusIcon'
+import { AlertCircle, BadgeCheck, ChevronRight, CircleDashed, ClipboardCheck, FileText, History, ListChecks } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { SkillIcon } from '../../../components/SkillIcon'
 import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
@@ -57,7 +59,7 @@ type StepFilter = 'all' | RoadmapNodeStatus
 const STEP_FILTERS: StepFilter[] = ['all', 'completed', 'in-progress', 'upcoming']
 const BADGE = 'inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[10px] font-semibold'
 const ACTION = 'inline-flex h-7 w-24 shrink-0 items-center justify-center rounded-md text-[11px] font-semibold'
-const STATE_ICON: Record<RoadmapNodeStatus, typeof CheckCircle2> = { completed: CheckCircle2, 'in-progress': PlayCircle, upcoming: Clock3 }
+const STATE_ICON = learningStatusIcons
 
 function stepStatus(node: RoadmapNodeData, summary: StepCheckSummary | undefined, hasCheck: boolean) {
   if (!hasCheck) {
@@ -152,7 +154,7 @@ export function AssessmentsPage() {
                     <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${state.bar}`} />
                     <div className="flex items-start gap-2.5">
                       <span className={`grid size-7 shrink-0 place-items-center rounded-full text-xs font-bold tabular-nums ${state.marker}`}>
-                        {node.status === 'completed' ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : index + 1}
+                        {node.status === 'completed' ? <StatusIcon status="completed" size={14} /> : index + 1}
                       </span>
                       <div className="min-w-0 flex-1">
                         <button type="button" onClick={() => openStep(node.id)} title="Open this step in your roadmap"

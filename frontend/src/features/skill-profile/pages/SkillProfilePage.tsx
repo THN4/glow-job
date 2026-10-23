@@ -1,3 +1,4 @@
+import { StatusIcon } from '../../../components/StatusIcon'
 import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
@@ -215,7 +216,7 @@ export function SkillProfilePage() {
                       </Link>
                       <Link to={roadmapNodePath(node.id)} className="text-sm font-semibold text-slate-900 hover:text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{node.title}</Link>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${statusStyle[node.status]}`}>{statusLabel[node.status]}</span>
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${statusStyle[node.status]}`}><StatusIcon status={node.status} size={12} />{statusLabel[node.status]}</span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">{node.description}</p>
                   {node.kind === 'skill' && profileLabel && <p className="mt-1 text-[11px] font-medium text-blue-700">Profile level: {profileLabel}</p>}

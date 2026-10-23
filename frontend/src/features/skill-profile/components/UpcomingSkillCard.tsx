@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowRight, Clock3, Container } from 'lucide-react'
+import { StatusIcon } from '../../../components/StatusIcon'
 import { SkillIcon } from '../../../components/SkillIcon'
 import { Link } from 'react-router-dom'
 import type { SkillEvidenceSource, SkillProfileSkill } from '../type'
@@ -21,7 +22,7 @@ export function UpcomingSkillCard({ skill, evidence, onToggleEvidence }: Upcomin
           <div>
             <h3 className="text-base font-bold text-slate-900">{skill.title}</h3>
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
-              <Clock3 size={9} aria-hidden="true" /> Upcoming
+              <StatusIcon status="upcoming" size={12} /> Upcoming
             </span>
           </div>
         </div>
