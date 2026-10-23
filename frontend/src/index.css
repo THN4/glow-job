@@ -42,7 +42,7 @@
 }
 
 .roadmap-current-flow {
-  animation: roadmap-current-flow 1.4s linear infinite;
+  animation: roadmap-current-flow 2s linear infinite;
 }
 
 .roadmap-connection-flow {

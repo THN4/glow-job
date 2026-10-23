@@ -61,7 +61,7 @@ class TaskProgressBody(Camel):
 
 
 class StepProgressBody(Camel):
-    status: Literal["not_started", "in_progress", "completed", "skipped"]
+    status: Literal["not_started", "in_progress", "completed"]
 
 
 @router.get("/profiles/{profile_id}/goal")

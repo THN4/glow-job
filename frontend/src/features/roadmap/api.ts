@@ -1,6 +1,6 @@
 import { getSavedProfileId, getSessionId, loadCareerProfiles, saveCareerGoal } from '../resume/api'
 import type { CareerGoalPreferences } from '../resume/api'
-import type { CareerGoalInput, ProgressStatus, RoadmapJob, RoadmapView } from './api-types'
+import type { CareerGoalInput, RoadmapJob, RoadmapView, StepProgressInput } from './api-types'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
 
@@ -136,7 +136,7 @@ export async function setRoadmapTask(roadmapId: number, taskId: string,
 }
 
 export async function setRoadmapStep(roadmapId: number, stepKey: string,
-                                     status: ProgressStatus): Promise<RoadmapView> {
+                                     status: StepProgressInput): Promise<RoadmapView> {
   const result = await request<{ roadmap: RoadmapView }>(
     `/profiles/${profileId()}/roadmaps/${roadmapId}/steps/${encodeURIComponent(stepKey)}`,
     { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) },

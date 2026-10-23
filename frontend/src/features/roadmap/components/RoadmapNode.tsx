@@ -13,6 +13,13 @@ type RoadmapNodeProps = {
 
 function getNodeStyle(node: RoadmapNodeData) {
   const icon = nodeIconColors[node.kind]
+  if (node.learningContentAvailable === false) {
+    return {
+      card: 'border-dashed border-slate-300 bg-slate-100 opacity-60',
+      icon: 'bg-slate-200 text-slate-500',
+      subtitle: 'font-medium text-slate-500',
+    }
+  }
   if (node.status === 'completed') {
     return {
       card: 'border-emerald-500 bg-emerald-100',
@@ -44,7 +51,7 @@ export function RoadmapNode({ node, width, selected, onSelect, compact = false }
         aria-pressed={selected}
         aria-current={node.status === 'in-progress' ? 'step' : undefined}
         style={{ width, height: compact ? 48 : 60 }}
-        className={`relative z-10 flex h-[60px] shrink-0 items-center gap-2.5 rounded-xl border px-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${styles.card} ${selected ? 'ring-2 ring-blue-300' : ''}`}
+        className={`relative z-10 flex h-[60px] shrink-0 items-center gap-2.5 rounded-xl border px-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${styles.card} ${selected && node.status !== 'in-progress' ? 'ring-2 ring-blue-300' : ''}`}
       >
         {node.status === 'in-progress' && <CurrentStepBorder />}
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${styles.icon}`}>

@@ -7,7 +7,7 @@
     "generation": {
       "provider": "mock",
       "model": "mock-roadmap-v1",
-      "promptVersion": "roadmap-prompt-v5",
+      "promptVersion": "roadmap-prompt-v14",
       "contextId": "ctx_88025785443b4aac8bfe0f4efe0f4e94",
       "reused": false
     },
@@ -46,8 +46,8 @@
     },
     "currentNodeKey": "apache-airflow",
     "layout": {
-      "columns": 4,
-      "rows": 2
+      "columns": 3,
+      "rows": 5
     },
     "nodes": [
       {
@@ -66,7 +66,13 @@
           "targetLevel": null,
           "gapStatus": null,
           "inProfile": true,
-          "profileLabel": "In your profile, level not assessed"
+          "profileLabel": "In your profile, level not assessed",
+          "profileEvidence": [
+            {
+              "evidenceType": "project",
+              "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label."
+            }
+          ]
         },
         "estimatedHours": {
           "min": 1.0,
@@ -77,7 +83,7 @@
         "order": 0,
         "position": {
           "row": 1,
-          "column": 1
+          "column": 2
         },
         "status": "completed",
         "checklist": [
@@ -93,7 +99,8 @@
         "details": [],
         "baselineComplete": false,
         "citations": [],
-        "notice": null
+        "notice": null,
+        "recommendedOrder": null
       },
       {
         "key": "apache-airflow",
@@ -124,7 +131,7 @@
         "layer": 1,
         "order": 0,
         "position": {
-          "row": 1,
+          "row": 2,
           "column": 2
         },
         "status": "in_progress",
@@ -211,7 +218,8 @@
             "quote": "An operator represents a unit of work in Airflow."
           }
         ],
-        "notice": null
+        "notice": null,
+        "recommendedOrder": 1
       },
       {
         "key": "rag",
@@ -236,14 +244,12 @@
           "min": 8.0,
           "max": 14.0
         },
-        "dependsOn": [
-          "apache-airflow"
-        ],
+        "dependsOn": [],
         "layer": 2,
         "order": 0,
         "position": {
-          "row": 1,
-          "column": 3
+          "row": 3,
+          "column": 2
         },
         "status": "not_started",
         "checklist": [
@@ -306,7 +312,8 @@
             "quote": "Models can only handle so much data within the context they consider during a generation request."
           }
         ],
-        "notice": null
+        "notice": null,
+        "recommendedOrder": 2
       },
       {
         "key": "portfolio-project",
@@ -323,13 +330,14 @@
           "max": 8.0
         },
         "dependsOn": [
+          "apache-airflow",
           "rag"
         ],
         "layer": 3,
         "order": 0,
         "position": {
-          "row": 1,
-          "column": 4
+          "row": 4,
+          "column": 2
         },
         "status": "not_started",
         "checklist": [
@@ -345,7 +353,8 @@
         "details": [],
         "baselineComplete": false,
         "citations": [],
-        "notice": null
+        "notice": null,
+        "recommendedOrder": null
       },
       {
         "key": "goal",
@@ -358,43 +367,52 @@
         ],
         "skill": null,
         "estimatedHours": null,
-        "dependsOn": [
-          "portfolio-project"
-        ],
+        "dependsOn": [],
         "layer": 4,
         "order": 0,
         "position": {
-          "row": 2,
-          "column": 3
+          "row": 5,
+          "column": 2
         },
         "status": "not_started",
         "checklist": [],
         "details": [],
         "baselineComplete": false,
         "citations": [],
-        "notice": null
+        "notice": null,
+        "recommendedOrder": null
       }
     ],
     "edges": [
       {
         "from": "check-docker",
         "to": "apache-airflow",
-        "optional": true
+        "optional": true,
+        "kind": "prerequisite"
       },
       {
         "from": "apache-airflow",
-        "to": "rag",
-        "optional": false
+        "to": "portfolio-project",
+        "optional": false,
+        "kind": "prerequisite"
       },
       {
         "from": "rag",
         "to": "portfolio-project",
-        "optional": false
+        "optional": false,
+        "kind": "prerequisite"
       },
       {
         "from": "portfolio-project",
         "to": "goal",
-        "optional": false
+        "optional": true,
+        "kind": "recommended_order"
+      },
+      {
+        "from": "apache-airflow",
+        "to": "rag",
+        "optional": true,
+        "kind": "recommended_order"
       }
     ],
     "deferred": [
@@ -416,17 +434,20 @@
       {
         "skillId": 15,
         "skillName": "Database Systems",
-        "notice": "Related foundation found, but learning content is not ready yet."
+        "notice": "Related foundation found, but learning content is not ready yet.",
+        "recommendedOrder": null
       },
       {
         "skillId": 218,
         "skillName": "vector databases",
-        "notice": "Related foundation found, but learning content is not ready yet."
+        "notice": "Related foundation found, but learning content is not ready yet.",
+        "recommendedOrder": null
       },
       {
         "skillId": 369,
         "skillName": "JSON",
-        "notice": "Related foundation found, but learning content is not ready yet."
+        "notice": "Related foundation found, but learning content is not ready yet.",
+        "recommendedOrder": null
       }
     ],
     "limitations": [

@@ -16,8 +16,9 @@ from ai.roadmap.compact import Budget
 from ai.roadmap.contracts import (
     ChecklistItem, Citation, Confirmation, ContentNotice, DeferredSkill, Edge, Generation,
     HoursRange, Layout, NextAction, NodeSkill, Position, Progress, RoadmapDraft, RoadmapNode,
-    RoadmapView, SkillDetail, Summary,
+    ProfileEvidence, RoadmapView, SkillDetail, Summary,
 )
+from ai.roadmap.ordering import recommended_route_steps, recommended_skill_steps
 from rag.context.agent_models import AgentContext
 
 NOT_READY_NOTICE = "Related foundation found, but learning content is not ready yet."
@@ -55,29 +56,67 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
     confirmed = {s.skill_id: s for s in context.user_context.confirmed_skills}
     names = {**{k: v.skill_name for k, v in mains.items()}, **{k: v.skill_name for k, v in foundations.items()}}
     planned = {step.skill_id for step in draft.steps if step.kind == "skill"}
+    ordered_skills = recommended_skill_steps(draft, context)
+    recommended_order = {step.key: index for index, step in enumerate(ordered_skills, 1)}
+    route_steps = recommended_route_steps(draft, context)
+    route_order = {step.key: index for index, step in enumerate(route_steps, 1)}
 
     def citation(chunk_id: int, quote: str) -> Citation:
         entry = registry[chunk_id]
         return Citation(chunk_id=chunk_id, title=entry.title, url=entry.source_url,
                         heading=entry.heading_path[-1] if entry.heading_path else None, quote=quote)
 
+    def profile_evidence(skill_id: int | None) -> list[ProfileEvidence]:
+        learner_skill = confirmed.get(skill_id) if skill_id is not None else None
+        if learner_skill is None:
+            return []
+        evidence = [ProfileEvidence(evidence_type=item.evidence_type, excerpt=item.excerpt.strip()[:500])
+                    for item in learner_skill.evidence if item.excerpt and item.excerpt.strip()]
+        if evidence:
+            return evidence[:3]
+
+        # Some older profile saves linked a skill to a project but left the
+        # evidence row's text empty. Use only the project text already present
+        # in Agent Context; do not invent a claim or infer one from the skill name.
+        for project in context.user_context.projects:
+            if skill_id not in {item.skill_id for item in project.skills}:
+                continue
+            excerpt_parts = [part.strip() for part in (
+                project.description or "", *project.highlights,
+            ) if part and part.strip()]
+            if excerpt_parts:
+                excerpt = " ".join(excerpt_parts)[:500]
+                evidence.append(ProfileEvidence(evidence_type="project", excerpt=excerpt))
+                if len(evidence) == 3:
+                    break
+        return evidence
+
     nodes: list[RoadmapNode] = []
     for step in draft.steps:
         skill = None
         notice = None
+        learning_content_available = True
         if step.skill_id in mains:
             c = mains[step.skill_id]
+            learning_content_available = (
+                step.kind != "skill"
+                or (c.teaching_content_status == "available" and c.rag_status in {"supported", "partial"})
+            )
             skill = NodeSkill(skill_id=c.skill_id, name=c.skill_name, current_level=c.gap.current_level,
                               target_level=c.gap.target_level, gap_status=c.gap.status,
                               in_profile=c.skill_id in confirmed,
-                              profile_label=profile_label(c.gap.status, c.skill_id in confirmed, c.gap.current_level))
+                              profile_label=profile_label(c.gap.status, c.skill_id in confirmed, c.gap.current_level),
+                              profile_evidence=profile_evidence(c.skill_id))
             if c.teaching_content_status == "outline_only":
                 notice = "Only a topic outline is available. You will need the full tutorial pages."
+            if step.kind == "skill" and not learning_content_available:
+                notice = "Learning content for this skill is not ready yet. This node is shown as a placeholder until reviewed material is available."
         elif step.skill_id in foundations:
             f = foundations[step.skill_id]
             skill = NodeSkill(skill_id=f.skill_id, name=f.skill_name, current_level=f.user_level,
                               target_level=None, gap_status=None, in_profile=f.confirmed_in_user_profile,
-                              profile_label=profile_label(None, f.confirmed_in_user_profile, f.user_level))
+                              profile_label=profile_label(None, f.confirmed_in_user_profile, f.user_level),
+                              profile_evidence=profile_evidence(f.skill_id))
             if f.learning_content_status == "unavailable":
                 notice = NOT_READY_NOTICE
         checklist = [
@@ -112,13 +151,14 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
             why_it_matters=step.why, skill=skill,
             estimated_hours=HoursRange(min=step.hours_min, max=step.hours_max),
             depends_on=step.depends_on, checklist=checklist, details=details,
+            learning_content_available=learning_content_available,
             baseline_complete=step.kind == "completed_skill", citations=list(unique.values()), notice=notice,
+            recommended_order=recommended_order.get(step.key),
         ))
 
     goal = context.user_context.career_goal
     target_role = goal.target_role_title if goal else context.career_context.career_name
     duration = TIMEFRAME_LABEL.get(goal.readiness_timeframe, "") if goal and goal.readiness_timeframe else ""
-    depended_on = {dep for node in nodes for dep in node.depends_on}
     goal_subtitle = (f"Target: {goal.target_date.strftime('%b %d, %Y').replace(' 0', ' ')}" if goal and goal.target_date
                      else f"Target: {duration}" if duration and goal and goal.readiness_timeframe != "no_fixed_deadline"
                      else "No fixed deadline")
@@ -126,10 +166,8 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
         key="goal", kind="goal", title=target_role, subtitle=goal_subtitle,
         summary=f"Your target role: {target_role}.",
         why_it_matters=["Everything above builds toward this goal."],
-        depends_on=[n.key for n in nodes if n.key not in depended_on],
+        depends_on=[],
     ))
-    _place(nodes)
-
     limitations = list(BASE_LIMITATIONS)
     if any(c.teaching_content_status != "available" for c in context.roadmap_candidates):
         limitations.append("Some skills only have a topic outline or partial sources so far.")
@@ -143,13 +181,89 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
                and relationship.target_skill_id in planned
                for relationship in foundation.relationships)
     }
-    edges = [Edge(
+    prerequisite_edges = [Edge(
         from_=dep, to=node.key,
         optional=(by_key[dep].kind == "foundation-check"
                   and by_key[dep].skill is not None
                   and by_key[dep].skill.skill_id not in hard_foundations),
+        kind="prerequisite",
     )
              for node in nodes for dep in node.depends_on]
+    edges = list(prerequisite_edges)
+    edge_pairs = {(edge.from_, edge.to) for edge in edges}
+
+    def already_reaches(start: str, target: str) -> bool:
+        pending = [start]
+        visited: set[str] = set()
+        while pending:
+            current = pending.pop()
+            if current == target:
+                return True
+            if current not in visited:
+                visited.add(current)
+                pending.extend(edge.to for edge in edges if edge.from_ == current)
+        return False
+
+    def add_recommended_edge(source: str, target: str) -> None:
+        pair = (source, target)
+        if source == target or pair in edge_pairs or already_reaches(target, source):
+            return
+        edges.append(Edge(from_=source, to=target, optional=True, kind="recommended_order"))
+        edge_pairs.add(pair)
+
+    completed_steps = [step for step in route_steps if step.kind == "completed_skill"]
+    check_keys = {step.skill_id: step.key for step in draft.steps if step.kind == "foundation_check"}
+    skill_keys = {step.skill_id: step.key for step in ordered_skills}
+    for foundation in context.foundation_mentions:
+        check_key = check_keys.get(foundation.skill_id)
+        if not check_key:
+            continue
+        for relationship in foundation.relationships:
+            target_key = skill_keys.get(relationship.target_skill_id)
+            if target_key:
+                add_recommended_edge(check_key, target_key)
+
+    def incoming(target: str) -> bool:
+        return any(edge.to == target for edge in edges)
+
+    def outgoing(source: str) -> bool:
+        return any(edge.from_ == source for edge in edges)
+
+    # Checks without a prior step branch from completed context when available, then
+    # join the first planned gap if they do not already point to a related skill.
+    for step in (item for item in route_steps if item.kind == "foundation_check"):
+        if not incoming(step.key) and completed_steps:
+            add_recommended_edge(completed_steps[-1].key, step.key)
+        if not outgoing(step.key) and ordered_skills:
+            add_recommended_edge(step.key, ordered_skills[0].key)
+
+    # Projects without an explicit model-authored prerequisite can still sit at
+    # the end of the learning route. Multiple projects remain parallel and can
+    # converge at a later activity or at the goal.
+    last_learning = (ordered_skills[-1].key if ordered_skills else
+                     next((step.key for step in reversed(route_steps)
+                           if step.kind in {"foundation_check", "completed_skill"}), None))
+    projects = [step for step in route_steps if step.kind == "project"]
+    activities = [step for step in route_steps if step.kind == "career_activity"]
+    for project in projects:
+        if not incoming(project.key) and last_learning:
+            add_recommended_edge(last_learning, project.key)
+    project_sinks = [step.key for step in projects if not outgoing(step.key)]
+    for activity in activities:
+        if not incoming(activity.key):
+            parents = project_sinks or ([last_learning] if last_learning else [])
+            for parent in parents:
+                if parent:
+                    add_recommended_edge(parent, activity.key)
+
+    # Every branch reaches the target role. These optional joins show completion
+    # of the roadmap path without claiming that every branch is a hard prerequisite.
+    for node in nodes:
+        if node.key != "goal" and not outgoing(node.key):
+            add_recommended_edge(node.key, "goal")
+
+    route_order["goal"] = len(route_order) + 1
+    _place(nodes, edges, route_order)
     weekly = (HoursRange(min=budget.weekly_min, max=budget.weekly_max)
               if budget.weekly_min is not None and budget.weekly_max is not None else None)
     view = RoadmapView(
@@ -188,6 +302,7 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
 
 def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_steps: set[str],
                    started_steps: set[str] | None = None, today: date | None = None,
+                   confirmed_steps: set[str] | None = None,
                    verified_tasks: set[str] | None = None, review_tasks: set[str] | None = None,
                    question_counts: dict[int, int] | None = None) -> RoadmapView:
     """Recalculate everything that depends on progress or on today's date.
@@ -196,13 +311,21 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
     "in progress" without ticking a task yet.
     """
     view = view.model_copy(deep=True)
+    route_order = {node.key: node.recommended_order for node in view.nodes if node.recommended_order is not None}
+    _place(view.nodes, view.edges, route_order)
+    view.layout = Layout(columns=grid.COLUMNS, rows=max(node.position.row for node in view.nodes))
     started_steps = started_steps or set()
+    confirmed_steps = confirmed_steps or set()
     by_key = {node.key: node for node in view.nodes}
     hard_checks = {edge.from_ for edge in view.edges if not edge.optional
                    and by_key[edge.from_].kind == "foundation-check"}
     done_steps = total_steps = done_tasks = total_tasks = 0
     for node in view.nodes:
         if node.kind == "goal":
+            continue
+        if not node.learning_content_available:
+            node.status = "not_started"
+            node.subtitle = _subtitle(node)
             continue
         if node.baseline_complete:
             node.status = "completed"
@@ -215,10 +338,10 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
             item.question_count = (min(2, sum((question_counts or {}).get(c.chunk_id, 0) for c in item.citations))
                                    if item.task_kind == "learn" else 0)
         finished = sum(item.completed for item in node.checklist)
-        if node.key in skipped_steps:
-            node.status = "skipped"
-        elif node.checklist and finished == len(node.checklist):
+        if node.key in confirmed_steps:
             node.status = "completed"
+        elif node.key in skipped_steps:
+            node.status = "skipped"
         elif finished or node.key in started_steps:
             node.status = "in_progress"
         else:
@@ -239,17 +362,16 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
         label=f"{done_tasks} of {total_tasks} tasks done")
 
     ordered = sorted(view.nodes, key=lambda n: (n.position.row, n.position.column))
-    finished_states = {"completed", "skipped"}
-
     def unlocked(node: RoadmapNode) -> bool:
         required = [edge for edge in view.edges if edge.to == node.key and not edge.optional]
-        return all(by_key[edge.from_].status == "completed" if edge.from_ in hard_checks
-                   else by_key[edge.from_].status in finished_states for edge in required)
+        return all(by_key[edge.from_].status == "completed" for edge in required)
 
     chosen = by_key.get(view.next_action.node_key)
-    if chosen is None or chosen.status in finished_states or not unlocked(chosen):
+    if (chosen is None or not chosen.learning_content_available
+            or chosen.status in {"completed", "skipped"} or not unlocked(chosen)):
         upcoming = next((n for n in ordered if n.kind != "goal"
-                         and (n.status not in finished_states or n.key in hard_checks and n.status == "skipped")
+                         and n.learning_content_available
+                         and n.status not in {"completed", "skipped"}
                          and unlocked(n)),
                         None)
         if upcoming is not None:
@@ -263,6 +385,8 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
 
 
 def _subtitle(node: RoadmapNode) -> str:
+    if not node.learning_content_available:
+        return "Content not ready"
     if node.status == "completed":
         return "Completed"
     if node.status == "in_progress":
@@ -289,11 +413,15 @@ def _remaining(view: RoadmapView, today: date) -> str:
     return f"{summary.duration_label} plan"
 
 
-def _place(nodes: list[RoadmapNode]) -> None:
+def _place(nodes: list[RoadmapNode], edges: list[Edge],
+           route_order: dict[str, int] | None = None) -> None:
     keys = [node.key for node in nodes]
-    deps = {node.key: node.depends_on for node in nodes}
-    layers = grid.depth(keys, deps)
-    positions = grid.place(keys, deps)
+    deps = {node.key: list(node.depends_on) for node in nodes}
+    for edge in edges:
+        if not edge.optional:
+            deps.setdefault(edge.to, []).append(edge.from_)
+    layers = grid.depth(keys, deps, route_order)
+    positions = grid.place(keys, deps, route_order)
     counts: dict[int, int] = {}
     for node in nodes:
         node.layer = layers[node.key]

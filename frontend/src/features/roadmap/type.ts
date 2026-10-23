@@ -35,6 +35,8 @@ export type RoadmapNodeData = {
   title: string
   kind: RoadmapNodeKind
   status: RoadmapNodeStatus
+  /** False for a visible placeholder node whose reviewed learning content is not ready. */
+  learningContentAvailable?: boolean
   baselineComplete?: boolean
   position: RoadmapNodePosition
   subtitle: string
@@ -49,6 +51,8 @@ export type RoadmapConnection = {
   to: string
   /** Dashed lines indicate a recommended/optional path. */
   optional?: boolean
+  kind?: 'prerequisite' | 'recommended_order'
+  label?: string
 }
 
 export type RoadmapSummary = {

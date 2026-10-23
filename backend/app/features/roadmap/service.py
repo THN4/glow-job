@@ -207,8 +207,17 @@ class RoadmapService:
     async def set_task(self, profile_id: str, session_id: str, roadmap_id: int, item_id: str,
                        completed: bool) -> RoadmapView:
         user_id = await self.owner(profile_id, session_id)
-        if not await asyncio.to_thread(self.repo.set_task, user_id, roadmap_id, item_id, completed):
+        current = await asyncio.to_thread(self.repo.current, user_id)
+        if current is None:
+            raise AppError("ROADMAP_NOT_FOUND")
+        step_key, _, _ = item_id.rpartition(".")
+        node = next((item for item in current.nodes if item.key == step_key), None)
+        if node is None or not any(task.id == item_id for task in node.checklist):
             raise AppError("TASK_NOT_FOUND")
+        if node.status != "in_progress":
+            raise AppError("ROADMAP_STEP_LOCKED", "Start this step after its prerequisites are complete.")
+        if not await asyncio.to_thread(self.repo.set_task, user_id, roadmap_id, item_id, completed):
+            raise AppError("ROADMAP_STEP_LOCKED", "Only an in-progress step can be changed.")
         view = await asyncio.to_thread(self.repo.current, user_id)
         if view is None:
             raise AppError("ROADMAP_NOT_FOUND")
@@ -220,10 +229,34 @@ class RoadmapService:
         current = await asyncio.to_thread(self.repo.current, user_id)
         if current is None:
             raise AppError("ROADMAP_NOT_FOUND")
-        if any(node.key == step_key and node.baseline_complete for node in current.nodes):
-            raise AppError("TASK_NOT_FOUND", "This skill is already complete in your confirmed profile.")
-        if not await asyncio.to_thread(self.repo.set_step, user_id, roadmap_id, step_key, status):
+        node = next((item for item in current.nodes if item.key == step_key), None)
+        if node is None:
             raise AppError("TASK_NOT_FOUND", "The roadmap step was not found.")
+        if node.baseline_complete:
+            raise AppError("TASK_NOT_FOUND", "This skill is already complete in your confirmed profile.")
+        if status not in {"not_started", "in_progress", "completed"}:
+            raise AppError("ROADMAP_STEP_LOCKED", "This step action is not supported.")
+        if status == "in_progress":
+            if node.status == "completed":
+                raise AppError("ROADMAP_STEP_LOCKED", "Reset this step before starting it again.")
+            blockers = [edge.from_ for edge in current.edges if edge.to == step_key and not edge.optional
+                        and next((item.status for item in current.nodes if item.key == edge.from_), None)
+                        != "completed"]
+            if blockers:
+                raise AppError("ROADMAP_STEP_LOCKED", "Complete the connected prerequisite steps first.")
+        elif status == "completed":
+            if node.status != "in_progress" or not node.checklist or not all(item.completed for item in node.checklist):
+                raise AppError("CHECKLIST_INCOMPLETE", "Complete every checklist item before confirming this step.")
+        elif status == "not_started" and node.status == "completed":
+            completed_dependents = [edge.to for edge in current.edges if edge.from_ == step_key
+                                    and next((item.status for item in current.nodes if item.key == edge.to), None)
+                                    == "completed"]
+            if completed_dependents:
+                raise AppError("ROADMAP_STEP_LOCKED", "Reset the later completed steps first.")
+        if not await asyncio.to_thread(self.repo.set_step, user_id, roadmap_id, step_key, status):
+            if status == "completed":
+                raise AppError("CHECKLIST_INCOMPLETE", "Complete every checklist item before confirming this step.")
+            raise AppError("ROADMAP_STEP_LOCKED", "This step is locked or could not be updated.")
         view = await asyncio.to_thread(self.repo.current, user_id)
         if view is None:
             raise AppError("ROADMAP_NOT_FOUND")
