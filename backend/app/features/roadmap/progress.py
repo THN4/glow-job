@@ -11,7 +11,8 @@ def progress_overview(connection: Any, user_id: int, career_profile_id: int | No
         SELECT
             (SELECT count(*) FROM app.user_skills WHERE user_id = %(user_id)s),
             (SELECT count(*) FROM app.user_skill_evidence e JOIN app.user_skills s USING (user_skill_id)
-             WHERE s.user_id = %(user_id)s),
+             WHERE s.user_id = %(user_id)s)
+             + (SELECT count(*) FROM app.user_skill_artifacts WHERE user_id = %(user_id)s),
             (SELECT max(generated_at) FROM app.roadmaps WHERE user_id = %(user_id)s AND status = 'active'),
             (SELECT updated_at FROM app.user_profiles WHERE user_id = %(user_id)s),
             (SELECT max(updated_at) FROM app.user_career_goals WHERE user_id = %(user_id)s AND is_primary),
@@ -53,6 +54,13 @@ def progress_overview(connection: Any, user_id: int, career_profile_id: int | No
                    coalesce(e.evidence_text, e.evidence_type), NULL, e.created_at, NULL
             FROM app.user_skill_evidence e JOIN app.user_skills s USING (user_skill_id)
             WHERE s.user_id = %(user_id)s
+            UNION ALL
+            SELECT 'artifact-' || a.artifact_id, 'evidence',
+                   'Evidence saved for ' || s.skill_name,
+                   a.title || CASE WHEN a.notes <> '' THEN ': ' || a.notes ELSE '' END,
+                   NULL, a.created_at, NULL
+            FROM app.user_skill_artifacts a JOIN core.skills s USING (skill_id)
+            WHERE a.user_id = %(user_id)s
             UNION ALL
             SELECT 'assessment-' || a.assessment_id, 'assessment',
                    coalesce(s.skill_name, 'Roadmap step') || ' assessment completed',

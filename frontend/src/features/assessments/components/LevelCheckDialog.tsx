@@ -9,6 +9,7 @@ import { QuestionCard } from './QuestionCard'
 
 type LevelCheckDialogProps = {
   onClose: () => void
+  onDecision?: (kept: boolean) => void
   skillId: number
   skillName: string
   entryPoint: EntryPoint
@@ -27,7 +28,7 @@ const SELF_ANSWERS: Array<[Answer, string]> = [['yes', 'Yes'], ['unsure', 'Not s
 const CONFIDENCE_STYLE = { high: 'bg-emerald-50 text-emerald-700', medium: 'bg-blue-50 text-blue-700', low: 'bg-amber-50 text-amber-800' }
 
 /** Mount only while open; each mount starts one level check. */
-export function LevelCheckDialog({ onClose, skillId, skillName, entryPoint }: LevelCheckDialogProps) {
+export function LevelCheckDialog({ onClose, onDecision, skillId, skillName, entryPoint }: LevelCheckDialogProps) {
   const queryClient = useQueryClient()
   const [phase, setPhase] = useState<Phase>({ kind: 'loading' })
   const [selfAnswers, setSelfAnswers] = useState<Record<string, Answer>>({})
@@ -63,6 +64,7 @@ export function LevelCheckDialog({ onClose, skillId, skillName, entryPoint }: Le
       await assessmentsApi.decide(phase.result.assessmentId, kept ? 'accepted' : 'declined')
       setPhase({ kind: 'done', kept, result: phase.result })
       void queryClient.invalidateQueries({ queryKey: overviewKey() })
+      onDecision?.(kept)
     } catch (error) {
       setPhase({ kind: 'error', message: (error as Error).message })
     } finally {

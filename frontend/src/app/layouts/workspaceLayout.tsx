@@ -1,4 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { applicationsApi } from '../../features/applications/api'
 import { PanelLeftOpen } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
@@ -13,13 +15,11 @@ import type {
 } from '../../features/workspace/type'
 
 type WorkspaceLayoutProps = {
-  marketUpdate: MarketUpdate
   onHelpClick: () => void
   onProfileClick: () => void
 }
 
 export function WorkspaceLayout({
-  marketUpdate,
   onHelpClick,
   onProfileClick,
 }: WorkspaceLayoutProps) {
@@ -33,6 +33,19 @@ export function WorkspaceLayout({
   const user: WorkspaceUser = {
     name: savedProfile.data?.profile.personal.fullName?.trim() || 'Your profile',
     subtitle: targetRole ? `Aspiring ${targetRole}` : 'Set your career goal',
+  }
+  const jobPostingsQuery = useQuery({
+    queryKey: ['job-postings'],
+    queryFn: applicationsApi.jobPostings,
+    staleTime: 5 * 60 * 1000,
+  })
+  const marketUpdate: MarketUpdate = {
+    title: 'Job Market',
+    summary: jobPostingsQuery.isPending
+      ? 'Loading current job openings...'
+      : jobPostingsQuery.isError
+        ? 'Current job market data is unavailable.'
+        : `${jobPostingsQuery.data.length} job openings are available from the database.`,
   }
   const isRoadmapPage = pathname.startsWith('/app/roadmap')
   const scrollRef = useRef<HTMLDivElement>(null)

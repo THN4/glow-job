@@ -20,15 +20,16 @@ export type NewApplicationInput = {
   jobUrl: string;
   applicationDate: string;
   jobDescription: string;
+  location: string;
 };
 
 type AddApplicationFormProps = {
   onCancel: () => void;
-  onSave: (application: NewApplicationInput) => void;
+  onSave: (application: NewApplicationInput) => Promise<void>;
   initialApplication?: ApplicationEntry;
+  isSaving?: boolean;
+  saveError?: string | null;
 };
-
-const sampleDescription = `About the role\nJoin a sample travel-data team to help turn raw data into reliable datasets for analytics. Work with engineers and analysts on supervised pipeline tasks in Bangkok. This is an illustrative internship description, not a verified live posting.\n\nResponsibilities\nโ€ข Build and maintain Python and SQL ETL pipelines.\nโ€ข Validate source data, investigate quality issues and document transformations.\nโ€ข Collaborate with analysts to deliver reusable tables and monitor scheduled jobs.\n\nRequired skills\nโ€ข Studying or recently graduated in Computer Science or a related field.\nโ€ข Python programming, SQL joins and basic relational database concepts.\nโ€ข Understanding of ETL and willingness to learn, communicate and review code.\n\nPreferred skills\nโ€ข Familiarity with Docker and version control.\nโ€ข Exposure to Spark, cloud data platforms and workflow scheduling.\nโ€ข A small data-pipeline project with clear documentation.`;
 
 const inputClassName =
   "min-h-10 w-full rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
@@ -37,13 +38,11 @@ export function AddApplicationForm({
   onCancel,
   onSave,
   initialApplication,
+  isSaving = false,
+  saveError,
 }: AddApplicationFormProps) {
-  const [company, setCompany] = useState(
-    initialApplication?.company ?? "Agoda",
-  );
-  const [role, setRole] = useState(
-    initialApplication?.role ?? "Data Engineer Intern",
-  );
+  const [company, setCompany] = useState(initialApplication?.company ?? "");
+  const [role, setRole] = useState(initialApplication?.role ?? "");
   const [jobUrl, setJobUrl] = useState(initialApplication?.jobUrl ?? "");
   const [status, setStatus] = useState<ApplicationStatus>(
     initialApplication?.status ?? "wishlist",
@@ -53,24 +52,30 @@ export function AddApplicationForm({
   );
   const [nextStep, setNextStep] = useState(
     initialApplication?.nextStep ??
-      "Review the requirements and tailor my ETL project summary before applying.",
+      "",
   );
   const [jobDescription, setJobDescription] = useState(
-    initialApplication?.jobDescription ?? sampleDescription,
+    initialApplication?.jobDescription ?? "",
   );
+  const [location, setLocation] = useState(initialApplication?.location ?? "");
   const [editingDescription, setEditingDescription] = useState(false);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    onSave({
-      company: company.trim(),
-      role: role.trim(),
-      status,
-      nextStep: nextStep.trim(),
-      jobUrl: jobUrl.trim(),
-      applicationDate,
-      jobDescription: jobDescription.trim(),
-    });
+    try {
+      await onSave({
+        company: company.trim(),
+        role: role.trim(),
+        status,
+        nextStep: nextStep.trim(),
+        jobUrl: jobUrl.trim(),
+        applicationDate,
+        jobDescription: jobDescription.trim(),
+        location: location.trim(),
+      });
+    } catch {
+      // The parent mutation exposes the error and keeps the form open for retry.
+    }
   }
 
   return (
@@ -193,16 +198,11 @@ export function AddApplicationForm({
                   Job description
                 </h3>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  Review or edit the saved description below.
+                  Add the description from the original job posting if you want to keep it.
                 </p>
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {!initialApplication?.jobDescription && (
-                <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-                  Sample content
-                </span>
-              )}
               <button
                 type="button"
                 onClick={() => setEditingDescription((editing) => !editing)}
@@ -237,17 +237,22 @@ export function AddApplicationForm({
               />
             ) : (
               <div className="min-h-[360px] max-h-[390px] space-y-3 overflow-y-auto whitespace-pre-line text-sm leading-relaxed text-slate-600">
-                {jobDescription.split("\n\n").map((paragraph, index) => (
+                {jobDescription ? jobDescription.split("\n\n").map((paragraph, index) => (
                   <p key={`${index}-${paragraph.slice(0, 10)}`}>{paragraph}</p>
-                ))}
+                )) : <span className="text-slate-400">No job description added.</span>}
               </div>
             )}
           </div>
           <p className="mt-2 text-[11px] text-slate-500">
-            Illustrative sample, not a verified live posting.
+            Save only details you entered or verified.
           </p>
         </section>
         </div>
+
+        <label className="mt-3 block space-y-1.5 text-xs font-semibold text-slate-800">
+          Location · optional
+          <input value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Bangkok or Remote" className={inputClassName} />
+        </label>
 
         <div className="my-5 border-t border-blue-200" aria-hidden="true" />
 
@@ -281,6 +286,7 @@ export function AddApplicationForm({
           </label>
         </section>
 
+        {saveError && <p role="alert" className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{saveError}</p>}
         <footer className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
           <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
             <CheckCircle2
@@ -288,7 +294,7 @@ export function AddApplicationForm({
               className="text-emerald-600"
               aria-hidden="true"
             />
-            Saves to your tracker. Does not submit a job application.
+            Saves this entry to your personal tracker.
           </span>
           <div className="ml-auto flex items-center gap-2">
             <button
@@ -300,10 +306,11 @@ export function AddApplicationForm({
             </button>
             <button
               type="submit"
-              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
+              disabled={isSaving}
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60"
             >
               <Save size={15} aria-hidden="true" />{" "}
-              {initialApplication ? "Save Changes" : "Save Application"}
+              {isSaving ? "Saving…" : initialApplication ? "Save Changes" : "Save Application"}
             </button>
           </div>
         </footer>

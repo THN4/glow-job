@@ -297,6 +297,22 @@ async def get_career_match(
     return result
 
 
+@router.get("/profiles/{profile_id}/career-recommendations")
+async def get_career_recommendations(
+    profile_id: str,
+    session_id: str = Header(alias="X-Session-Id", min_length=1, max_length=100),
+    limit: int = Query(default=6, gt=0, le=20),
+    svc: Services = Depends(get_services),
+) -> dict[str, Any]:
+    """Rank market career profiles by overlap with the caller's confirmed skills."""
+    if svc.career_match is None:
+        raise AppError("CAREER_MATCH_UNAVAILABLE", "Career matching requires the shared database.")
+    result = await svc.career_match.recommendations(profile_id, session_id, limit)
+    if result is None:
+        raise AppError("PROFILE_NOT_FOUND")
+    return result
+
+
 def _issues(err: ValidationError) -> list[dict[str, str]]:
     return [{"path": ".".join(str(p) for p in e["loc"]), "message": e["msg"]} for e in err.errors()]
 

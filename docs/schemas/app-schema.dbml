@@ -254,6 +254,19 @@ Table app.user_skill_evidence {
   created_at timestamptz [not null, default: `now()`]
 }
 
+Table app.user_skill_artifacts {
+  artifact_id bigint [pk, increment]
+  user_id bigint [not null]
+  skill_id bigint [not null]
+  evidence_type text [not null, note: 'github_project, certificate, or self_report']
+  title varchar(160) [not null]
+  source_url text
+  notes text [not null, default: '']
+  photo_data text [note: 'Optional data URL for a small certificate or self-report image, up to 500 KB.']
+  created_at timestamptz [not null, default: `now()`]
+  updated_at timestamptz [not null, default: `now()`]
+}
+
 Table app.user_career_goals {
   goal_id bigint [pk, increment]
   user_id bigint [not null]
@@ -437,6 +450,8 @@ Ref: app.user_skills.user_id > app.users.user_id
 Ref: app.user_skill_evidence.user_skill_id > app.user_skills.user_skill_id
 Ref: app.user_skill_evidence.resume_id > app.resumes.resume_id
 Ref: app.user_skill_evidence.experience_id > app.user_experiences.experience_id
+Ref: app.user_skill_artifacts.user_id > app.users.user_id
+Ref: app.user_skill_artifacts.skill_id > core.skills.skill_id
 Ref: app.user_career_goals.user_id > app.users.user_id
 Ref: app.user_certifications.user_id > app.users.user_id
 Ref: app.user_certifications.source_resume_id > app.resumes.resume_id

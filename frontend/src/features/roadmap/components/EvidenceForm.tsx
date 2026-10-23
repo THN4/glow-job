@@ -6,7 +6,7 @@ import type { RoadmapEvidence } from '../type'
 
 type EvidenceFormProps = {
   topic: string
-  onSave: (evidence: RoadmapEvidence) => void
+  onSave: (evidence: RoadmapEvidence) => void | Promise<void>
 }
 
 export function EvidenceForm({ topic, onSave }: EvidenceFormProps) {
@@ -16,7 +16,8 @@ export function EvidenceForm({ topic, onSave }: EvidenceFormProps) {
   const [photo, setPhoto] = useState<string>()
   const [photoName, setPhotoName] = useState('')
   const [reading, setReading] = useState(false)
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  const [saving, setSaving] = useState(false)
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const title = String(form.get('title') ?? '').trim()
@@ -31,8 +32,15 @@ export function EvidenceForm({ topic, onSave }: EvidenceFormProps) {
       setError('Enter a valid http or https link.')
       return
     }
-    onSave({ id: crypto.randomUUID(), type, title, url, notes, photo: type !== 'GitHub project' ? photo : undefined })
-    setOpen(false)
+    setSaving(true)
+    try {
+      await onSave({ id: crypto.randomUUID(), type, title, url, notes, photo: type !== 'GitHub project' ? photo : undefined })
+      setOpen(false)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'Could not save evidence.')
+    } finally {
+      setSaving(false)
+    }
   }
   const fieldClass = 'mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm focus-visible:outline-primary'
   return (
@@ -45,22 +53,22 @@ export function EvidenceForm({ topic, onSave }: EvidenceFormProps) {
         <DialogDescription>Add a project, certificate, or study notes for {topic}.</DialogDescription>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm font-medium">Evidence type
-            <select name="type" value={type} onChange={(event) => { setType(event.target.value as RoadmapEvidence['type']); setPhoto(undefined); setError('') }} disabled={reading} className={fieldClass}>
+            <select name="type" value={type} onChange={(event) => { setType(event.target.value as RoadmapEvidence['type']); setPhoto(undefined); setError('') }} disabled={reading || saving} className={fieldClass}>
               <option>GitHub project</option><option>Certificate</option><option>Self report</option>
             </select>
           </label>
           <label className="block text-sm font-medium">Title
-            <input name="title" required maxLength={160} className={fieldClass} placeholder="My pipeline project" />
+              <input name="title" required maxLength={160} disabled={saving} className={fieldClass} placeholder="My pipeline project" />
           </label>
           {type !== 'Self report' && <label className="block text-sm font-medium">{type === 'Certificate' ? 'Certificate link' : 'Project link'}
-            <input key={type} name="url" type="url" required={type === 'GitHub project'} maxLength={2048} className={fieldClass} placeholder="https://…" />
+            <input key={type} name="url" type="url" required={type === 'GitHub project'} maxLength={2048} disabled={saving} className={fieldClass} placeholder="https://…" />
           </label>}
           {type !== 'GitHub project' && <label className="block text-sm font-medium">{type === 'Certificate' ? 'Certificate photo (optional with link)' : 'Photo (optional)'}
             <div className="mt-1 flex flex-wrap items-center gap-2">
             <label className="relative inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-white px-2.5 text-xs font-medium text-foreground shadow-xs transition hover:bg-accent focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
               <Plus size={14} className="text-primary" aria-hidden="true" />
               Add file
-              <input key={`${type}-photo`} type="file" accept="image/png,image/jpeg,image/webp" aria-label={type === 'Certificate' ? 'Upload a certificate photo' : 'Add an optional photo to your self report'} className="absolute inset-0 cursor-pointer opacity-0" disabled={reading} onChange={(event) => {
+              <input key={`${type}-photo`} type="file" accept="image/png,image/jpeg,image/webp" aria-label={type === 'Certificate' ? 'Upload a certificate photo' : 'Add an optional photo to your self report'} className="absolute inset-0 cursor-pointer opacity-0" disabled={reading || saving} onChange={(event) => {
               const file = event.target.files?.[0]
               setPhoto(undefined)
               setPhotoName('')
@@ -86,13 +94,13 @@ export function EvidenceForm({ topic, onSave }: EvidenceFormProps) {
           </label>
           }
           <label className="block text-sm font-medium">Notes
-            <textarea name="notes" required={type === 'Self report'} rows={4} maxLength={4000} className={fieldClass} placeholder="Describe what you built or learned…" />
+            <textarea name="notes" required={type === 'Self report'} rows={4} maxLength={4000} disabled={saving} className={fieldClass} placeholder="Describe what you built or learned…" />
           </label>
-          <p className="text-xs text-muted-foreground">Evidence is saved in this browser.</p>
+          <p className="text-xs text-muted-foreground">Evidence is saved to your profile.</p>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
-            <button type="submit" disabled={reading} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">Save evidence</button>
+            <button type="button" onClick={() => setOpen(false)} disabled={saving} className="rounded-lg border border-border px-4 py-2 text-sm">Cancel</button>
+            <button type="submit" disabled={reading || saving} className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50">{saving ? 'Saving…' : 'Save evidence'}</button>
           </div>
         </form>
       </DialogContent>

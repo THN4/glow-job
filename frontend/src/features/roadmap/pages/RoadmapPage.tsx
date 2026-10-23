@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
-import { getSavedProfileId, getSessionId } from '../../resume/api'
+import { getSavedProfileId } from '../../resume/api'
 import { NodeDetailPanel } from '../components/NodeDetailPanel'
 import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
 import { generateRoadmap, setRoadmapStep, setRoadmapTask } from '../api'
-import { useCurrentRoadmap } from '../useCurrentRoadmap'
+import { currentRoadmapKey, useCurrentRoadmap } from '../useCurrentRoadmap'
 import type { ProgressStatus, RoadmapJob, RoadmapView } from '../api-types'
 import { toRoadmapScreen } from '../adapter'
 
@@ -21,7 +21,7 @@ export function RoadmapPage() {
   const [error, setError] = useState<string | null>(null)
 
   function setView(next: RoadmapView) {
-    queryClient.setQueryData(['current-roadmap', getSessionId(), getSavedProfileId()], next)
+    queryClient.setQueryData(currentRoadmapKey(getSavedProfileId()), next)
     void queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
   }
 

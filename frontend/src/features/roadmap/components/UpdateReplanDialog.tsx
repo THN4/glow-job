@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../../../components/ui/dialog'
-import { getSavedProfileId, getSessionId, saveProfile } from '../../resume/api'
+import { getSavedProfileId, saveProfile } from '../../resume/api'
 import { useSavedProfile } from '../../resume/useSavedProfile'
 import { generateRoadmap, updateRoadmapGoal } from '../api'
 import { useCareerGoal } from '../useCareerGoal'
 import { applyProfileUpdates } from '../profileUpdates'
+import { currentRoadmapKey } from '../useCurrentRoadmap'
 
 const inputClass = 'mt-1 min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm'
 
@@ -47,7 +48,7 @@ export function UpdateReplanDialog({ onClose }: { onClose: () => void }) {
         queryClient.invalidateQueries({ queryKey: ['market-career-match'] }),
       ])
       const roadmap = await generateRoadmap(setStage, undefined, true)
-      queryClient.setQueryData(['current-roadmap', getSessionId(), getSavedProfileId()], roadmap)
+      queryClient.setQueryData(currentRoadmapKey(getSavedProfileId()), roadmap)
       await queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
       onClose()
     } catch (caught) {

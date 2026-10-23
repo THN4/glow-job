@@ -64,7 +64,7 @@ export function SelectableCard({
         selected &&
           "border-primary bg-accent text-primary shadow-sm hover:border-primary",
         cardVariant === "inline-radio" &&
-          "min-h-18 flex-row justify-start gap-4 px-4 py-3 text-left",
+          "h-full min-h-[5.5rem] flex-row justify-start gap-4 px-4 py-3 text-left",
         className,
       )}
     >
@@ -111,6 +111,7 @@ export function SelectableCard({
             className={cn(
               "text-sm leading-5 text-muted-foreground",
               cardVariant === "inline-radio" && selected && "text-primary",
+            cardVariant === "inline-radio" && "deadline-option-description",
             )}
           >
             {sublabel}
