@@ -185,22 +185,6 @@
   animation: roadmap-build-route 3s linear infinite;
 }
 
-.roadmap-build-node {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  width: 46px;
-  height: 46px;
-  border: 3px solid white;
-  border-radius: 50%;
-  color: white;
-  box-shadow: 0 4px 16px #7c8de433;
-}
-
-.roadmap-build-node-one { left: 6%; top: 60%; background: #60a5fa; }
-.roadmap-build-node-two { left: 30%; top: 61%; background: #a78bfa; }
-.roadmap-build-node-three { left: 54%; top: 35%; background: #6acfb5; }
-.roadmap-build-node-four { right: 3%; top: 32%; background: #ff9865; }
 
 .roadmap-build-label {
   position: absolute;
@@ -245,8 +229,6 @@
   .roadmap-build-board { inset: 20% 5% 18%; padding: 12px; border-width: 7px; }
   .roadmap-build-label { padding: 7px; font-size: 10px; gap: 5px; }
   .roadmap-build-label > svg { width: 27px; height: 27px; }
-  .roadmap-build-node { width: 36px; height: 36px; }
-  .roadmap-build-node > svg { width: 18px; }
 }
 
 @keyframes roadmap-build-dot {

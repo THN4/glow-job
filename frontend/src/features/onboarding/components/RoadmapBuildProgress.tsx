@@ -14,6 +14,14 @@ const steps = [
   { title: 'Save your roadmap', description: 'Validating your plan and saving it to your profile.' },
 ]
 
+const illustrationNodes = [
+  { x: 35, y: 100, color: '#60a5fa', Icon: FileText },
+  { x: 145, y: 110, color: '#a78bfa', Icon: BarChart3 },
+  { x: 245, y: 35, color: '#6acfb5', Icon: GraduationCap },
+  { x: 365, y: 40, color: '#ff9865', Icon: BriefcaseBusiness },
+]
+const illustrationRoute = 'M35 100 C80 140 100 110 145 110 S205 35 245 35 S310 80 365 40'
+
 export function RoadmapBuildProgress({ stage, goalSaved }: RoadmapBuildProgressProps) {
   const activeIndex = !goalSaved ? 0 : stage === 'done' ? 4 : stage === 'generating' ? 2 : stage === 'saving' ? 3 : 1
   const status = stage === 'queued' ? 'Waiting to start your roadmap…' : steps[activeIndex]?.title ?? 'Your roadmap is ready'
@@ -37,13 +45,13 @@ export function RoadmapBuildProgress({ stage, goalSaved }: RoadmapBuildProgressP
                 <div className="flex-1 space-y-2"><div className="h-2 w-3/5 rounded-full bg-indigo-200" /><div className="h-2 w-1/3 rounded-full bg-indigo-100" /></div>
               </div>
               <svg viewBox="0 0 400 150" className="roadmap-build-path" fill="none">
-                <path d="M30 115 C95 145 105 105 145 100 S205 10 255 35 S320 65 370 30" stroke="#dbeafe" strokeWidth="11" />
-                <path className="roadmap-build-route" d="M30 115 C95 145 105 105 145 100 S205 10 255 35 S320 65 370 30" stroke="#8b9df6" strokeWidth="7" strokeLinecap="round" />
+                <path d={illustrationRoute} stroke="#dbeafe" strokeWidth="11" />
+                <path className="roadmap-build-route" d={illustrationRoute} stroke="#8b9df6" strokeWidth="7" strokeLinecap="round" />
+                {illustrationNodes.map(({ x, y, color, Icon }) => <g key={color}>
+                  <circle cx={x} cy={y} r="21" fill={color} stroke="white" strokeWidth="3" />
+                  <Icon x={x - 12} y={y - 12} width="24" height="24" color="white" />
+                </g>)}
               </svg>
-              <span className="roadmap-build-node roadmap-build-node-one"><FileText /></span>
-              <span className="roadmap-build-node roadmap-build-node-two"><BarChart3 /></span>
-              <span className="roadmap-build-node roadmap-build-node-three"><GraduationCap /></span>
-              <span className="roadmap-build-node roadmap-build-node-four"><BriefcaseBusiness /></span>
               <div className="absolute bottom-5 right-6 space-y-2 rounded-lg bg-indigo-100/70 p-3"><div className="h-1.5 w-20 rounded bg-white" /><div className="h-1.5 w-12 rounded bg-white/70" /></div>
             </div>
             <div className="roadmap-build-label roadmap-build-label-one"><BarChart3 className="bg-blue-100 text-blue-500" /><span>Analyzing<br />your skills</span></div>
