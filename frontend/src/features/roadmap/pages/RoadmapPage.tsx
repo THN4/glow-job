@@ -22,6 +22,7 @@ export function RoadmapPage() {
 
   function setView(next: RoadmapView) {
     queryClient.setQueryData(['current-roadmap', getSessionId(), getSavedProfileId()], next)
+    void queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
   }
 
   const screen = useMemo(() => view ? toRoadmapScreen(view) : null, [view])

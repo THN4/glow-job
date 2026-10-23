@@ -1,6 +1,7 @@
 import { getSavedProfileId, getSessionId, loadCareerProfiles, saveCareerGoal } from '../resume/api'
 import type { CareerGoalPreferences } from '../resume/api'
 import type { CareerGoal, CareerGoalInput, ProgressStatus, RoadmapJob, RoadmapView } from './api-types'
+import type { ProgressOverview } from './progressOverview'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
 
@@ -33,6 +34,17 @@ function profileId(): string {
 export async function loadRoadmapGoal(signal?: AbortSignal): Promise<CareerGoal | null> {
   if (!getSavedProfileId()) return null
   const result = await request<{ goal: CareerGoal | null }>(`/profiles/${profileId()}/goal`, { signal })
+  return result.goal
+}
+
+export function loadProgressOverview(signal?: AbortSignal): Promise<ProgressOverview> {
+  return request(`/profiles/${profileId()}/progress-overview`, { signal })
+}
+
+export async function updateRoadmapGoal(goal: CareerGoalInput): Promise<CareerGoal> {
+  const result = await request<{ goal: CareerGoal }>(`/profiles/${profileId()}/goal`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goal),
+  })
   return result.goal
 }
 

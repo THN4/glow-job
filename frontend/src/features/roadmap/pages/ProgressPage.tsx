@@ -1,6 +1,9 @@
 import { ArrowRight, CheckCircle2, ClipboardList, Compass, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RoadmapNodeIcon } from '../components/RoadmapNodeIcon'
+import { UpdateReplanCard } from '../components/UpdateReplanCard'
+import { RecentActivity } from '../components/RecentActivity'
+import { useProgressOverview } from '../progressOverview'
 import { useCurrentRoadmap } from '../useCurrentRoadmap'
 import { toRoadmapScreen } from '../adapter'
 import type { RoadmapNodeKind } from '../type'
@@ -16,22 +19,24 @@ const roadmapLink = (nodeId: string) => `/app/roadmap?node=${encodeURIComponent(
 
 export function ProgressPage() {
   const roadmap = useCurrentRoadmap()
+  const overview = useProgressOverview()
   if (roadmap.isPending) return <p role="status" className="p-6 text-sm text-slate-600">Loading your progress…</p>
   if (roadmap.isError) return <section className="p-6"><p role="alert">{roadmap.error.message}</p><button type="button" onClick={() => void roadmap.refetch()} className="mt-3 text-blue-700">Try again</button></section>
   if (!roadmap.data) return <section className="p-6"><h1 className="text-2xl font-bold">Progress</h1><p className="mt-3">Create your roadmap to start tracking progress.</p><Link to="/app/roadmap" className="mt-3 inline-block text-blue-700">Open My Roadmap</Link></section>
-  const screen = toRoadmapScreen(roadmap.data)
+  const view = roadmap.data
+  const screen = toRoadmapScreen(view)
   const { nodes } = screen
   const completionPercent = screen.summary.completion
-  const statusById = new Map(roadmap.data.nodes.map((node) => [node.key, node.status]))
+  const statusById = new Map(view.nodes.map((node) => [node.key, node.status]))
   const completed = nodes.filter((node) => node.status === 'completed').length
   const inProgress = nodes.filter((node) => node.status === 'in-progress').length
   const upcoming = nodes.filter((node) => statusById.get(node.id) === 'not_started').length
-  const skipped = roadmap.data.nodes.filter((node) => node.status === 'skipped').length
+  const skipped = view.nodes.filter((node) => node.status === 'skipped').length
   const checklistItems = nodes.flatMap((node) => node.checklist ?? [])
   const checkedItems = checklistItems.filter((item) => item.completed).length
-  const currentStep = nodes.find((node) => node.id === roadmap.data.currentNodeKey && node.status === 'in-progress')
+  const currentStep = nodes.find((node) => node.id === view.currentNodeKey && node.status === 'in-progress')
     ?? nodes.find((node) => node.status === 'in-progress')
-  const focusStep = currentStep ?? nodes.find((node) => node.id === roadmap.data.nextAction.nodeKey && statusById.get(node.id) === 'not_started')
+  const focusStep = currentStep ?? nodes.find((node) => node.id === view.nextAction.nodeKey && statusById.get(node.id) === 'not_started')
   const focusChecklist = focusStep?.checklist ?? []
   const focusChecked = focusChecklist.filter((item) => item.completed).length
   const nextSteps = nodes.filter((node) => statusById.get(node.id) === 'not_started' && node.id !== focusStep?.id).slice(0, 4)
@@ -44,10 +49,9 @@ export function ProgressPage() {
         <p className="mt-2 text-sm text-slate-600">Your saved roadmap progress, current learning step, and upcoming work.</p>
       </header>
 
-      <div className="flex flex-wrap gap-4 text-sm text-blue-700">
-        <Link to="/app/roadmap">Review or regenerate your roadmap →</Link>
-        <Link to="/app/market-insights">View market insights →</Link>
-      </div>
+      {overview.isPending && <p role="status" className="text-sm text-slate-600">Loading profile summary and activity…</p>}
+      {overview.isError && <p role="alert" className="text-sm text-red-700">Could not load profile summary and activity: {overview.error.message} <button type="button" onClick={() => void overview.refetch()} className="underline">Try again</button></p>}
+      {overview.data && <UpdateReplanCard overview={overview.data} completedProjects={nodes.filter((node) => node.kind === 'project' && node.status === 'completed').length} />}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -91,7 +95,7 @@ export function ProgressPage() {
               <Link to={roadmapLink(focusStep.id)} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700">Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">{completionPercent === 100 ? 'Every task on your roadmap is complete.' : roadmap.data.nextAction.text}</p>
+            <p className="mt-3 text-sm text-slate-600">{completionPercent === 100 ? 'Every task on your roadmap is complete.' : view.nextAction.text}</p>
           )}
         </section>
 
@@ -134,7 +138,7 @@ export function ProgressPage() {
           })}
         </div>
       </section>
-      <p className="text-xs text-slate-500">Roadmap generated: <time dateTime={roadmap.data.generatedAt}>{new Date(roadmap.data.generatedAt).toLocaleString()}</time></p>
+      {overview.data && <RecentActivity activities={overview.data.activities} roadmapId={view.roadmapId} />}
     </section>
   )
 }
