@@ -6,6 +6,7 @@
  */
 
 export type ProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'skipped'
+export type StepProgressInput = Exclude<ProgressStatus, 'skipped'>
 export type NodeKind = 'skill' | 'foundation-check' | 'project' | 'career-activity' | 'goal'
 export type TaskKind = 'learn' | 'practice' | 'check'
 export type DeferReason =
@@ -47,6 +48,11 @@ export type SkillDetail = {
   citations: Citation[]
 }
 
+export type ProfileEvidence = {
+  evidenceType: string
+  excerpt: string
+}
+
 export type NodeSkill = {
   skillId: number
   name: string
@@ -59,6 +65,8 @@ export type NodeSkill = {
    * design has "Current confidence". No confidence percentage is calculated.
    */
   profileLabel: string
+  /** Evidence extracted from the learner's CV or profile; separate from learning citations. */
+  profileEvidence: ProfileEvidence[]
 }
 
 export type RoadmapNode = {
@@ -75,9 +83,12 @@ export type RoadmapNode = {
   /** Dependency depth. Prefer position for drawing. */
   layer: number
   order: number
-  /** Canvas grid lines, starting at 1. column is 1-4 and row is 1-6, like the Figma canvas. */
+  /** Recommended learning sequence by market-gap priority; not a prerequisite. */
+  recommendedOrder: number | null
+  /** Canvas grid lines, starting at 1. column is 1-3; at most three nodes share a row. */
   position: { row: number; column: number }
   status: ProgressStatus
+  learningContentAvailable: boolean
   checklist: ChecklistItem[]
   details: SkillDetail[]
   /** Complete at roadmap creation because the skill is confirmed in the profile. */
@@ -120,7 +131,7 @@ export type RoadmapView = {
   layout: { columns: number; rows: number }
   nodes: RoadmapNode[]
   /** optional: true is a recommended path that does not block the next step (dashed line). */
-  edges: Array<{ from: string; to: string; optional: boolean }>
+  edges: Array<{ from: string; to: string; optional: boolean; kind: 'prerequisite' | 'recommended_order' }>
   deferred: Array<{ skillId: number; skillName: string; reasonCode: DeferReason; note: string }>
   confirmations: Array<{ skillId: number; skillName: string; question: string }>
   contentNotices: Array<{ skillId: number; skillName: string; notice: string }>
@@ -156,7 +167,7 @@ export type CareerGoalInput = Omit<CareerGoal, 'goalId' | 'careerId' | 'updatedA
 }
 
 /** Body of PUT .../steps/{stepKey}: "Start learning" = in_progress, "Mark as completed" = completed. */
-export type StepStatusInput = { status: ProgressStatus }
+export type StepStatusInput = { status: StepProgressInput }
 
 export type RoadmapJob = {
   jobId: string

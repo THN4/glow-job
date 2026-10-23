@@ -1,7 +1,7 @@
 import type { RoadmapConnection, RoadmapNodeData } from './type'
 
 export function canStartNode(nodes: RoadmapNodeData[], connections: RoadmapConnection[], id: string): boolean {
-  return nodes.some((node) => node.id === id && node.status === 'upcoming')
+  return nodes.some((node) => node.id === id && node.status === 'upcoming' && node.learningContentAvailable !== false)
     && connections.filter((edge) => edge.to === id && !edge.optional)
       .every((edge) => nodes.some((node) => node.id === edge.from && node.status === 'completed'))
 }
