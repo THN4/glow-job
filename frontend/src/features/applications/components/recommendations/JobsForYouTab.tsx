@@ -5,6 +5,7 @@ import type { CompanyOpening, JobFilters, JobRecommendation, JobRecommendationsR
 import { JobRecommendationsToolbar } from './JobRecommendationsToolbar'
 import type { RoadmapNodeData } from '../../../roadmap/type'
 import { CompanyOpeningDetail } from '../companies/CompanyOpeningDetail'
+import { companyAvatarColor } from '../shared/companyAvatar'
 
 type JobsForYouTabProps = {
   filters: JobFilters
@@ -28,10 +29,23 @@ function SkillList({ label, skills }: { label: string; skills: string[] }) {
 }
 
 function MatchFacts({ job }: { job: JobRecommendation }) {
+  const matchedSkills = job.requiredMatches.length + job.preferredMatches.length
+  const totalSkills = matchedSkills + job.requiredMissing.length + job.preferredMissing.length
+  const score = Math.max(0, Math.min(100, job.scorePct))
   return <>
-    <div className="mt-3 flex flex-wrap items-center gap-2">
-      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">{job.scorePct}% skill coverage</span>
-      {job.matchesGoal && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs text-emerald-800"><Target className="size-3" aria-hidden="true" />Target career</span>}
+    <div className="mt-4 flex items-center gap-3 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 via-teal-50/60 to-white p-3">
+      <div className="relative flex size-[76px] shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
+        <svg viewBox="0 0 76 76" className="absolute inset-0 size-full -rotate-90" aria-hidden="true">
+          <circle cx="38" cy="38" r="31" fill="none" stroke="#d1fae5" strokeWidth="5" />
+          <circle cx="38" cy="38" r="31" fill="none" stroke="#059669" strokeWidth="5" pathLength="100" strokeDasharray={`${score} 100`} strokeLinecap={score > 0 ? 'round' : 'butt'} />
+        </svg>
+        <span className="relative text-lg font-extrabold tracking-tight text-emerald-700 tabular-nums">{job.scorePct}<span className="ml-0.5 text-[11px] font-bold">%</span></span>
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-bold text-emerald-950">Skill coverage</p>
+        <p className="mt-1 text-xs leading-5 text-slate-600">{matchedSkills} of {totalSkills} scored skills matched</p>
+        {job.matchesGoal && <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100/70 px-2 py-0.5 text-[10px] font-semibold text-emerald-800"><Target className="size-3" aria-hidden="true" />Target career</span>}
+      </div>
     </div>
     {!job.requiredMatches.length && !job.requiredMissing.length && <p className="mt-2 text-xs text-amber-800">Scored on preferred skills only; no required skills were classified.</p>}
     <SkillList label="Required skills in your profile" skills={job.requiredMatches} />
@@ -83,7 +97,7 @@ export function JobsForYouTab({ data, filters, onFiltersChange, isLoading, error
       </div> : <>
         <div aria-busy={isRefreshing} className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-3 ${isRefreshing ? 'opacity-60' : ''}`}>
           {data.recommendations.map((job) => <article key={job.jobId} className="flex flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-start gap-3"><span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Building2 className="size-5" aria-hidden="true" /></span>
+            <div className="flex items-start gap-3"><span className={`flex size-10 shrink-0 items-center justify-center rounded-xl ${companyAvatarColor(job.company)}`}><Building2 className="size-5" aria-hidden="true" /></span>
               <div className="min-w-0"><h3 className="text-sm font-bold text-slate-900">{job.role}</h3><p className="mt-1 text-xs text-slate-600">{job.company}</p></div>
             </div>
             <p className="mt-3 flex items-start gap-1 text-xs leading-5 text-slate-500"><MapPin className="mt-0.5 size-3 shrink-0" aria-hidden="true" />{job.location} · {job.experience}</p>

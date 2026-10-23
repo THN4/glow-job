@@ -1,4 +1,5 @@
-import { BriefcaseBusiness, ChevronDown, Info, Layers, MapPin, RefreshCw, SlidersHorizontal, Sparkles, Target, type LucideIcon } from 'lucide-react'
+import { BriefcaseBusiness, Info, Layers, MapPin, RefreshCw, SlidersHorizontal, Sparkles, Target } from 'lucide-react'
+import { FilterSelect } from '../shared/FilterSelect'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../../../components/ui/dialog'
 import type { JobFilters, JobRecommendationsResponse } from '../../type'
 
@@ -10,23 +11,6 @@ type Props = {
   onChange: (filters: JobFilters) => void
 }
 
-function FilterSelect({ label, icon: Icon, value, onChange, options }: {
-  label: string; icon: LucideIcon; value: string
-  onChange: (value: string) => void
-  options: { value: string; label: string }[]
-}) {
-  const displayedOptions = options.some((option) => option.value === value)
-    ? options : [...options, { value, label: value }]
-  return <label className="relative flex min-w-0 items-center">
-    <span className="sr-only">{label}</span>
-    <Icon className="pointer-events-none absolute left-3 size-4 text-blue-600" aria-hidden="true" />
-    <select value={value} onChange={(event) => onChange(event.target.value)}
-      className="min-h-11 w-full min-w-0 appearance-none truncate rounded-xl border border-blue-100 bg-white py-2 pl-10 pr-9 text-xs text-slate-700 shadow-sm outline-none transition hover:border-blue-300 focus-visible:border-blue-500 focus-visible:ring-2 focus-visible:ring-blue-100">
-      {displayedOptions.map((option) => <option key={option.value} value={option.value}>{label}: {option.label}</option>)}
-    </select>
-    <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-slate-400" aria-hidden="true" />
-  </label>
-}
 
 export function JobRecommendationsToolbar({ data, filters, isRefreshing, onRefresh, onChange }: Props) {
   const hasFilters = Boolean(filters.location || filters.employmentType || filters.skillId || filters.sort !== 'coverage')
