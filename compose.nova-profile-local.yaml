@@ -1,11 +1,20 @@
-# Optional host AWS login/SSO profile, for local testing only.
+# Optional host AWS profile, for local testing only.
 # Use after compose.yaml AND compose.nova-local.yaml.
 services:
   backend:
+    extends:
+      file: compose.nova-local.yaml
+      service: backend
     environment:
       AWS_PROFILE: ${AWS_PROFILE:-default}
     volumes:
       - type: bind
-        source: ${AWS_CONFIG_DIR:?Set AWS_CONFIG_DIR to your host AWS configuration directory}
+        source: ${AWS_CONFIG_DIR:-${USERPROFILE:-${HOME}}/.aws}
         target: /root/.aws
         read_only: true
+      # aws login refreshes its cached token. Keep config/credentials read-only,
+      # but allow atomic temporary-file writes in this specific cache directory.
+      - type: bind
+        source: ${AWS_CONFIG_DIR:-${USERPROFILE:-${HOME}}/.aws}/login/cache
+        target: /root/.aws/login/cache
+        read_only: false

@@ -1,8 +1,27 @@
 # Nova Pro roadmap generation through Bedrock Converse
 
-This changes roadmap generation only. CV extraction, query/document embeddings,
-RAG review, validation, storage and the frontend remain on their existing paths.
+This page documents final roadmap generation. CV extraction and RAG text review
+also use Nova Pro in the default local setup; see [CV/RAG configuration](nova-cv-rag.md).
+Query/document embeddings, validation, storage and the frontend retain their existing paths.
 The existing `bedrock` provider remains Claude Mantle; use `bedrock_converse` for Nova.
+
+## Default local startup
+
+`compose.override.yaml` is loaded automatically by ordinary `docker compose`.
+It selects Nova Pro even if the root `.env` still contains a legacy Gemini
+ROADMAP_PROVIDER/MODEL_ID. It also mounts the host AWS profile and writable
+login cache using the existing local profile override. Normal local startup is:
+
+```powershell
+docker compose up -d --build --no-deps backend
+```
+
+The AWS directory defaults to the user's `.aws` directory (`USERPROFILE` on
+Windows, `HOME` elsewhere); AWS_CONFIG_DIR and AWS_PROFILE can override it.
+No secret values are stored in this Compose file. Explicit `-f compose.yaml`
+does not load the automatic override; configure its provider and runtime AWS
+role explicitly for deployment. To use an alternate provider locally, likewise
+select the base Compose file explicitly rather than the default local override.
 
 ## Configuration
 
@@ -22,7 +41,7 @@ ROADMAP_PRICE_OUTPUT_PER_MTOK=
 
 `ROADMAP_MODEL_ID` overrides `BEDROCK_ROADMAP_MODEL` when nonempty. Clear an old
 Gemini model override before switching. Region precedence is `ROADMAP_AWS_REGION`,
-`AWS_DEFAULT_REGION`, then `AWS_REGION`. Keep `GEMINI_API_KEY` for existing CV/RAG.
+`AWS_DEFAULT_REGION`, then `AWS_REGION`. Keep `GEMINI_API_KEY` for live RAG embeddings.
 
 The SDK uses the AWS credential chain. On the host, use your existing AWS profile
 (SSO/assumed role). Containers cannot automatically see the host's SSO files.
@@ -37,7 +56,7 @@ them in source files. For deployment use an ECS task or EC2 instance role. Never
 commit credentials, or run `docker compose config` into shared logs containing secrets.
 
 If the host SDK uses `aws login` or SSO/profile files instead of shell credentials,
-use the optional read-only profile mount (the directory stays outside the repo):
+use the optional profile mount (the directory stays outside the repo):
 
 ```powershell
 $env:AWS_CONFIG_DIR = Join-Path $env:USERPROFILE '.aws'
@@ -45,9 +64,14 @@ $env:AWS_CONFIG_DIR = Join-Path $env:USERPROFILE '.aws'
 docker compose -f compose.yaml -f compose.nova-local.yaml -f compose.nova-profile-local.yaml up -d --build --no-deps backend
 ```
 
-The profile override mounts the host AWS configuration only into this local
-backend container. Log in again on the host if its session expires; do not use
-this host-directory mount for deployment. Environment credentials take precedence
+The profile override mounts the host AWS configuration read-only into this local
+backend container, with a writable submount only for `login/cache`. AWS login
+must save refreshed tokens atomically in that directory, otherwise an initially
+working session fails when it reaches its mandatory refresh window. Files such
+as `config` and `credentials` remain read-only. Log in again on the host if the
+login session itself expires; do not use this host-directory mount for deployment.
+For SSO profiles, refresh SSO on the host; this override only makes the AWS login
+cache writable. Environment credentials take precedence
 over profile credentials, so clear stale AWS_ACCESS_KEY_ID/SECRET_ACCESS_KEY/SESSION_TOKEN
 variables when testing a login/SSO profile.
 
@@ -80,6 +104,13 @@ load current roadmap, and check node IDs, exact citations and dependency gating.
 Do not accept output only because it is valid JSON: the shared semantic validator
 still runs, with at most one repair for a structurally valid but inconsistent draft.
 Invalid JSON, refusal, and truncated output fail without storing a partial roadmap.
+
+Completed profile skills use up to three reviewed RAG claims and their exact
+citations, copied by the server. Models return `details: []` for those baseline
+cards instead of regenerating quotes. New learning tasks still require model
+citations to match their source and skill exactly. Compacted claims include their
+reviewed quotes so the model can copy them without reconstructing citations.
+No evidence checks are disabled.
 
 Nova v1 permits at most 5,000 output tokens. The adapter caps the existing 24k
 setting to 5k; long roadmaps may fail with output truncation rather than being

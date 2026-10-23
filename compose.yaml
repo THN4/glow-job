@@ -30,6 +30,9 @@ services:
       RESUME_EXTRACTOR: ${RESUME_EXTRACTOR:-mock}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       RESUME_GEMINI_TIMEOUT_MS: ${RESUME_GEMINI_TIMEOUT_MS:-180000}
+      RESUME_BEDROCK_TIMEOUT_MS: ${RESUME_BEDROCK_TIMEOUT_MS:-180000}
+      BEDROCK_EXTRACTION_MODEL: ${BEDROCK_EXTRACTION_MODEL:-amazon.nova-pro-v1:0}
+      BEDROCK_RAG_MODEL: ${BEDROCK_RAG_MODEL:-amazon.nova-pro-v1:0}
       MAX_FILE_MB: ${MAX_FILE_MB:-10}
       MAX_PDF_PAGES: ${MAX_PDF_PAGES:-10}
       MAX_IMAGE_PAGES: ${MAX_IMAGE_PAGES:-4}
@@ -41,7 +44,7 @@ services:
       DB_NAME: ${DB_TARGET_NAME:-${DB_NAME:-glowjob}}
       DB_USER: ${DB_TARGET_USER:-${DB_USER:-glowjob}}
       DB_PASSWORD: ${DB_TARGET_PASSWORD:-${DB_PASSWORD:?Set DB_PASSWORD in the root .env file}}
-      # mock skips Roadmap generation calls; live RAG still calls Gemini unless a fixture is set.
+      # mock skips Roadmap generation calls; live RAG uses Nova text review and Gemini embeddings.
       ROADMAP_PROVIDER: ${ROADMAP_PROVIDER:-mock}
       ROADMAP_MODEL_ID: ${ROADMAP_MODEL_ID:-}
       ROADMAP_AWS_REGION: ${ROADMAP_AWS_REGION:-}
