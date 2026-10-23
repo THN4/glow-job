@@ -29,7 +29,9 @@
 }
 
 @supports selector(::-webkit-scrollbar) {
-  .scrollbar-subtle, .roadmap-scrollbar {
+  /* Keep the standard hover rule from switching Chromium back to native bars. */
+  .scrollbar-subtle, .roadmap-scrollbar,
+  .scrollbar-subtle:hover, .roadmap-scrollbar:hover {
     scrollbar-width: auto;
     scrollbar-color: auto;
   }
@@ -46,7 +48,7 @@
     background: var(--scrollbar-thumb);
     border-radius: 999px;
   }
-  :is(.scrollbar-subtle, .roadmap-scrollbar):hover::-webkit-scrollbar-thumb {
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-thumb:hover {
     background: var(--scrollbar-hover);
   }
   :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-button {
