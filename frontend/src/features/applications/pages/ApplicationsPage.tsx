@@ -64,9 +64,10 @@ export function ApplicationsPage() {
     staleTime: 60_000,
   })
   const jobRecommendationsQuery = useQuery({
-    queryKey: ['job-recommendations', profileId, jobFilters],
+    queryKey: ['job-recommendations-v2', profileId, jobFilters],
     queryFn: () => applicationsApi.jobRecommendations(jobFilters),
-    placeholderData: (previousData, previousQuery) => previousQuery?.queryKey[1] === profileId ? previousData : undefined,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[0] === 'job-recommendations-v2' && previousQuery.queryKey[1] === profileId ? previousData : undefined,
     enabled: activeTab === 'recommendations' && recommendationView === 'jobs' && hasProfile,
     retry: false,
     staleTime: 60_000,
