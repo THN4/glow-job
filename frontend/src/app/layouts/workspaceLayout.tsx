@@ -4,6 +4,8 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
 import { useCurrentRoadmap } from '../../features/roadmap/useCurrentRoadmap'
 import { toRoadmapScreen } from '../../features/roadmap/adapter'
+import { useCareerGoal } from '../../features/roadmap/useCareerGoal'
+import { useSavedProfile } from '../../features/resume/useSavedProfile'
 import type {
   CurrentGoalSummary,
   MarketUpdate,
@@ -12,14 +14,12 @@ import type {
 
 type WorkspaceLayoutProps = {
   marketUpdate: MarketUpdate
-  user: WorkspaceUser
   onHelpClick: () => void
   onProfileClick: () => void
 }
 
 export function WorkspaceLayout({
   marketUpdate,
-  user,
   onHelpClick,
   onProfileClick,
 }: WorkspaceLayoutProps) {
@@ -27,6 +27,13 @@ export function WorkspaceLayout({
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const roadmap = useCurrentRoadmap()
+  const savedProfile = useSavedProfile()
+  const careerGoal = useCareerGoal()
+  const targetRole = careerGoal.data?.targetRoleTitle?.trim() || roadmap.data?.summary.targetRole?.trim()
+  const user: WorkspaceUser = {
+    name: savedProfile.data?.profile.personal.fullName?.trim() || 'Your profile',
+    subtitle: targetRole ? `Aspiring ${targetRole}` : 'Set your career goal',
+  }
   const isRoadmapPage = pathname.startsWith('/app/roadmap')
   const scrollRef = useRef<HTMLDivElement>(null)
   // Every page shares this scroll box, so start each page at the top. Without this the roadmap page,
