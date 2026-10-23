@@ -81,9 +81,30 @@ class RoadmapService:
             raise AppError("PROFILE_NOT_FOUND")
         return user_id
 
+    async def list_skill_artifacts(self, profile_id: str, session_id: str) -> list[dict[str, Any]]:
+        user_id = await self.owner(profile_id, session_id)
+        return await asyncio.to_thread(self.repo.list_skill_artifacts, user_id)
+
+    async def add_skill_artifact(self, profile_id: str, session_id: str, skill_id: int,
+                                 values: dict[str, Any]) -> dict[str, Any]:
+        user_id = await self.owner(profile_id, session_id)
+        artifact = await asyncio.to_thread(self.repo.create_skill_artifact, user_id, skill_id, values)
+        if artifact is None:
+            raise AppError("SKILL_NOT_FOUND")
+        return artifact
+
+    async def delete_skill_artifact(self, profile_id: str, session_id: str, artifact_id: int) -> None:
+        user_id = await self.owner(profile_id, session_id)
+        if not await asyncio.to_thread(self.repo.delete_skill_artifact, user_id, artifact_id):
+            raise AppError("EVIDENCE_NOT_FOUND")
+
     async def get_goal(self, profile_id: str, session_id: str) -> dict[str, Any] | None:
         user_id = await self.owner(profile_id, session_id)
         return await asyncio.to_thread(self.repo.get_goal, user_id)
+
+    async def progress_overview(self, profile_id: str, session_id: str) -> dict[str, Any]:
+        user_id = await self.owner(profile_id, session_id)
+        return await asyncio.to_thread(self.repo.progress_overview, user_id)
 
     async def put_goal(self, profile_id: str, session_id: str, goal: dict[str, Any]) -> dict[str, Any]:
         user_id = await self.owner(profile_id, session_id)

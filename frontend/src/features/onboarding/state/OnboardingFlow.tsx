@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { OnboardingLayout } from '../components/layout/OnboardingLayout'
 import { UploadCvStep } from '../pages/steps/UploadCvStep'
 import { useOnboarding } from './OnboardingContext'
-import { PageHeader } from '../components/layout/PageHeader'
+import { ConfirmationStep } from '../pages/steps/ConfirmationStep'
 import { onboardingCopy } from '../../../lib/constants'
 import { PreferencesStep } from '../pages/steps/PreferencesStep'
 import { CareerGoalStep } from '../pages/steps/CareerGoalStep'
@@ -23,6 +23,8 @@ import { hasProfileInformation } from '../profileFromCv'
 import { loadCareerProfiles, saveProfile, type CvProfile } from '../../resume/api'
 import { toSavedCvProfile } from '../api/profilePersistence'
 import { generateRoadmap, saveRoadmapGoal } from '../../roadmap/api'
+import type { RoadmapJob } from '../../roadmap/api-types'
+import { RoadmapBuildProgress } from '../components/RoadmapBuildProgress'
 
 export function OnboardingFlow() {
   const navigate = useNavigate()
@@ -47,7 +49,8 @@ export function OnboardingFlow() {
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [goalSaved, setGoalSaved] = useState(false)
-  const [roadmapStage, setRoadmapStage] = useState<string | null>(null)
+  const [roadmapReady, setRoadmapReady] = useState(false)
+  const [roadmapStage, setRoadmapStage] = useState<RoadmapJob['stage'] | null>(null)
   const roadmapController = useRef<AbortController | null>(null)
   const [supportedRoles, setSupportedRoles] = useState<string[]>([])
 
@@ -144,6 +147,10 @@ export function OnboardingFlow() {
       return
     }
     if (currentStep === 5) {
+      if (roadmapReady) {
+        navigate('/app/roadmap')
+        return
+      }
       saving.current = true
       setIsSaving(true)
       setGoalSaved(false)
@@ -159,7 +166,7 @@ export function OnboardingFlow() {
         const controller = new AbortController()
         roadmapController.current = controller
         await generateRoadmap(setRoadmapStage, controller.signal)
-        navigate('/app/roadmap')
+        setRoadmapReady(true)
       } catch (error) {
         if (!(error instanceof DOMException && error.name === 'AbortError')) {
           setSaveError(error instanceof Error ? error.message : 'สร้าง roadmap ไม่สำเร็จ กรุณาลองอีกครั้ง')
@@ -198,10 +205,10 @@ export function OnboardingFlow() {
       currentStep={currentStep}
       completedSteps={completedSteps}
       availableSteps={availableSteps}
-      onStepChange={analysis || isSaving ? undefined : goToStep}
+      onStepChange={analysis || isSaving ? undefined : (step) => { setRoadmapReady(false); goToStep(step) }}
       onBack={currentStep > 1 && !isSaving ? previousStep : undefined}
-      onContinue={currentStep === 1 || currentStep === 2 ? undefined : handleContinue}
-      continueLabel={isSaving ? roadmapStage ? `Building roadmap: ${roadmapStage}...` : 'Saving...' : currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
+      onContinue={currentStep === 1 || currentStep === 2 || currentStep === 5 ? undefined : handleContinue}
+      continueLabel={isSaving ? goalSaved ? 'Building your roadmap...' : 'Saving your goal...' : currentStep === 4 ? preferencesCopy.analyze : currentStep === 5 ? onboardingCopy.buildRoadmap : onboardingCopy.continue}
       isLoading={isSaving}
       continueIcon={currentStep === 4 ? Sparkles : undefined}
       analyzing={Boolean(analysis)}
@@ -232,20 +239,10 @@ export function OnboardingFlow() {
       ) : currentStep === 4 ? (
         <PreferencesStep preferences={data.preferences} onChange={updatePreferences} />
       ) : (
-        <section>
-          <PageHeader {...(currentStep === 5 ? {
-            title: roadmapStage ? 'Building your roadmap' : saveError ? 'We couldn’t build your roadmap yet' : isSaving ? 'Saving your goal' : 'Ready to build your roadmap',
-            subtitle: roadmapStage
-              ? 'We’re matching your profile with career requirements and finding cited learning content.'
-              : saveError
-                ? goalSaved ? 'Your goal is saved. Retry to generate the roadmap.' : 'We couldn’t save your goal and prepare the roadmap. Please try again.'
-                : isSaving ? 'Your saved profile and preferences are being prepared.'
-                  : 'Your profile and preferences are ready. Build a personalized roadmap from your skill gaps and learning documents.',
-          } : onboardingCopy.headers[currentStep])} />
-          {roadmapStage && <p className="mt-4 text-sm font-medium text-blue-700" role="status">Creating your roadmap: {roadmapStage}...</p>}
-          {goalSaved && saveError && <p className="mt-4 text-sm font-medium text-emerald-700" role="status">Career goal and preferences are saved.</p>}
-          {saveError && <p className="mt-4 text-sm text-destructive" role="alert">{saveError}</p>}
-        </section>
+        isSaving ? <RoadmapBuildProgress stage={roadmapStage} goalSaved={goalSaved} />
+          : <ConfirmationStep ready={roadmapReady} error={saveError} goalSaved={goalSaved}
+            onContinue={handleContinue}
+            onBack={() => { setRoadmapReady(false); setSaveError(null); previousStep() }} />
       )}
     </OnboardingLayout>
   )

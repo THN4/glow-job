@@ -8,10 +8,12 @@ from __future__ import annotations
 
 from datetime import date
 from functools import lru_cache
+import re
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Header
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 
 from app.features.resume.config import get_settings
 from app.features.resume.errors import AppError
@@ -64,10 +66,55 @@ class StepProgressBody(Camel):
     status: Literal["not_started", "in_progress", "completed"]
 
 
+class SkillEvidenceBody(Camel):
+    evidence_type: Literal["github_project", "certificate", "self_report"]
+    title: str = Field(min_length=1, max_length=160)
+    url: str | None = Field(default=None, max_length=2048)
+    notes: str = Field(default="", max_length=4000)
+    photo_data: str | None = Field(default=None, max_length=700000)
+
+    @field_validator("title", "notes", mode="before")
+    @classmethod
+    def trim_text(cls, value: Any) -> str:
+        return str(value).strip()
+
+    @field_validator("url", mode="before")
+    @classmethod
+    def normalize_url(cls, value: Any) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip()
+        return normalized or None
+
+    @model_validator(mode="after")
+    def validate_evidence(self):
+        if self.url:
+            parsed = urlsplit(self.url)
+            if parsed.scheme.lower() not in {"http", "https"} or not parsed.hostname:
+                raise ValueError("Evidence links must be valid http or https URLs.")
+        if self.photo_data and not re.fullmatch(
+            r"data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+", self.photo_data
+        ):
+            raise ValueError("Evidence photo must be a PNG, JPEG, or WebP data URL.")
+        if self.evidence_type == "github_project" and not self.url:
+            raise ValueError("A project link is required.")
+        if self.evidence_type == "certificate" and not (self.url or self.photo_data):
+            raise ValueError("A certificate link or photo is required.")
+        if self.evidence_type == "self_report" and not self.notes:
+            raise ValueError("Notes are required for a self report.")
+        return self
+
+
 @router.get("/profiles/{profile_id}/goal")
 async def get_goal(profile_id: str, session_id: str = SessionId,
                    svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
     return {"goal": await svc.get_goal(profile_id, session_id)}
+
+
+@router.get("/profiles/{profile_id}/progress-overview")
+async def get_progress_overview(profile_id: str, session_id: str = SessionId,
+                                svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    return await svc.progress_overview(profile_id, session_id)
 
 
 @router.put("/profiles/{profile_id}/goal")
@@ -111,3 +158,24 @@ async def put_step_progress(profile_id: str, roadmap_id: int, step_key: str, bod
     """Whole-step actions behind "Start learning", "Mark as completed" and skip."""
     view = await svc.set_step(profile_id, session_id, roadmap_id, step_key, body.status)
     return {"roadmap": view.model_dump(mode="json", by_alias=True)}
+
+
+@router.get("/profiles/{profile_id}/skill-evidence")
+async def list_skill_evidence(profile_id: str, session_id: str = SessionId,
+                              svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    return {"evidence": await svc.list_skill_artifacts(profile_id, session_id)}
+
+
+@router.post("/profiles/{profile_id}/skills/{skill_id}/evidence", status_code=201)
+async def add_skill_evidence(profile_id: str, skill_id: int, body: SkillEvidenceBody,
+                             session_id: str = SessionId,
+                             svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    artifact = await svc.add_skill_artifact(profile_id, session_id, skill_id, body.model_dump())
+    return {"evidence": artifact}
+
+
+@router.delete("/profiles/{profile_id}/skill-evidence/{evidence_id}")
+async def delete_skill_evidence(profile_id: str, evidence_id: int, session_id: str = SessionId,
+                               svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    await svc.delete_skill_artifact(profile_id, session_id, evidence_id)
+    return {"deleted": True}

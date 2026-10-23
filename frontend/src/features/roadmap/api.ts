@@ -1,10 +1,38 @@
 import { getSavedProfileId, getSessionId, loadCareerProfiles, saveCareerGoal } from '../resume/api'
 import type { CareerGoalPreferences } from '../resume/api'
-import type { CareerGoalInput, RoadmapJob, RoadmapView, StepProgressInput } from './api-types'
+import type { CareerGoal, CareerGoalInput, RoadmapJob, RoadmapView, StepProgressInput } from './api-types'
+import type { ProgressOverview } from './progressOverview'
+import type { RoadmapEvidence } from './type'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
 
 type ApiErrorBody = { error?: { message?: string } }
+
+export type SkillEvidence = RoadmapEvidence & { skillId: number; createdAt: string }
+
+type SkillEvidenceApi = {
+  evidenceId: number
+  skillId: number
+  evidenceType: 'github_project' | 'certificate' | 'self_report'
+  title: string
+  url: string | null
+  notes: string
+  photoData: string | null
+  createdAt: string
+}
+type EvidenceType = SkillEvidenceApi['evidenceType']
+
+function adaptSkillEvidence(item: SkillEvidenceApi): SkillEvidence {
+  const evidenceType: Record<EvidenceType, RoadmapEvidence['type']> = {
+    github_project: 'GitHub project', certificate: 'Certificate', self_report: 'Self report',
+  }
+  return {
+    id: String(item.evidenceId), skillId: item.skillId,
+    type: evidenceType[item.evidenceType],
+    title: item.title, url: item.url ?? undefined, notes: item.notes, photo: item.photoData ?? undefined,
+    createdAt: item.createdAt,
+  }
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   let response: Response
@@ -28,6 +56,23 @@ function profileId(): string {
   const id = getSavedProfileId()
   if (!id) throw new Error('ไม่พบโปรไฟล์ที่บันทึกไว้ กรุณากลับไปยืนยันโปรไฟล์ก่อน')
   return encodeURIComponent(id)
+}
+
+export async function loadRoadmapGoal(signal?: AbortSignal): Promise<CareerGoal | null> {
+  if (!getSavedProfileId()) return null
+  const result = await request<{ goal: CareerGoal | null }>(`/profiles/${profileId()}/goal`, { signal })
+  return result.goal
+}
+
+export function loadProgressOverview(signal?: AbortSignal): Promise<ProgressOverview> {
+  return request(`/profiles/${profileId()}/progress-overview`, { signal })
+}
+
+export async function updateRoadmapGoal(goal: CareerGoalInput): Promise<CareerGoal> {
+  const result = await request<{ goal: CareerGoal }>(`/profiles/${profileId()}/goal`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goal),
+  })
+  return result.goal
 }
 
 export async function saveRoadmapGoal(goal: CareerGoalPreferences): Promise<void> {
@@ -142,4 +187,28 @@ export async function setRoadmapStep(roadmapId: number, stepKey: string,
     { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) },
   )
   return result.roadmap
+}
+
+export async function loadSkillEvidence(): Promise<SkillEvidence[]> {
+  const result = await request<{ evidence: SkillEvidenceApi[] }>(`/profiles/${profileId()}/skill-evidence`)
+  return result.evidence.map(adaptSkillEvidence)
+}
+
+export async function addSkillEvidence(skillId: number, evidence: RoadmapEvidence): Promise<SkillEvidence> {
+  const evidenceType: Record<RoadmapEvidence['type'], EvidenceType> = {
+    'GitHub project': 'github_project', Certificate: 'certificate', 'Self report': 'self_report',
+  }
+  const result = await request<{ evidence: SkillEvidenceApi }>(
+    `/profiles/${profileId()}/skills/${skillId}/evidence`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      evidenceType: evidenceType[evidence.type], title: evidence.title, url: evidence.url ?? null, notes: evidence.notes,
+      photoData: evidence.photo ?? null,
+    }) },
+  )
+  return adaptSkillEvidence(result.evidence)
+}
+
+export async function deleteSkillEvidence(evidenceId: string): Promise<void> {
+  await request<{ deleted: boolean }>(`/profiles/${profileId()}/skill-evidence/${encodeURIComponent(evidenceId)}`,
+    { method: 'DELETE' })
 }

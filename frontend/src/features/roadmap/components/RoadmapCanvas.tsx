@@ -10,6 +10,7 @@ import { RoadmapNode } from './RoadmapNode'
 import { RoadmapProgressBadge } from './RoadmapProgressBadge'
 
 type RoadmapCanvasProps = {
+  targetRole: string
   nodes: RoadmapNodeData[]
   connections: RoadmapConnection[]
   selectedNodeId: string | null
@@ -91,6 +92,7 @@ function getConnectionPath(
 }
 
 export function RoadmapCanvas({
+  targetRole,
   nodes,
   connections,
   selectedNodeId,
@@ -368,8 +370,10 @@ export function RoadmapCanvas({
       <div className="shrink-0 border-b border-[#E4ECF8] bg-white px-4 py-3 sm:px-5 [@media(max-height:760px)]:py-2">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-slate-800">Roadmap relationships</h2>
-            <p className="mt-0.5 text-[10px] text-slate-500">Labels distinguish prerequisites from suggested applications. Completed links are solid; other links are dashed. Skills without prerequisites can be started anytime. Drag steps to arrange them.</p>
+            <h2 className="text-sm font-semibold text-slate-800">Your roadmap relationships</h2>
+            <p className="mt-0.5 text-[10px] text-slate-500">
+              Your path to {targetRole}. Labels distinguish prerequisites from suggested links; completed links are solid, while other links are dashed. Skills without prerequisites can be started anytime. Drag steps to arrange them.
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <div role="group" className="hidden items-center gap-1 rounded-lg border border-slate-200 px-1 py-0.5 min-[640px]:flex" aria-label="Roadmap zoom controls">

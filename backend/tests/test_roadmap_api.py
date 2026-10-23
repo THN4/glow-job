@@ -36,12 +36,41 @@ class FakeRepo:
         self.month_cost = 0.0
         self.contexts_built = 0
         self.missing_knowledge = False
+        self.artifacts: dict[int, dict] = {}
 
     def owner(self, profile_id, session_id):
         return USER if (profile_id, session_id) == (PROFILE, SESSION) else None
 
+    def list_skill_artifacts(self, user_id):
+        return [{k: v for k, v in item.items() if k != "userId"}
+                for item in self.artifacts.values() if item["userId"] == user_id]
+
+    def create_skill_artifact(self, user_id, skill_id, values):
+        if skill_id != 85:
+            return None
+        artifact_id = len(self.artifacts) + 1
+        item = {"evidenceId": artifact_id, "userId": user_id, "skillId": skill_id,
+                "evidenceType": values["evidence_type"], "title": values["title"],
+                "url": values["url"], "notes": values["notes"], "photoData": values["photo_data"],
+                "createdAt": "2026-10-23T00:00:00+00:00"}
+        self.artifacts[artifact_id] = item
+        return {k: v for k, v in item.items() if k != "userId"}
+
+    def delete_skill_artifact(self, user_id, artifact_id):
+        item = self.artifacts.get(artifact_id)
+        if item is None or item["userId"] != user_id:
+            return False
+        del self.artifacts[artifact_id]
+        return True
+
     def get_goal(self, user_id):
         return self.goal
+
+    def progress_overview(self, user_id):
+        assert user_id == USER
+        return {"skillsInProfile": 3, "evidenceItems": 2, "lastAnalysedAt": None,
+                "profileChangedSinceAnalysis": False, "marketUpdatedAt": None,
+                "marketScanAgeDays": None, "activities": []}
 
     def put_goal(self, user_id, goal):
         self.goal = {"goalId": 2, "careerId": 1, "careerProfileId": goal["career_profile_id"],
@@ -272,3 +301,48 @@ async def test_ui_fields_and_step_actions(tmp_path):
         assert r.json()["error"]["code"] == "TASK_NOT_FOUND"
         r = await client.put(f"{steps}/{first['key']}", json={"status": "done"})
         assert r.status_code == 400
+
+async def test_progress_overview_is_owned_and_returns_saved_counts(tmp_path):
+    client, svc, repo = make(tmp_path)
+    async with client:
+        response = await client.get(f'/api/profiles/{PROFILE}/progress-overview')
+        assert response.status_code == 200
+        assert response.json()['skillsInProfile'] == 3
+        assert response.json()['evidenceItems'] == 2
+        assert response.json()['marketScanAgeDays'] is None
+        denied = await client.get(f'/api/profiles/{PROFILE}/progress-overview',
+                                  headers={'X-Session-Id': 'another-session'})
+        assert denied.status_code == 404
+        missing = await client.get(f'/api/profiles/{PROFILE}/progress-overview',
+                                   headers={'X-Session-Id': ''})
+        assert missing.status_code == 400
+
+
+async def test_skill_evidence_is_saved_and_scoped_to_profile_owner(tmp_path):
+    client, svc, repo = make(tmp_path)
+    base = f"/api/profiles/{PROFILE}"
+    async with client:
+        created = await client.post(f"{base}/skills/85/evidence", json={
+            "evidenceType": "self_report", "title": "Built a search prototype", "notes": "Implemented retrieval.",
+        })
+        assert created.status_code == 201
+        item = created.json()["evidence"]
+        assert item["evidenceId"] == 1 and item["skillId"] == 85
+        assert item["evidenceType"] == "self_report" and item["notes"] == "Implemented retrieval."
+
+        listed = await client.get(f"{base}/skill-evidence")
+        assert listed.json()["evidence"] == [item]
+
+        deleted = await client.delete(f"{base}/skill-evidence/1")
+        assert deleted.json() == {"deleted": True}
+        assert (await client.get(f"{base}/skill-evidence")).json()["evidence"] == []
+        missing = await client.delete(f"{base}/skill-evidence/1")
+        assert missing.status_code == 404 and missing.json()["error"]["code"] == "EVIDENCE_NOT_FOUND"
+
+        invalid = await client.post(f"{base}/skills/85/evidence", json={
+            "evidenceType": "self_report", "title": "Missing notes",
+        })
+        assert invalid.status_code == 400 and invalid.json()["error"]["code"] == "INVALID_REQUEST"
+
+        other = await client.get(f"{base}/skill-evidence", headers={"X-Session-Id": "another-session"})
+        assert other.status_code == 404 and other.json()["error"]["code"] == "PROFILE_NOT_FOUND"

@@ -55,6 +55,13 @@ class RoadmapRepository:
 
     # ------------------------------------------------------------------ ownership and goals
 
+    def progress_overview(self, user_id: int) -> dict[str, Any]:
+        from app.features.roadmap.progress import progress_overview
+
+        goal = self.get_goal(user_id)
+        with self._connect() as connection:
+            return progress_overview(connection, user_id, goal["careerProfileId"] if goal else None)
+
     def owner(self, profile_id: str, session_id: str) -> int | None:
         with self._connect() as connection:
             row = connection.execute(
@@ -65,6 +72,43 @@ class RoadmapRepository:
                 (profile_id, session_id),
             ).fetchone()
         return row[0] if row else None
+
+    def list_skill_artifacts(self, user_id: int) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT artifact_id, skill_id, evidence_type, title, source_url, notes, photo_data, created_at
+                FROM app.user_skill_artifacts
+                WHERE user_id = %s
+                ORDER BY created_at DESC, artifact_id DESC
+                """,
+                (user_id,),
+            ).fetchall()
+        return [_artifact_body(row) for row in rows]
+
+    def create_skill_artifact(self, user_id: int, skill_id: int, values: dict[str, Any]) -> dict[str, Any] | None:
+        with self._connect() as connection, connection.transaction():
+            row = connection.execute(
+                """
+                INSERT INTO app.user_skill_artifacts (
+                    user_id, skill_id, evidence_type, title, source_url, notes, photo_data
+                )
+                SELECT %s, s.skill_id, %s, %s, %s, %s, %s
+                FROM core.skills AS s WHERE s.skill_id = %s
+                RETURNING artifact_id, skill_id, evidence_type, title, source_url, notes, photo_data, created_at
+                """,
+                (user_id, values["evidence_type"], values["title"], values["url"],
+                 values["notes"], values["photo_data"], skill_id),
+            ).fetchone()
+        return _artifact_body(row) if row else None
+
+    def delete_skill_artifact(self, user_id: int, artifact_id: int) -> bool:
+        with self._connect() as connection:
+            row = connection.execute(
+                "DELETE FROM app.user_skill_artifacts WHERE artifact_id = %s AND user_id = %s RETURNING artifact_id",
+                (artifact_id, user_id),
+            ).fetchone()
+        return row is not None
 
     def get_goal(self, user_id: int) -> dict[str, Any] | None:
         with self._connect() as connection:
@@ -532,6 +576,14 @@ def _recompute_step(connection: Any, user_id: int, step_id: int) -> None:
 
 def _level(value: str | None) -> str | None:
     return value if value in {"beginner", "intermediate", "advanced", "expert", "unknown"} else None
+
+
+def _artifact_body(row: tuple) -> dict[str, Any]:
+    return {
+        "evidenceId": row[0], "skillId": row[1], "evidenceType": row[2], "title": row[3],
+        "url": row[4], "notes": row[5], "photoData": row[6],
+        "createdAt": row[7].isoformat() if isinstance(row[7], datetime) else row[7],
+    }
 
 
 def parse_date(value: str | None) -> date | None:

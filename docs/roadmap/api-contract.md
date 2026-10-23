@@ -71,6 +71,25 @@ A step the learner started stays `in_progress` when they untick its tasks. Reset
 `not_started`. Independent steps without required incoming dependencies can be started in any
 order. Optional edges are recommendations and do not lock a step.
 
+## Skill evidence
+
+All routes require the same profile-owning `X-Session-Id` header. User-added
+evidence is stored separately from CV-extracted and assessment evidence.
+
+| Method | Path | Body | Response |
+|---|---|---|---|
+| GET | `/profiles/{profileId}/skill-evidence` | none | `{"evidence": SkillEvidence[]}` |
+| POST | `/profiles/{profileId}/skills/{skillId}/evidence` | evidence type, title, optional URL, notes, optional small image data URL | `201 {"evidence": SkillEvidence}` |
+| DELETE | `/profiles/{profileId}/skill-evidence/{evidenceId}` | none | `{"deleted": true}` |
+
+Evidence types are `github_project`, `certificate`, and `self_report`. Project
+links must use HTTP(S); certificates need a link or image; self reports need
+notes. Images are PNG, JPEG, or WebP data URLs up to 500 KB. Records are scoped
+to the signed-in anonymous profile owner and canonical skill catalog.
+
+The table is created by host migration `020_skill_profile_evidence.sql`.
+Apply it with `python -m scripts.database.migrate` before using these endpoints.
+
 ## Rendering rules
 
 The fields below were shaped to the Figma Roadmap frames. See

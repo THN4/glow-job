@@ -3,6 +3,261 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+@keyframes cv-analysis-float {
+  50% { translate: 0 -7px; }
+}
+
+@keyframes cv-analysis-scan {
+  0%, 15% { top: -20%; opacity: 0; }
+  25% { opacity: 1; }
+  80% { top: 100%; opacity: 0.7; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes cv-analysis-transfer {
+  0%, 15% { translate: 0 -50%; opacity: 0; }
+  30% { opacity: 1; }
+  80%, 100% { translate: 40px -50%; opacity: 0; }
+}
+
+@keyframes cv-analysis-highlight {
+  50% { background-color: #dbeafe80; }
+}
+
+@keyframes cv-analysis-twinkle {
+  50% { opacity: 0.45; scale: 0.88; }
+}
+
+.cv-analysis-visual:is([data-state="running"], [data-state="ready"]) .cv-analysis-document {
+  animation: cv-analysis-float 5s ease-in-out infinite;
+}
+
+.cv-analysis-visual:is([data-state="running"], [data-state="ready"]) .cv-analysis-profile {
+  animation: cv-analysis-float 6s ease-in-out -2s infinite;
+}
+
+.cv-analysis-visual[data-state="ready"] :is(.cv-analysis-document, .cv-analysis-profile) {
+  animation-duration: 9s;
+}
+
+.cv-analysis-scan, .cv-analysis-transfer {
+  opacity: 0;
+}
+
+.cv-analysis-visual[data-state="running"] .cv-analysis-scan {
+  background: linear-gradient(transparent, #60a5fa40);
+  border-bottom: 1px solid #60a5fa90;
+  box-shadow: 0 4px 12px #60a5fa30;
+  animation: cv-analysis-scan 3.8s ease-in-out infinite;
+}
+
+.cv-analysis-visual[data-state="running"] .cv-analysis-transfer {
+  box-shadow: 0 0 8px #38bdf8;
+  animation: cv-analysis-transfer 2.6s ease-in-out infinite;
+}
+
+.cv-analysis-visual[data-state="running"] .cv-analysis-row {
+  animation: cv-analysis-highlight 3s ease-in-out infinite;
+}
+
+.cv-analysis-visual[data-state="running"] :is(.cv-analysis-halo, .cv-analysis-sparkle) {
+  animation: cv-analysis-twinkle 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-analysis-visual * {
+    animation: none !important;
+  }
+}
+
+.onboarding-sidebar-scroll {
+  scrollbar-color: rgb(37 99 235 / 0.35) transparent;
+  scrollbar-width: thin;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-track,
+.onboarding-sidebar-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgb(37 99 235 / 0.28);
+  background-clip: padding-box;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(37 99 235 / 0.5);
+  background-clip: padding-box;
+}
+
+.deadline-option-group {
+  container-type: inline-size;
+}
+
+@container (max-width: 800px) {
+  .deadline-option-description {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .onboarding-sidebar-copy h2 {
+    margin-top: 1.25rem;
+  }
+
+  .onboarding-sidebar-copy p {
+    margin-top: 0.625rem;
+  }
+
+  .onboarding-sidebar-copy ul {
+    margin-top: 1rem;
+    padding-bottom: 5rem;
+  }
+
+  .onboarding-sidebar-copy li + li {
+    margin-top: 1rem;
+  }
+}
+
+@keyframes roadmap-build-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes roadmap-build-glow {
+  50% { opacity: 0.45; transform: scale(0.88); }
+}
+
+@keyframes roadmap-build-float {
+  50% { translate: 0 -9px; }
+}
+
+@keyframes roadmap-build-route {
+  to { stroke-dashoffset: -48; }
+}
+
+.roadmap-build-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.roadmap-build-scene {
+  position: relative;
+  height: 340px;
+  isolation: isolate;
+}
+
+.roadmap-build-halo {
+  position: absolute;
+  inset: 8% 0;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #c7d2fe90, #e0f2fe60 55%, transparent 72%);
+}
+
+.roadmap-build-board {
+  position: absolute;
+  inset: 18% 12% 13%;
+  border: 10px solid #c7d2fe;
+  border-top-color: #b9c5ff;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fff, #eef2ff);
+  padding: 18px;
+  rotate: 7deg;
+  box-shadow: 0 20px 40px #637ee52b, inset 0 0 20px #dbeafe;
+  animation: roadmap-build-float 6s ease-in-out infinite;
+}
+
+.roadmap-build-path {
+  position: absolute;
+  inset: 30% 2% 0;
+  width: 96%;
+  height: 60%;
+}
+
+.roadmap-build-route {
+  stroke-dasharray: 16 8;
+  animation: roadmap-build-route 3s linear infinite;
+}
+
+
+.roadmap-build-label {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 175px;
+  border: 1px solid #ffffffc9;
+  border-radius: 14px;
+  background: #ffffffdb;
+  padding: 10px;
+  color: #172554;
+  font-size: 11px;
+  line-height: 1.4;
+  box-shadow: 0 8px 26px #7399ee1f;
+  backdrop-filter: blur(8px);
+  animation: roadmap-build-float 4.5s ease-in-out infinite;
+}
+
+.roadmap-build-label > svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  padding: 6px;
+}
+
+.roadmap-build-label-one { left: 0; top: 21%; animation-delay: -1s; }
+.roadmap-build-label-two { right: 0; top: 5%; animation-delay: -2.5s; }
+.roadmap-build-label-three { left: 0; bottom: 10%; animation-delay: -3s; }
+.roadmap-build-label-four { right: 0; bottom: 6%; animation-delay: -0.5s; }
+
+@media (min-width: 1100px) {
+  .roadmap-build-layout {
+    grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 479px) {
+  .roadmap-build-scene { height: 280px; }
+  .roadmap-build-board { inset: 20% 5% 18%; padding: 12px; border-width: 7px; }
+  .roadmap-build-label { padding: 7px; font-size: 10px; gap: 5px; }
+  .roadmap-build-label > svg { width: 27px; height: 27px; }
+}
+
+@keyframes roadmap-build-dot {
+  50% { opacity: 0.55; transform: scale(0.75); }
+}
+
+.roadmap-build-orbit {
+  animation: roadmap-build-orbit 3.5s linear infinite;
+}
+
+.roadmap-build-glow {
+  animation: roadmap-build-glow 2.2s ease-in-out infinite;
+}
+
+.roadmap-build-dot {
+  animation: roadmap-build-dot 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-build-orbit,
+  .roadmap-build-board,
+  .roadmap-build-label,
+  .roadmap-build-route,
+  .roadmap-build-glow,
+  .roadmap-build-dot {
+    animation: none;
+  }
+}
+
 .application-form-layout {
   display: grid;
   gap: 1.25rem;
@@ -64,7 +319,53 @@
   animation: roadmap-flow 900ms linear infinite;
 }
 
+@keyframes recent-activity-flow {
+  to { background-position: 0 32px; }
+}
+
+.recent-activity-circle {
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.recent-activity-item:is(:hover, :focus-within) .recent-activity-circle {
+  border-color: currentColor;
+  box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 14%, transparent),
+    0 0 16px color-mix(in srgb, currentColor 22%, transparent);
+  transform: scale(1.08);
+}
+
+.recent-activity-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.recent-activity-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, #60a5fa 40%, #2563eb 60%, transparent);
+  background-size: 100% 32px;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  animation: recent-activity-flow 900ms linear infinite paused;
+}
+
+.recent-activity-timeline:is(:hover, :focus-within) .recent-activity-line::after {
+  opacity: 1;
+  animation-play-state: running;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .recent-activity-circle {
+    transition: none;
+  }
+  .recent-activity-item:is(:hover, :focus-within) .recent-activity-circle {
+    transform: none;
+  }
+  .recent-activity-line::after {
+    animation: none;
+    transition: none;
+  }
   .roadmap-current-flow {
     animation: none;
   }

@@ -33,7 +33,7 @@ export function SelectGroup<Value extends string>({ value, onChange, options,
 
   return (
     <div role="radiogroup" aria-labelledby={labelledBy} aria-describedby={describedBy}
-      onKeyDown={handleKeyDown} className={cn('grid grid-cols-2 gap-3 sm:grid-cols-4', className)}>
+      onKeyDown={handleKeyDown} className={cn('grid auto-rows-fr grid-cols-2 items-stretch gap-3 sm:grid-cols-4', className)}>
       {options.map((option) => <SelectableCard key={option.value} {...option}
         selected={value === option.value} tabIndex={focusValue === option.value ? 0 : -1} cardVariant={cardVariant}
         onSelect={() => onChange(option.value)} />)}

@@ -19,7 +19,7 @@ export function AnalyzingCvStep({ steps, error, ready }: { steps: readonly Analy
     </p>
     <div aria-busy={!error && !ready} className="grid grid-cols-1 items-center gap-6 rounded-lg border border-border bg-panel p-4 sm:p-5 xl:grid-cols-2 xl:gap-8">
       <AnalysisSteps steps={steps} />
-      <div className="hidden min-w-0 border-t border-border pt-5 sm:block xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6"><CvProfileIllustration /></div>
+      <div className="hidden min-w-0 border-t border-border pt-5 sm:block xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6"><CvProfileIllustration state={error ? 'error' : ready ? 'ready' : 'running'} /></div>
     </div>
     {error ? <div role="alert" className="mt-4 rounded-lg border border-destructive/30 bg-panel p-4 sm:p-5">
       <h2 className="text-base font-semibold text-destructive">{analysisCopy.errorTitle}</h2>

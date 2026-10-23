@@ -25,7 +25,7 @@ export function DeadlineSelector({ value, customDate, onChange, onCustomDateChan
   return <div className="space-y-3">
     <SelectGroup<Deadline> value={value} onChange={onChange} options={goalCopy.deadline.options}
       labelledBy={labelledBy} describedBy={describedBy} cardVariant="inline-radio"
-      className="grid-cols-1 min-[480px]:grid-cols-2 2xl:grid-cols-4" />
+      className="deadline-option-group grid-cols-1 min-[480px]:grid-cols-2 2xl:grid-cols-4" />
     {value === 'custom' && <div className="max-w-sm space-y-2">
       <Label htmlFor={inputId}>{goalCopy.deadline.dateLabel}</Label>
       <Input id={inputId} type="date" value={customDate} min={getMinimumDeadlineDate()} required
