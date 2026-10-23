@@ -16,12 +16,12 @@ type ApplicationsHeaderProps = {
 
 export function ApplicationsHeader({ formOpen = false, detailOpen = false, detailLabel, onBack, activeTab = 'my-applications', titleOverride, subtitleOverride, backLabel }: ApplicationsHeaderProps) {
   const companiesTab = activeTab === 'companies'
-  const currentPageTitle = activeTab === 'my-applications' ? 'Applications' : companiesTab ? 'Companies' : 'Career Recommendations'
+  const currentPageTitle = activeTab === 'my-applications' ? 'Applications' : companiesTab ? 'Companies' : 'Recommendations'
   const currentPageSubtitle = activeTab === 'my-applications'
     ? 'Manage your applications, explore career paths and browse company openings.'
     : companiesTab
       ? 'Browse sample openings from the app’s job database—not your application records.'
-      : 'Explore broad career paths grounded in your skills, experience and current goal.'
+      : 'Find jobs for your skills or explore career paths based on your saved profile.'
   const isRecommendationDetail = activeTab === 'recommendations' && Boolean(titleOverride)
   const backButton = backLabel && !formOpen && (
     <button type="button" onClick={onBack} className={workspaceStyles.outlineAction}>

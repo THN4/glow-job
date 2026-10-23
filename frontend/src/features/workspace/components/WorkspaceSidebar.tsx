@@ -58,7 +58,7 @@ export function WorkspaceSidebar({
         </p>
       </div>
 
-      <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [scrollbar-width:thin] [@media(max-height:900px)]:mt-3">
+      <div className="scrollbar-subtle mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain [@media(max-height:900px)]:mt-3">
         <div className="shrink-0">
           <CurrentGoalCard goal={goal} />
         </div>

@@ -1,7 +1,9 @@
 import { workspaceStyles } from '../../../workspace/workspaceStyles'
 import { useState } from 'react'
-import { ArrowRight, MapPin } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, MapPin, Search } from 'lucide-react'
 import { CompanyOpeningDetail } from './CompanyOpeningDetail'
+import { companyAvatarColor } from '../shared/companyAvatar'
+import { FilterSelect } from '../shared/FilterSelect'
 import type { CompanyOpening } from '../../type'
 import type { RoadmapNodeData } from '../../../roadmap/type'
 
@@ -50,18 +52,12 @@ export function CompaniesTab({ applications, openings, selectedOpening, onAddOpe
   return (
     <section aria-label="Companies and job openings" className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-3">
-        <label className="sr-only" htmlFor="company-role-filter">Role</label>
-        <select id="company-role-filter" value={role} onChange={(event) => setRole(event.target.value)} className={workspaceStyles.filter}>
-          <option value="all">Role: All job titles</option>{roles.map((value) => <option key={value}>{value}</option>)}
-        </select>
-        <label className="sr-only" htmlFor="company-location-filter">Location</label>
-        <select id="company-location-filter" value={location} onChange={(event) => setLocation(event.target.value)} className={workspaceStyles.filter}>
-          <option value="all">Location: All locations</option>{locations.map((value) => <option key={value}>{value}</option>)}
-        </select>
-        <label className="sr-only" htmlFor="company-experience-filter">Employment type</label>
-        <select id="company-experience-filter" value={experience} onChange={(event) => setExperience(event.target.value)} className={workspaceStyles.filter}>
-          <option value="all">Employment type: All</option>{experiences.map((value) => <option key={value}>{value}</option>)}
-        </select>
+        <FilterSelect label="Role" icon={Search} value={role} onChange={setRole}
+          options={[{ value: 'all', label: 'All job titles' }, ...roles.map((value) => ({ value, label: value }))]} />
+        <FilterSelect label="Location" icon={MapPin} value={location} onChange={setLocation}
+          options={[{ value: 'all', label: 'All locations' }, ...locations.map((value) => ({ value, label: value }))]} />
+        <FilterSelect label="Employment" icon={BriefcaseBusiness} value={experience} onChange={setExperience}
+          options={[{ value: 'all', label: 'All types' }, ...experiences.map((value) => ({ value, label: value }))]} />
       </div>
 
       {filteredOpenings.length ? (
@@ -69,7 +65,7 @@ export function CompaniesTab({ applications, openings, selectedOpening, onAddOpe
           {filteredOpenings.map((opening) => (
             <article key={opening.id} className="flex min-h-40 flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-[border-color,box-shadow] hover:border-blue-400 hover:shadow-md focus-within:border-blue-400">
               <div className="flex items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-700 text-xs font-bold text-white">{opening.company.slice(0, 2).toUpperCase()}</span>
+                <span aria-hidden="true" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-bold ${companyAvatarColor(opening.company)}`}>{opening.company.slice(0, 2).toUpperCase()}</span>
                 <div className="min-w-0"><h3 className="truncate text-sm font-bold text-slate-900">{opening.company}</h3><p className="truncate text-xs font-medium text-slate-700">{opening.role}</p></div>
               </div>
               <p className="mt-2 text-xs text-slate-500"><MapPin size={11} className="mr-1 inline" aria-hidden="true" />{opening.location} · {opening.workStyle} · {opening.experience}</p>

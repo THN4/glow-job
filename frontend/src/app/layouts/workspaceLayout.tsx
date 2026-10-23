@@ -88,10 +88,10 @@ export function WorkspaceLayout({
             <PanelLeftOpen size={20} aria-hidden="true" />
           </button>
         </div>}
-        <div ref={scrollRef} className={`min-h-0 flex-1 ${isRoadmapPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <div ref={scrollRef} className={`scrollbar-subtle min-h-0 min-w-0 flex-1 ${isRoadmapPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             className={`mx-auto w-full max-w-[1500px] p-4 sm:p-6 ${
-              isRoadmapPage ? 'flex h-full min-h-0 flex-col' : 'min-h-screen'
+              isRoadmapPage ? 'flex h-full min-h-0 min-w-0 flex-col' : 'min-h-full'
             }`}
           >
             <Outlet />
