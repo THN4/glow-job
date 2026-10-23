@@ -14,6 +14,7 @@ export function MarketInsightsPage() {
   const profileId = getSavedProfileId()
   const sessionId = getSessionId()
   const [selection, setSelection] = useState('')
+  const [skillLimit, setSkillLimit] = useState('10')
   const goal = useCareerGoal()
   const careers = useQuery({ queryKey: ['market-career-profiles'], queryFn: loadCareerProfiles, enabled: Boolean(profileId) })
   const savedGoal = goal.data
@@ -25,10 +26,12 @@ export function MarketInsightsPage() {
   })
   const data = match.data
   const skills = [...(data?.skills ?? [])].sort((a, b) => (b.demandPercentage ?? 0) - (a.demandPercentage ?? 0))
+  const visibleSkills = skillLimit === 'all' ? skills : skills.slice(0, Number(skillLimit))
 
   const careerProfileSelector = (
         <div className="mt-6 border-b border-slate-100 pb-6">
-          <label className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-700">
+          <div className="flex flex-wrap items-end gap-4">
+          <label className="flex min-w-0 flex-1 flex-col gap-2 text-sm font-semibold text-slate-700">
             Career profile
             <select value={careerProfileId ?? ''} onChange={(event) => setSelection(event.target.value)} className={workspaceStyles.filter}>
               <option value="" disabled>Select a career profile</option>
@@ -36,6 +39,15 @@ export function MarketInsightsPage() {
               {careers.data?.map((career) => <option key={career.careerProfileId} value={career.careerProfileId}>{career.profileName}</option>)}
             </select>
           </label>
+          <label className="flex w-full flex-col gap-2 text-sm font-semibold text-slate-700 sm:w-auto">
+            Show skills
+            <select value={skillLimit} onChange={(event) => setSkillLimit(event.target.value)}
+              disabled={!data || !skills.length || data.marketSample.totalJobs === 0} className={workspaceStyles.filter}>
+              {[5, 10, 20, 50].map((limit) => <option key={limit} value={String(limit)}>Top {limit}</option>)}
+              <option value="all">All skills</option>
+            </select>
+          </label>
+          </div>
           {careers.isPending && <p role="status" className="mt-2 text-sm text-slate-500">Loading career profiles…</p>}
           {careers.isError && <p role="alert" className="mt-2 text-sm text-red-700">{careers.error.message} <button type="button" onClick={() => void careers.refetch()} className="underline">Try again</button></p>}
           {goal.isError && <p role="alert" className="mt-2 text-sm text-red-700">Could not load your saved goal. Select a career profile above. <button type="button" onClick={() => void goal.refetch()} className="underline">Retry goal</button></p>}
@@ -66,13 +78,14 @@ export function MarketInsightsPage() {
         </>}
           <section className="my-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
             <h2 className={workspaceStyles.sectionTitle}>Skill frequency in job postings</h2>
-            <p className="mt-1 text-xs text-slate-500">Top 10 skills by share of collected postings for the selected career profile.</p>
+            <p className="mt-1 text-xs text-slate-500">{skillLimit === 'all' ? 'All skills' : `Top ${skillLimit} skills`} by share of collected postings for the selected career profile.</p>
             {careerProfileSelector}
             {!careerProfileId && <p className="mt-4 text-sm text-slate-600">Choose a career profile to view its market data.</p>}
             {careerProfileId && match.isPending && <p role="status" className="mt-4 text-sm text-slate-600">Loading market insights…</p>}
             {match.isError && <p role="alert" className="mt-4 text-sm text-red-700">{match.error.message} <button type="button" onClick={() => void match.refetch()} className="underline">Try again</button></p>}
             {data && (data.marketSample.totalJobs === 0 || !skills.length ? <p className="mt-4 text-sm text-slate-600">No skill frequency data is available for this career profile yet.</p> : <div className="mt-8 space-y-7 pb-2">
-              {skills.slice(0, 10).map((skill) => {
+              <p aria-live="polite" className="text-xs text-muted-foreground">Showing {visibleSkills.length} of {skills.length} skills</p>
+              {visibleSkills.map((skill) => {
                 const available = Number.isFinite(skill.demandPercentage)
                 const value = available ? Math.max(0, Math.min(100, skill.demandPercentage)) : 0
                 const barColor = `hsl(217 85% ${75 - value * 0.35}%)`

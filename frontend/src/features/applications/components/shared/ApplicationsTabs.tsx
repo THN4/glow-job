@@ -1,5 +1,4 @@
 import { Building2, BriefcaseBusiness, GitBranch, Plus } from 'lucide-react'
-import { workspaceStyles } from '../../../workspace/workspaceStyles'
 import type { ApplicationTabKey } from '../../type'
 
 type ApplicationsTabsProps = {
@@ -36,8 +35,9 @@ export function ApplicationsTabs({ activeTab, onChange, showAddApplication, onAd
         ))}
       </nav>
       {showAddApplication && (
-        <button type="button" onClick={onAddApplication} className={`mb-1 ${workspaceStyles.primaryAction}`}>
-          <Plus size={15} aria-hidden="true" /> Add Application
+        <button type="button" onClick={onAddApplication} aria-label="Add application" title="Add application"
+          className="mb-1 inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <Plus size={20} aria-hidden="true" />
         </button>
       )}
     </div>

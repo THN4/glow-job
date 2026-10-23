@@ -10,6 +10,7 @@ type StatCardProps = {
   progress?: number | null
   selected?: boolean
   onClick?: () => void
+  compactOnMobile?: boolean
 }
 
 const tones = {
@@ -21,7 +22,7 @@ const tones = {
   destructive: 'text-destructive',
 }
 
-export function StatCard({ label, value, icon: Icon, tone = 'primary', detail, progress, selected, onClick }: StatCardProps) {
+export function StatCard({ label, value, icon: Icon, tone = 'primary', detail, progress, selected, onClick, compactOnMobile = false }: StatCardProps) {
   const progressValue = typeof progress === 'number' && Number.isFinite(progress)
     ? Math.max(0, Math.min(100, progress)) : undefined
   const content = <>
@@ -42,14 +43,14 @@ export function StatCard({ label, value, icon: Icon, tone = 'primary', detail, p
       </div>
     </div>}
   </>
-  const className = `flex min-h-36 min-w-0 flex-col rounded-xl border bg-card p-4 text-left font-sans shadow-sm transition-[background-color,border-color,box-shadow] duration-150 hover:bg-accent hover:shadow-md motion-reduce:transition-none ${tones[tone]} ${onClick ? 'cursor-pointer focus-visible:bg-accent focus-visible:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary' : ''} ${selected ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/40'}`
+  const className = `flex min-w-0 flex-col rounded-xl border bg-card text-left font-sans shadow-sm transition-[background-color,border-color,box-shadow] duration-150 hover:bg-accent hover:shadow-md motion-reduce:transition-none ${compactOnMobile ? 'min-h-32 p-3 sm:min-h-36 sm:p-4' : 'min-h-36 p-4'} ${tones[tone]} ${onClick ? 'cursor-pointer focus-visible:bg-accent focus-visible:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary' : ''} ${selected ? 'border-primary ring-1 ring-primary' : 'border-border hover:border-primary/40'}`
 
   return onClick
     ? <button type="button" aria-pressed={selected} onClick={onClick} className={className}>{content}</button>
     : <article className={className}>{content}</article>
 }
 
-export function StatGrid({ children, columns = 4, label }: { children: ReactNode; columns?: 3 | 4 | 5; label?: string }) {
+export function StatGrid({ children, columns = 4, label, mobileColumns = 1 }: { children: ReactNode; columns?: 3 | 4 | 5; label?: string; mobileColumns?: 1 | 2 }) {
   const widths = { 3: 'lg:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5' }
-  return <div aria-label={label} role={label ? 'group' : undefined} className={`grid auto-rows-fr grid-cols-1 gap-3 min-[400px]:grid-cols-2 ${widths[columns]}`}>{children}</div>
+  return <div aria-label={label} role={label ? 'group' : undefined} className={`grid auto-rows-fr gap-3 ${mobileColumns === 2 ? 'grid-cols-2' : 'grid-cols-1 min-[400px]:grid-cols-2'} ${widths[columns]}`}>{children}</div>
 }
