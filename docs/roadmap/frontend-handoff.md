@@ -70,15 +70,15 @@ sequenceDiagram
 | การ์ด Current goal ใน sidebar (ชื่อ, แถบ %, "4 months remaining") | `summary.targetRole`, `progress.percent`, `progress.label`, `summary.timeRemainingLabel` | `toRoadmapScreen(view).goal` ส่งให้ `CurrentGoalCard` ได้ตรง ๆ |
 | ข้อความใต้ชื่อ node (Completed / In progress / Upcoming project / Career activity) | `nodes[].subtitle` | คำนวณใหม่ทุกครั้งที่อ่าน ตามความคืบหน้า |
 | Badge "You are here" | `currentNodeKey` | ขั้นที่ in progress ก่อน ถ้าไม่มีใช้ขั้นถัดไปที่ควรทำ |
-| Badge "Best next step" | `nextAction.nodeKey`, `nextAction.text` | เลื่อนไปข้างหน้าเองเมื่อขั้นนั้นเสร็จหรือถูกข้าม |
-| เส้นประ (เส้นทางที่แนะนำแต่ไม่บังคับ) | `edges[].optional` | foundation check ที่เป็น prerequisite แบบ `global_ordering` มี `optional: false` |
+| Badge "Best next step" | `nextAction.nodeKey`, `nextAction.text` | เลื่อนไปขั้นที่ปลดล็อกหลังยืนยัน checklist ครบ |
+| เส้นเชื่อม | `edges[]` | เส้น prerequisite เป็นเส้นประระหว่างที่ยังเรียนอยู่ และเป็นเส้นทึบเมื่อทั้งสอง node complete; เส้น optional แสดงเป็นเส้นประ |
 | Node สุดท้าย "Data Engineer · Job-ready in 4 months" | subtitle `Target: Jan 18, 2027` | **ไม่ใช้ "Job-ready"** เพราะระบบไม่ได้ประเมินความพร้อมรับงาน |
 | Panel: ชื่อ, chip Skill / In progress | `title`, `kind`, `status`/`subtitle` | |
 | "Current confidence 42%" | **ไม่คำนวณ** | FE ใช้ "Not assessed" อยู่แล้ว ซึ่งถูกต้อง แนะนำแสดง `skill.profileLabel` เช่น "Not in your profile yet" ใต้หัวข้อนี้ |
 | คำอธิบาย / Why it matters / What this unlocks | `summary` / `whyItMatters` / `unlockIds` (adapter คำนวณจาก `edges`) | |
-| Learning checklist "0 / 4 completed" | `checklist[]` | ติ๊กแล้วเรียก `PUT .../tasks/{id}` |
+| Learning checklist "0 / 4 completed" | `checklist[]` | เริ่ม node ก่อน แล้วติ๊กเพื่อบันทึกด้วย `PUT .../tasks/{id}` |
 | "Estimated time: 2 weeks at 8 hrs/week" | `extras[id].timeText` เช่น "8 to 14 hours · at 2 to 5 hrs/week" | เป็นช่วงเพราะผู้ใช้ระบุเวลาเป็นช่วง ไม่ได้แปลงเป็นสัปดาห์ให้ เพื่อไม่ให้เลขดูแม่นเกินจริง |
-| ปุ่ม "Start learning" / "Mark as completed" | `PUT .../steps/{stepKey}` ด้วย `in_progress` / `completed` | **FE ปัจจุบันใช้ "Review skill" / "Manage evidence"** ต่างจาก design ต้องตกลงกับ designer ว่าใช้ชุดไหน API รองรับได้ทั้งหมด |
+| ปุ่มเริ่ม/ยืนยัน | `PUT .../steps/{stepKey}` ด้วย `in_progress` / `completed` | เริ่มได้เมื่อ prerequisite ที่เชื่อมเข้ามา complete แล้ว; ยืนยันได้เมื่อ checklist ทุกข้อ complete |
 | "Evidence you can add" (GitHub project / Certificate / Self report) | **ยังไม่มี API** | หน้า Roadmap ที่ใช้ข้อมูลจริงซ่อนปุ่มจำลองนี้แล้ว ถ้าต้องบันทึกจริงต้องออกแบบ endpoint ใหม่ (ตาราง `app.user_skill_evidence` มีอยู่แล้ว) |
 | Market Updates, ชื่อผู้ใช้ ใน sidebar | ไม่เกี่ยวกับ Roadmap API | |
 
@@ -169,4 +169,4 @@ Label ภาษาคนของ `deferred[].reasonCode`:
 
 1. ฟอร์ม goal จะอยู่ต่อท้าย CV onboarding หรือเป็นหน้าแยก (Settings)
 2. ตำแหน่งแสดงเนื้อหาใหม่ 4 อย่างข้างบน (หลังเลือกจากภาพเปรียบเทียบแล้ว)
-3. ต้องการให้ข้าม step ได้ใน UI หรือไม่ (API รองรับ `skipped` แล้ว)
+3. ถ้าต้องการรองรับการข้าม step ในอนาคต ต้องกำหนดกติกาเพิ่ม โดย API ปัจจุบันไม่อนุญาตให้ข้าม

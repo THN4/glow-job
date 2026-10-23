@@ -187,6 +187,15 @@
           "default": false,
           "title": "Optional",
           "type": "boolean"
+        },
+        "kind": {
+          "default": "prerequisite",
+          "enum": [
+            "prerequisite",
+            "recommended_order"
+          ],
+          "title": "Kind",
+          "type": "string"
         }
       },
       "required": [
@@ -334,6 +343,14 @@
           "default": "",
           "title": "Profilelabel",
           "type": "string"
+        },
+        "profileEvidence": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ProfileEvidence"
+          },
+          "title": "ProfileEvidence",
+          "type": "array"
         }
       },
       "required": [
@@ -347,8 +364,26 @@
       "title": "NodeSkill",
       "type": "object"
     },
+    "ProfileEvidence": {
+      "properties": {
+        "evidenceType": {
+          "title": "Evidencetype",
+          "type": "string"
+        },
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidenceType",
+        "excerpt"
+      ],
+      "title": "ProfileEvidence",
+      "type": "object"
+    },
     "Position": {
-      "description": "Canvas grid line numbers, starting at 1. column is 1-4.",
+      "description": "Canvas grid line numbers, starting at 1. column is 1-3.",
       "properties": {
         "row": {
           "title": "Row",
@@ -480,6 +515,18 @@
           "default": 0,
           "title": "Order",
           "type": "integer"
+        },
+        "recommendedOrder": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommendedorder"
         },
         "position": {
           "$ref": "#/$defs/Position",
@@ -761,7 +808,7 @@
     "layout": {
       "$ref": "#/$defs/Layout",
       "default": {
-        "columns": 4,
+          "columns": 3,
         "rows": 1
       }
     },

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getSavedProfileId } from '../../resume/api'
@@ -7,8 +7,12 @@ import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
 import { generateRoadmap, setRoadmapStep, setRoadmapTask } from '../api'
 import { currentRoadmapKey, useCurrentRoadmap } from '../useCurrentRoadmap'
-import type { ProgressStatus, RoadmapJob, RoadmapView } from '../api-types'
+import type { RoadmapJob, RoadmapView, StepProgressInput } from '../api-types'
 import { toRoadmapScreen } from '../adapter'
+import { canStartNode } from '../progress'
+import { recordRoadmapActivity } from '../activity'
+import { loadEvidenceByNode, saveEvidenceByNode } from '../storage'
+import type { RoadmapEvidence, RoadmapNodeData } from '../type'
 
 export function RoadmapPage() {
   const [searchParams] = useSearchParams()
@@ -19,6 +23,15 @@ export function RoadmapPage() {
   const [working, setWorking] = useState(false)
   const [stage, setStage] = useState<RoadmapJob['stage'] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [evidenceByNode, setEvidenceByNode] = useState<Record<string, RoadmapEvidence[]>>(loadEvidenceByNode)
+
+  useEffect(() => { saveEvidenceByNode(evidenceByNode) }, [evidenceByNode])
+
+  useEffect(() => {
+    if (requestedNodeKey && view?.nodes.some((node) => node.key === requestedNodeKey)) {
+      setSelectedNodeId(requestedNodeKey)
+    }
+  }, [requestedNodeKey, view])
 
   function setView(next: RoadmapView) {
     queryClient.setQueryData(currentRoadmapKey(getSavedProfileId()), next)
@@ -55,7 +68,7 @@ export function RoadmapPage() {
     }
   }
 
-  async function updateStep(stepKey: string, status: ProgressStatus) {
+  async function updateStep(stepKey: string, status: StepProgressInput) {
     if (!view?.roadmapId || working) return
     setWorking(true)
     setError(null)
@@ -66,6 +79,21 @@ export function RoadmapPage() {
     } finally {
       setWorking(false)
     }
+  }
+
+  function addEvidence(node: RoadmapNodeData, evidence: RoadmapEvidence) {
+    setEvidenceByNode((current) => ({ ...current, [node.id]: [...(current[node.id] ?? []), evidence] }))
+    recordRoadmapActivity({ kind: 'evidence', title: `Added ${evidence.type} evidence`,
+      description: `${evidence.title} for ${node.title}.`, nodeId: node.id })
+  }
+
+  function removeEvidence(node: RoadmapNodeData, evidenceId: string) {
+    const evidence = evidenceByNode[node.id]?.find((item) => item.id === evidenceId)
+    if (!evidence) return
+    setEvidenceByNode((current) => ({ ...current,
+      [node.id]: (current[node.id] ?? []).filter((item) => item.id !== evidenceId) }))
+    recordRoadmapActivity({ kind: 'evidence', title: `Removed evidence from ${node.title}`,
+      description: evidence.title, nodeId: node.id })
   }
 
   if (loading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your roadmap...</p>
@@ -115,7 +143,11 @@ export function RoadmapPage() {
               className="fixed inset-0 z-30 bg-slate-900/25 backdrop-blur-[1px] min-[1200px]:hidden" />
             <div className="fixed inset-x-2 bottom-2 top-[6dvh] z-40 overflow-hidden min-[640px]:inset-x-6 min-[640px]:top-[8dvh] min-[1200px]:static min-[1200px]:mt-6 min-[1200px]:h-[calc(100%-1.5rem)] min-[1200px]:w-[304px] min-[1200px]:shrink-0">
               <NodeDetailPanel node={selectedNode} nodes={screen.nodes} extra={screen.extras[selectedNode.id]}
-                onTaskChange={updateTask} onStepChange={updateStep} busy={working}
+                canStart={canStartNode(screen.nodes, screen.dependencies, selectedNode.id)}
+                evidenceItems={evidenceByNode[selectedNode.id] ?? []}
+                onAddEvidence={(evidence) => addEvidence(selectedNode, evidence)}
+                onRemoveEvidence={(id) => removeEvidence(selectedNode, id)}
+                connections={screen.dependencies} onTaskChange={updateTask} onStepChange={updateStep} busy={working}
                 onClose={() => setSelectedNodeId(null)} />
             </div>
           </>

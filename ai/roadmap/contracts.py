@@ -110,6 +110,11 @@ class SkillDetail(View):
     citations: list[Citation] = []
 
 
+class ProfileEvidence(View):
+    evidence_type: str
+    excerpt: str
+
+
 class ChecklistItem(View):
     id: str
     label: str
@@ -133,13 +138,15 @@ class NodeSkill(View):
     # Plain-language profile status for the detail panel, e.g. "Not in your profile yet".
     # It replaces the design's "Current confidence" percentage, which is not calculated.
     profile_label: str = ""
+    # Evidence extracted from the learner's confirmed profile, separate from learning citations.
+    profile_evidence: list[ProfileEvidence] = Field(default_factory=list)
 
 
 ProgressStatus = Literal["not_started", "in_progress", "completed", "skipped"]
 
 
 class Position(View):
-    """Canvas grid line numbers, starting at 1. column is 1-4."""
+    """Canvas grid line numbers, starting at 1. column is 1-3."""
 
     row: int
     column: int
@@ -158,8 +165,13 @@ class RoadmapNode(View):
     depends_on: list[str] = []
     layer: int = 0
     order: int = 0
+    # Recommended learning order from the deterministic market-gap priority rank.
+    # This is distinct from depends_on: it does not assert a prerequisite.
+    recommended_order: int | None = None
     position: Position = Position(row=1, column=1)
     status: ProgressStatus = "not_started"
+    # False for a selected skill-gap node that has no reviewed instructional content yet.
+    learning_content_available: bool = True
     checklist: list[ChecklistItem] = []
     details: list[SkillDetail] = []
     # True when the learner's confirmed profile and market assessment show this skill is
@@ -174,6 +186,7 @@ class Edge(View):
     to: str
     # True for a recommended path that does not block the next step (drawn dashed).
     optional: bool = False
+    kind: Literal["prerequisite", "recommended_order"] = "prerequisite"
 
 
 class Layout(View):
@@ -252,7 +265,7 @@ class RoadmapView(View):
     next_action: NextAction
     # Node that gets the "You are here" badge: the first step in progress, else the next action.
     current_node_key: str = ""
-    layout: Layout = Layout(columns=4, rows=1)
+    layout: Layout = Layout(columns=3, rows=1)
     nodes: list[RoadmapNode]
     edges: list[Edge]
     deferred: list[DeferredSkill]

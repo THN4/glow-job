@@ -41,6 +41,7 @@ export type RoadmapNodeExtra = {
   timeText: string | null
   /** Replaces "Current confidence": for example "Not in your profile yet". */
   profileLabel: string | null
+  profileEvidence: NonNullable<ApiNode['skill']>['profileEvidence']
   notice: string | null
   citations: ApiNode['citations']
   tasks: Array<{ id: string; detail: string; taskKind: ApiNode['checklist'][number]['taskKind']; citations: ApiNode['citations'] }>
@@ -49,7 +50,10 @@ export type RoadmapNodeExtra = {
 
 export type RoadmapScreenData = {
   nodes: RoadmapNodeData[]
+  /** Simple visual learning path; does not define which steps are unlocked. */
   connections: RoadmapConnection[]
+  /** Reviewed prerequisites used for start/completion gating and detail display. */
+  dependencies: RoadmapConnection[]
   summary: RoadmapSummary
   /** Header card in the workspace sidebar. */
   goal: CurrentGoalSummary
@@ -89,12 +93,13 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
     title: node.kind === 'skill' && node.skill ? node.skill.name : node.title,
     kind: KIND[node.kind],
     status: STATUS[node.status],
+    learningContentAvailable: node.learningContentAvailable,
     baselineComplete: node.baselineComplete,
     position: node.position,
     subtitle: node.subtitle,
     description: node.summary,
     whyItMatters: node.whyItMatters,
-    unlockIds: view.edges.filter((edge) => edge.from === node.key).map((edge) => edge.to),
+    unlockIds: view.edges.filter((edge) => edge.kind === 'prerequisite' && edge.from === node.key).map((edge) => edge.to),
     checklist: node.checklist.map((item) => ({ id: item.id, label: item.label, completed: item.completed })),
   }))
 
@@ -103,6 +108,7 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
     extras[node.key] = {
       timeText: timeText(node, weekly),
       profileLabel: node.skill?.profileLabel ?? null,
+      profileEvidence: node.skill?.profileEvidence ?? [],
       notice: node.notice,
       citations: node.citations,
       tasks: node.checklist.map((item) => ({
@@ -115,9 +121,33 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
     }
   }
 
+  // Draw true prerequisites and suggested links into portfolio/career steps.
+  // Rank-only skill-to-skill hints and direct-to-goal joins are left out to keep the graph clear.
+  const nodeKindById = new Map(nodes.map((node) => [node.id, node.kind]))
+  const connections: RoadmapConnection[] = view.edges
+    .filter((edge) => edge.kind === 'prerequisite'
+      || (edge.kind === 'recommended_order'
+        && (['project', 'career-activity'].includes(nodeKindById.get(edge.to) ?? '')
+          || (edge.to === 'goal'
+            && ['project', 'career-activity'].includes(nodeKindById.get(edge.from) ?? '')))))
+    .map((edge) => ({
+      from: edge.from,
+      to: edge.to,
+      optional: edge.optional,
+      kind: edge.kind,
+      label: edge.kind === 'prerequisite'
+        ? edge.optional ? 'Optional foundation' : 'Required first'
+        : nodeKindById.get(edge.to) === 'project' ? 'Practice in project'
+          : nodeKindById.get(edge.to) === 'career-activity' ? 'Career step' : 'Career outcome',
+    }))
+  const dependencies: RoadmapConnection[] = view.edges
+    .filter((edge) => !edge.optional && edge.kind === 'prerequisite')
+    .map((edge) => ({ from: edge.from, to: edge.to, kind: edge.kind }))
+
   return {
     nodes,
-    connections: view.edges.map((edge) => ({ from: edge.from, to: edge.to, optional: edge.optional || undefined })),
+    connections,
+    dependencies,
     summary: {
       goalTitle: view.summary.careerName,
       targetRole: view.summary.targetRole,

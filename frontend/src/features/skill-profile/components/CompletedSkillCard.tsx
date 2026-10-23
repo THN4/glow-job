@@ -1,4 +1,5 @@
-import { CheckCircle2, GitBranch, Plus } from 'lucide-react'
+import { CheckCircle2, Plus } from 'lucide-react'
+import { SkillIcon } from '../../../components/SkillIcon'
 import { Link } from 'react-router-dom'
 import type { SkillProfileSkill } from '../type'
 
@@ -12,7 +13,7 @@ export function CompletedSkillCard({ skill, evidence, onAddEvidence }: Completed
   return (
     <article className="flex flex-col gap-2.5 border-b border-slate-100 py-3 last:border-b-0 sm:flex-row sm:items-center sm:justify-between sm:gap-3 [@media(max-height:960px)]:py-2">
       <div className="flex min-w-0 items-start gap-2.5">
-        <GitBranch size={15} className="mt-0.5 shrink-0 text-blue-600" aria-hidden="true" />
+        <SkillIcon name={skill.title} size={15} className="mt-0.5 text-blue-600" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">
             <h4 className="text-sm font-semibold text-slate-900">{skill.title}</h4>

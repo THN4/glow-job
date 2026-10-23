@@ -160,9 +160,11 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 ],
                 "foundation_skill_ids": list(c.foundation_skill_ids),
             }
-            for rank, c in enumerate(
-                [item for item in context.roadmap_candidates if item.learning_recommendation != "reference_only"], 1
-            )
+            for rank, c in enumerate(sorted(
+                (item for item in context.roadmap_candidates
+                 if item.learning_recommendation != "reference_only"),
+                key=lambda item: item.priority.rank or 10_000,
+            ), 1)
             if c.learning_recommendation != "reference_only"
         ],
         "completed_skills": [

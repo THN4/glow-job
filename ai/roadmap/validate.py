@@ -11,8 +11,9 @@ from dataclasses import dataclass, field
 
 from ai.roadmap import layout
 from ai.roadmap.compact import Budget
-from ai.roadmap.contracts import DraftDeferred, RoadmapDraft
-from rag.context.agent_models import AgentContext
+from ai.roadmap.contracts import DraftDeferred, DraftStep, RoadmapDraft
+from ai.roadmap.ordering import recommended_route_steps, recommended_skill_steps
+from rag.context.agent_models import AgentContext, RoadmapCandidate
 
 _SPACE = re.compile(r"\s+")
 MAX_CHECK_HOURS = 2
@@ -28,6 +29,11 @@ class Validation:
 
 def _norm(text: str) -> str:
     return _SPACE.sub(" ", text).strip()
+
+
+def _has_learning_content(candidate: RoadmapCandidate) -> bool:
+    return (candidate.teaching_content_status == "available"
+            and candidate.rag_status in {"supported", "partial"})
 
 
 def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -> Validation:
@@ -47,6 +53,43 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
     sources = {
         e.chunk_id: e for e in context.evidence_registry if "learning_content" in e.usage_roles
     }
+
+    # Keep selected skills visible even when the live knowledge context has no usable
+    # instructional material. Build a factual placeholder from Agent Context rather
+    # than letting the model invent tasks or dropping the skill from the graph.
+    unavailable_ids = {
+        candidate.skill_id for candidate in mains.values()
+        if candidate.learning_recommendation != "reference_only"
+        and not _has_learning_content(candidate)
+    }
+    for candidate in sorted(
+        (mains[skill_id] for skill_id in unavailable_ids),
+        key=lambda item: (item.priority.rank or 10_000, item.skill_id),
+    ):
+        existing = next((step for step in draft.steps
+                         if step.kind == "skill" and step.skill_id == candidate.skill_id), None)
+        if existing is None:
+            existing = DraftStep(
+                key=f"content-not-ready-{candidate.skill_id}", kind="skill", skill_id=candidate.skill_id,
+                title=candidate.skill_name,
+                summary="Learning content for this skill is not available yet.",
+                why=list(candidate.priority.reasons) or ["This skill is part of the selected career skill gaps."],
+                hours_min=0, hours_max=0, depends_on=[], tasks=[], details=[],
+            )
+            draft.steps.append(existing)
+        else:
+            existing.title = candidate.skill_name
+            existing.summary = "Learning content for this skill is not available yet."
+            existing.why = list(candidate.priority.reasons) or [
+                "This skill is part of the selected career skill gaps."
+            ]
+            existing.hours_min = 0
+            existing.hours_max = 0
+            existing.depends_on = []
+            existing.tasks = []
+            existing.details = []
+    if unavailable_ids:
+        draft.deferred = [item for item in draft.deferred if item.skill_id not in unavailable_ids]
 
     if not draft.steps:
         fatal.append("The roadmap has no steps.")
@@ -96,7 +139,7 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
             candidate = mains.get(step.skill_id)
             if candidate is None:
                 fatal.append(f"{label} is a skill step, but skill_id {step.skill_id} is not a main skill.")
-            elif candidate.learning_recommendation != "candidate":
+            elif candidate.learning_recommendation != "candidate" and step.skill_id not in unavailable_ids:
                 fatal.append(f"{label} plans {candidate.skill_name}, which is {candidate.learning_recommendation}.")
             elif step.skill_id in scheduled:
                 fatal.append(f"{label} repeats main skill {candidate.skill_name}; plan each main skill once.")
@@ -123,7 +166,8 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
         if unknown:
             warnings.append(f"{label}: removed unknown dependencies {unknown}.")
             step.depends_on = [key for key in step.depends_on if key in known and key != step.key]
-        if not step.tasks and step.kind != "completed_skill":
+        if (not step.tasks and step.kind != "completed_skill"
+                and not (step.kind == "skill" and step.skill_id in unavailable_ids)):
             fatal.append(f"{label} has no tasks.")
 
         for task in step.tasks:
@@ -172,14 +216,78 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                            for prerequisite_key in prerequisite_keys):
                     fatal.append(f"Step '{target_key}' must depend on prerequisite {foundation.skill_name}.")
         keys = [step.key for step in draft.steps]
-        deps = {step.key: step.depends_on for step in draft.steps}
-        needed = {dep for value in deps.values() for dep in value}
-        deps["goal"] = [key for key in keys if key not in needed]
-        rows = layout.row_count([*keys, "goal"], deps)
+        deps = {step.key: list(step.depends_on) for step in draft.steps}
+
+        def reaches(start: str, target: str) -> bool:
+            pending = [start]
+            visited: set[str] = set()
+            while pending:
+                current = pending.pop()
+                if current == target:
+                    return True
+                if current not in visited:
+                    visited.add(current)
+                    pending.extend(child for child, parents in deps.items() if current in parents)
+            return False
+
+        def add_display_link(source: str, target: str) -> None:
+            if (source != target and source not in deps.setdefault(target, [])
+                    and not reaches(target, source)):
+                deps[target].append(source)
+
+        completed_steps = [step for step in draft.steps if step.kind == "completed_skill"]
+        planned_skills = recommended_skill_steps(draft, context)
+        route_steps = recommended_route_steps(draft, context)
+        for previous, current in zip(completed_steps, completed_steps[1:]):
+            add_display_link(previous.key, current.key)
+        for previous, current in zip(planned_skills, planned_skills[1:]):
+            add_display_link(previous.key, current.key)
+        if completed_steps and planned_skills:
+            add_display_link(completed_steps[-1].key, planned_skills[0].key)
+
+        check_keys = {step.skill_id: step.key for step in draft.steps if step.kind == "foundation_check"}
+        skill_keys = {step.skill_id: step.key for step in planned_skills}
+        for foundation in context.foundation_mentions:
+            check_key = check_keys.get(foundation.skill_id)
+            if check_key:
+                for relationship in foundation.relationships:
+                    target_key = skill_keys.get(relationship.target_skill_id)
+                    if target_key:
+                        add_display_link(check_key, target_key)
+
+        for check_key in check_keys.values():
+            if not deps.get(check_key) and completed_steps:
+                add_display_link(completed_steps[-1].key, check_key)
+            if not any(check_key in parents for parents in deps.values()) and planned_skills:
+                add_display_link(check_key, planned_skills[0].key)
+
+        last_learning = (planned_skills[-1].key if planned_skills else
+                         next((step.key for step in reversed(route_steps)
+                               if step.kind in {"foundation_check", "completed_skill"}), None))
+        projects = [step for step in draft.steps if step.kind == "project"]
+        activities = [step for step in draft.steps if step.kind == "career_activity"]
+        for project in projects:
+            if not deps.get(project.key) and last_learning:
+                add_display_link(last_learning, project.key)
+
+        def has_outgoing(key: str) -> bool:
+            return any(key in parents for parents in deps.values())
+
+        project_sinks = [step.key for step in projects if not has_outgoing(step.key)]
+        for activity in activities:
+            if not deps.get(activity.key):
+                for parent in project_sinks or ([last_learning] if last_learning else []):
+                    if parent:
+                        add_display_link(parent, activity.key)
+
+        deps["goal"] = [key for key in [*keys, "goal"] if key != "goal" and not has_outgoing(key)]
+        route_order = {step.key: index for index, step in enumerate(route_steps, 1)}
+        route_order["goal"] = len(route_order) + 1
+        rows = layout.row_count([*keys, "goal"], deps, route_order)
         if rows > layout.MAX_ROWS:
             fatal.append(
                 f"The diagram needs {rows} rows, but the canvas fits {layout.MAX_ROWS} "
-                f"(4 steps per row, goal last). Run independent steps side by side or merge steps."
+                f"(at most 3 linear nodes per row, with branch and join nodes alone). Shorten or defer steps."
             )
 
     deferred: dict[int, DraftDeferred] = {}

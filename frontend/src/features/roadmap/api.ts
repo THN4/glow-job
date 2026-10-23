@@ -1,6 +1,6 @@
 import { getSavedProfileId, getSessionId, loadCareerProfiles, saveCareerGoal } from '../resume/api'
 import type { CareerGoalPreferences } from '../resume/api'
-import type { CareerGoal, CareerGoalInput, ProgressStatus, RoadmapJob, RoadmapView } from './api-types'
+import type { CareerGoal, CareerGoalInput, RoadmapJob, RoadmapView, StepProgressInput } from './api-types'
 import type { ProgressOverview } from './progressOverview'
 import type { RoadmapEvidence } from './type'
 
@@ -181,7 +181,7 @@ export async function setRoadmapTask(roadmapId: number, taskId: string,
 }
 
 export async function setRoadmapStep(roadmapId: number, stepKey: string,
-                                     status: ProgressStatus): Promise<RoadmapView> {
+                                     status: StepProgressInput): Promise<RoadmapView> {
   const result = await request<{ roadmap: RoadmapView }>(
     `/profiles/${profileId()}/roadmaps/${roadmapId}/steps/${encodeURIComponent(stepKey)}`,
     { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) },

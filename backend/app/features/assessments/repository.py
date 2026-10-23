@@ -203,6 +203,14 @@ class AssessmentRepository:
 
     # ------------------------------------------------------------------ roadmap steps (API roadmaps)
 
+    def profile_level(self, user_id: int, skill_id: int) -> dict[str, Any] | None:
+        with self._connect() as c:
+            row = c.execute(
+                "SELECT proficiency_level::text, proficiency_basis FROM app.user_skills "
+                "WHERE user_id = %s AND skill_id = %s", (user_id, skill_id),
+            ).fetchone()
+        return {"skillId": skill_id, "level": row[0], "basis": row[1]} if row else None
+
     def roadmap_step(self, user_id: int, roadmap_id: int, step_key: str) -> dict[str, Any] | None:
         """Study tasks of a saved roadmap step with the chunk IDs their citations use."""
         with self._connect() as c:

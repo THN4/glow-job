@@ -33,6 +33,8 @@ All paths below start with `/profiles/{profileId}/assessments`.
   and ticks its own checklist after `apply`.
 - Questions carry no answer key. `finish` must answer every question exactly once. A task is verified when
   all of its questions are right. `409 NO_CHECK_QUESTIONS` when no question matches the tasks.
+- Finished results include `unassessedTasks: [{taskId, label}]` for tasks omitted because questions
+  were unavailable or the eight-question limit was reached. Applying a result leaves those tasks unchanged.
 - With `ASSESSMENT_AI_GENERATION=gemini`, tasks without questions get new ones written from their source
   before the response, so `POST /step-checks` can take up to about 20 seconds the first time
   ([question bank](question-bank.md)). The response shape does not change.
@@ -47,11 +49,16 @@ All paths below start with `/profiles/{profileId}/assessments`.
 | POST | `/{assessmentId}/decision` | `{decision: "accepted" \| "declined"}` | `{decision, profileLevel}` |
 
 - The server holds the question queue. Answering any item other than the current one returns
-  `409 ASSESSMENT_STATE_INVALID`. At most 9 questions (`staircase-v1`).
+  `409 ASSESSMENT_STATE_INVALID`. At most 9 questions (`staircase-v2`).
 - `result`: `level`, `confidence` (high/medium/low), `method` (quiz/self_check), `note`, `selfCheckLevel`,
   `ladder` (per level: answers, status passed/not_passed/not_tested), `review` (answers with source quotes).
+- `level` is null when no quiz level was passed; confidence is low and accepting the result returns
+  `409 ASSESSMENT_STATE_INVALID`. The result can still be declined and remains in history.
+- New short quiz results have at most medium confidence. Historical results keep their original scoring version.
 - `accepted` writes the level into the profile (`proficiency_basis` `assessed` for a quiz,
-  `self_reported` for a self-check). Deciding twice returns 409.
+  `self_reported` for a self-check). Accepted quiz evidence takes priority over self-ratings;
+  the latest accepted result within that evidence type is used. `profileLevel` returns the effective
+  profile value. Deciding twice returns 409.
 
 ## Quick question
 
@@ -60,6 +67,7 @@ All paths below start with `/profiles/{profileId}/assessments`.
 | POST | `/quick` | `{skillId, level, answer, entryPoint?, stepKey?}` | `201 {assessmentId, decision, profileLevel}` |
 
 A one-tap self rating (`level` beginner/intermediate/advanced). Kept immediately as `self_reported`.
+It is retained in history without replacing an accepted quiz result for the same skill.
 
 ## Read one check
 

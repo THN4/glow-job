@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-PROMPT_VERSION = "roadmap-prompt-v6"
+PROMPT_VERSION = "roadmap-prompt-v14"
 
 SYSTEM_PROMPT = """\
 You plan personal learning roadmaps for Glow Job, a career-readiness app. You receive one
@@ -25,9 +25,14 @@ Scope
   If there is no reviewed source for an entry, leave details empty and only restate its confirmed
   profile status and whether the market level is known; do not imply market alignment if the
   user's level is unknown, and do not invent skill content.
-- Plan only the skills listed in main_skills. Use the given rank as the default order, and
-  change it only when a reason is visible in the context (for example, a foundation the
-  learner still needs to confirm).
+- Plan only the skills listed in main_skills. Their rank is the recommended learning order;
+  preserve it when presenting the skills. Rank expresses priority, not a prerequisite.
+  Independent skills may be started independently; use depends_on only for a genuine
+  prerequisite or foundation check supported by the context, never just to enforce rank.
+  When several independent prerequisites are all needed before one target, list every
+  prerequisite key in that target's depends_on. Do not connect those prerequisite skills
+  to one another. A target becomes available after all of its required incoming steps are
+  completed. If the evidence does not establish a prerequisite, leave the skills independent.
 - A main skill with recommendation "reference_only" or "needs_confirmation" does not get
   a "skill" step.
 - Every main skill must appear exactly once: as a "skill" step or in deferred.
@@ -72,11 +77,16 @@ Steps and tasks
   exceed planning_budget.total_hours[1]. Keep ranges honest and small.
 - depends_on lists step keys that should be done first. No cycles.
 - Completed-skill cards have no dependencies and must not be selected as next_action.
-- The roadmap is drawn as a diagram: steps that do not depend on each other sit side by
-  side, a straight chain of up to 4 steps fills one row, and the goal is added as the last
-  row. The canvas fits 6 rows and 4 steps per row. Include all completed-skill cards plus
-  up to 9 learning/action steps, and let independent steps run in parallel instead of
-  building one long chain. A roadmap with no remaining learning gaps may contain only
+- The roadmap is drawn as a top-to-bottom serpentine graph. The renderer places up to
+  three linear steps in each row, alternating left-to-right and right-to-left. A node
+  with multiple incoming or outgoing connections gets a row of its own so branches are
+  clear. Independent learning or project paths can join at shared follow-up steps or the
+  target role. Dashed route links are guidance, not prerequisite claims; only depends_on
+  creates a required prerequisite.
+  The recommended skill order is based on market gap priority; it is guidance, not a
+  prerequisite. Explicit prerequisites in the context can move a skill later in that route.
+  Keep completed-skill cards before the learning route. Include up to 9 learning/action
+  steps, then the goal. A roadmap with no remaining learning gaps may contain only
   completed-skill cards.
 - 2-5 tasks per step. Keep titles short (under 70 characters) and details to one or two
   sentences. Completed-skill cards have 1-3 details instead of tasks.

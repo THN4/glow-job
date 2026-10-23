@@ -35,7 +35,9 @@ services:
       MAX_IMAGE_PAGES: ${MAX_IMAGE_PAGES:-4}
       DAILY_EXTRACTION_LIMIT: ${DAILY_EXTRACTION_LIMIT:-0}
       DB_HOST: ${DB_HOST:-postgres}
-      DB_PORT: ${DB_CONTAINER_PORT:-5432}
+      # DB_TARGET_PORT can differ from the local Postgres container port when
+      # Backend connects through a host SSH tunnel to RDS.
+      DB_PORT: ${DB_TARGET_PORT:-${DB_CONTAINER_PORT:-5432}}
       DB_NAME: ${DB_NAME:-glowjob}
       DB_USER: ${DB_USER:-glowjob}
       DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the root .env file}

@@ -415,7 +415,7 @@ class MockRoadmapModel:
                 "key": key, "kind": "skill", "skill_id": main["skill_id"],
                 "title": f"Learn {main['name']}", "summary": f"Work through the core {main['name']} concepts.",
                 "why": why, "hours_min": low, "hours_max": high,
-                "depends_on": check_keys + skill_keys[-1:], "tasks": tasks or [{
+                "depends_on": check_keys, "tasks": tasks or [{
                     "title": f"Find the {main['name']} tutorial pages", "detail": "Full lessons are needed.",
                     "task_kind": "practice", "citations": []}],
             })
@@ -428,7 +428,7 @@ class MockRoadmapModel:
                 "title": "Build a small portfolio project",
                 "summary": "Combine what you learned into one project you can show employers.",
                 "why": ["Turns your learning into evidence for your CV."],
-                "hours_min": 4, "hours_max": 8, "depends_on": skill_keys[-1:],
+                "hours_min": 4, "hours_max": 8, "depends_on": list(skill_keys),
                 "tasks": [{"title": "Build and document the project", "detail": "Push it to GitHub with a README.",
                            "task_kind": "practice", "citations": []}],
             })

@@ -1,4 +1,5 @@
 import type { RoleRecommendation, RoleSearchResult } from '../features/onboarding/types'
+import { loadCareerProfiles } from '../features/resume/api'
 import { goalCopy, MOCK_ROLE_RECOMMENDATIONS } from './goalConstants'
 import { profileSchema, type Profile } from '../features/onboarding/types'
 import { extractCv } from '../features/resume/api'
@@ -6,6 +7,24 @@ import { profileFromCv } from '../features/onboarding/profileFromCv'
 import { validateCvFile } from './cv'
 import type { AnalysisProgress, AnalysisTask } from '../features/onboarding/analysisTypes'
 import { DEMO_ANALYSIS_STEP_MIN_MS } from './analysisConstants'
+
+let cachedCareerTitles: string[] | null = null
+let careerTitlesRequest: Promise<string[]> | null = null
+
+function loadCareerTitles(): Promise<string[]> {
+  if (cachedCareerTitles) return Promise.resolve(cachedCareerTitles)
+  if (!careerTitlesRequest) {
+    careerTitlesRequest = loadCareerProfiles().then((profiles) => {
+      const titles = [...new Set(profiles.map(({ profileName }) => profileName))]
+      cachedCareerTitles = titles
+      return titles
+    }).catch((error: unknown) => {
+      careerTitlesRequest = null
+      throw error
+    })
+  }
+  return careerTitlesRequest
+}
 
 function waitForDemoStep(duration: number, signal?: AbortSignal): Promise<void> {
   signal?.throwIfAborted()
@@ -62,10 +81,16 @@ export async function analyzeCv(file: File, options: { onProgress?: AnalysisProg
   return run('profile', () => profileSchema.parse({ ...createEmptyProfile(), skills, education, ...sections }))
 }
 
-// Replace these mock functions with backend requests when the role API is ready.
 export async function searchRoles(query: string): Promise<RoleSearchResult[]> {
   const normalizedQuery = query.trim().toLocaleLowerCase()
   if (!normalizedQuery) return []
+  try {
+    const careerNames = await loadCareerTitles()
+    return careerNames.filter((title) => title.toLocaleLowerCase().includes(normalizedQuery))
+      .slice(0, 6).map((title) => ({ id: title.toLocaleLowerCase().replaceAll(' ', '-'), title }))
+  } catch {
+    // Keep free text and local suggestions available when the market catalog is offline.
+  }
   const titles = [...new Set([
     ...goalCopy.popularRoles,
     ...MOCK_ROLE_RECOMMENDATIONS.map((role) => role.title),

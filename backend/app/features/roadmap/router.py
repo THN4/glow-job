@@ -63,7 +63,7 @@ class TaskProgressBody(Camel):
 
 
 class StepProgressBody(Camel):
-    status: Literal["not_started", "in_progress", "completed", "skipped"]
+    status: Literal["not_started", "in_progress", "completed"]
 
 
 class SkillEvidenceBody(Camel):

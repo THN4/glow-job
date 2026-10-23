@@ -1,5 +1,6 @@
 import { AlertCircle, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDashed, ClipboardCheck, Clock3, FileText, History, ListChecks, PlayCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { SkillIcon } from '../../../components/SkillIcon'
 import { Link, useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../../../components/ui/dialog'
 import { applyStepCheck } from '../../roadmap/progress'
@@ -190,7 +191,7 @@ export function AssessmentsPage() {
               {data.levelChecks.map((target) => (
                 <article key={target.skillId} className="flex flex-col gap-2 rounded-xl border border-blue-100 bg-white p-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">{target.name}</h3>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><SkillIcon name={target.name} skillId={target.skillId} size={18} />{target.name}</h3>
                     <p className="text-xs text-slate-500">{target.level ? `${capitalize(target.level)} · ${target.reason}` : target.reason}</p>
                   </div>
                   <span className={`self-start rounded-full px-2 py-0.5 text-[10px] font-semibold ${target.hasQuiz ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-800'}`}>

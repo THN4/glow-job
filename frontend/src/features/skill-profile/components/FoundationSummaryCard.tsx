@@ -1,4 +1,5 @@
 import { Code2 } from 'lucide-react'
+import { SkillIcon } from '../../../components/SkillIcon'
 import type { SkillProfileSkill } from '../type'
 
 type FoundationSummaryCardProps = {
@@ -17,7 +18,7 @@ export function FoundationSummaryCard({ skills, evidenceCount }: FoundationSumma
       </h3>
       <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 [@media(max-height:960px)]:mt-3 [@media(max-height:960px)]:gap-y-1.5">
         {skills.map((skill) => (
-          <span key={skill.id} className="text-sm font-semibold text-blue-700">{skill.title}</span>
+          <span key={skill.id} className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700"><SkillIcon name={skill.title} size={16} />{skill.title}</span>
         ))}
       </div>
       <p className="mt-4 text-xs leading-relaxed text-slate-500 [@media(max-height:960px)]:mt-3">
