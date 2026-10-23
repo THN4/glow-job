@@ -102,6 +102,10 @@ class RoadmapService:
         user_id = await self.owner(profile_id, session_id)
         return await asyncio.to_thread(self.repo.get_goal, user_id)
 
+    async def progress_overview(self, profile_id: str, session_id: str) -> dict[str, Any]:
+        user_id = await self.owner(profile_id, session_id)
+        return await asyncio.to_thread(self.repo.progress_overview, user_id)
+
     async def put_goal(self, profile_id: str, session_id: str, goal: dict[str, Any]) -> dict[str, Any]:
         user_id = await self.owner(profile_id, session_id)
         return await asyncio.to_thread(self.repo.put_goal, user_id, goal)

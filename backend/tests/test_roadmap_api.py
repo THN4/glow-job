@@ -66,6 +66,12 @@ class FakeRepo:
     def get_goal(self, user_id):
         return self.goal
 
+    def progress_overview(self, user_id):
+        assert user_id == USER
+        return {"skillsInProfile": 3, "evidenceItems": 2, "lastAnalysedAt": None,
+                "profileChangedSinceAnalysis": False, "marketUpdatedAt": None,
+                "marketScanAgeDays": None, "activities": []}
+
     def put_goal(self, user_id, goal):
         self.goal = {"goalId": 2, "careerId": 1, "careerProfileId": goal["career_profile_id"],
                      "targetRoleTitle": goal["target_role_title"] or "Data Engineer",
@@ -295,6 +301,21 @@ async def test_ui_fields_and_step_actions(tmp_path):
         assert r.json()["error"]["code"] == "TASK_NOT_FOUND"
         r = await client.put(f"{steps}/{first['key']}", json={"status": "done"})
         assert r.status_code == 400
+
+async def test_progress_overview_is_owned_and_returns_saved_counts(tmp_path):
+    client, svc, repo = make(tmp_path)
+    async with client:
+        response = await client.get(f'/api/profiles/{PROFILE}/progress-overview')
+        assert response.status_code == 200
+        assert response.json()['skillsInProfile'] == 3
+        assert response.json()['evidenceItems'] == 2
+        assert response.json()['marketScanAgeDays'] is None
+        denied = await client.get(f'/api/profiles/{PROFILE}/progress-overview',
+                                  headers={'X-Session-Id': 'another-session'})
+        assert denied.status_code == 404
+        missing = await client.get(f'/api/profiles/{PROFILE}/progress-overview',
+                                   headers={'X-Session-Id': ''})
+        assert missing.status_code == 400
 
 
 async def test_skill_evidence_is_saved_and_scoped_to_profile_owner(tmp_path):

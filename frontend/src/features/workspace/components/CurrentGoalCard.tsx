@@ -39,7 +39,7 @@ export function CurrentGoalCard({ goal }: CurrentGoalCardProps) {
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground [@media(max-height:900px)]:mt-1">
-        {goal.statusText} · {goal.timeRemaining}
+        {[goal.statusText, goal.timeRemaining].filter(Boolean).join(' · ')}
       </p>
     </section>
   )

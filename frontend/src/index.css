@@ -119,7 +119,53 @@
   animation: roadmap-flow 900ms linear infinite;
 }
 
+@keyframes recent-activity-flow {
+  to { background-position: 0 32px; }
+}
+
+.recent-activity-circle {
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.recent-activity-item:is(:hover, :focus-within) .recent-activity-circle {
+  border-color: currentColor;
+  box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 14%, transparent),
+    0 0 16px color-mix(in srgb, currentColor 22%, transparent);
+  transform: scale(1.08);
+}
+
+.recent-activity-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.recent-activity-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, #60a5fa 40%, #2563eb 60%, transparent);
+  background-size: 100% 32px;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  animation: recent-activity-flow 900ms linear infinite paused;
+}
+
+.recent-activity-timeline:is(:hover, :focus-within) .recent-activity-line::after {
+  opacity: 1;
+  animation-play-state: running;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .recent-activity-circle {
+    transition: none;
+  }
+  .recent-activity-item:is(:hover, :focus-within) .recent-activity-circle {
+    transform: none;
+  }
+  .recent-activity-line::after {
+    animation: none;
+    transition: none;
+  }
   .roadmap-current-flow {
     animation: none;
   }

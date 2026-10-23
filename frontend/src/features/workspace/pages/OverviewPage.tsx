@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { getSavedProfileId } from '../../resume/api'
 import { useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
+import { toRoadmapScreen } from '../../roadmap/adapter'
 import {
   ArrowRight,
   Check,
@@ -55,6 +56,7 @@ function MetricCard({ metric }: { metric: {
 }
 
 function RoadmapMilestones({ view }: { view: RoadmapView }) {
+  const progressLabel = toRoadmapScreen(view).summary.statusText
   const milestones = useMemo(() => {
     const learningNodes = view.nodes
       .filter((node) => node.kind !== 'goal')
@@ -69,7 +71,7 @@ function RoadmapMilestones({ view }: { view: RoadmapView }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Career Roadmap</h2>
-          <p className="mt-1 text-xs text-slate-500">{view.progress.label}</p>
+          <p className="mt-1 text-xs text-slate-500">{progressLabel}</p>
         </div>
         <Link to="/app/roadmap" className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-800 sm:text-sm">
           Open full roadmap <ArrowRight className="size-4" aria-hidden="true" />
@@ -105,8 +107,9 @@ function OverviewContent({ view }: { view: RoadmapView }) {
   const skills = view.nodes.filter((node) => node.skill !== null)
   const completedSkills = skills.filter((node) => node.status === 'completed' || node.baselineComplete).length
   const nextNode = view.nodes.find((node) => node.key === view.nextAction.nodeKey)
+  const progress = toRoadmapScreen(view).summary
   const metrics = [
-    { label: 'Roadmap Progress', value: `${view.progress.percent}%`, icon: Target, tone: 'blue' as const, progress: view.progress.percent },
+    { label: 'Roadmap Progress', value: `${progress.completion}%`, icon: Target, tone: 'blue' as const, progress: progress.completion },
     { label: 'Skills Completed', value: `${completedSkills} / ${skills.length}`, icon: CircleCheck, tone: 'green' as const },
     { label: 'Skills to Build', value: String(Math.max(0, skills.length - completedSkills)), icon: Layers3, tone: 'amber' as const },
     { label: 'Weekly Hours', value: formatHours(view.summary.weeklyHours), icon: Clock3, tone: 'purple' as const },
@@ -121,7 +124,7 @@ function OverviewContent({ view }: { view: RoadmapView }) {
         </p>
         <h1 id="overview-title" className="relative mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">{view.summary.targetRole}</h1>
         <p className="relative mt-1 text-sm text-slate-500 sm:text-base">
-          Target: {view.summary.timeRemainingLabel} · {view.progress.label}
+          Target: {view.summary.timeRemainingLabel} · {progress.statusText}
         </p>
       </header>
 

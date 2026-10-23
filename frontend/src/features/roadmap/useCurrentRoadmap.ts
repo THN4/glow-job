@@ -1,15 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { getSavedProfileId } from '../resume/api'
+import { getSavedProfileId, getSessionId } from '../resume/api'
 import { loadCurrentRoadmap } from './api'
 
-export const currentRoadmapKey = (profileId: string | null) => ['roadmap', 'current', profileId] as const
+export const currentRoadmapKey = (profileId: string | null) => ['current-roadmap', getSessionId(), profileId] as const
 
-/** Shared saved-roadmap query for the Overview and workspace sidebar. */
+/** Shared saved roadmap for Overview, Skill Profile, Progress, canvas and sidebar. */
 export function useCurrentRoadmap() {
   const profileId = getSavedProfileId()
   return useQuery({
     queryKey: currentRoadmapKey(profileId),
     queryFn: ({ signal }) => loadCurrentRoadmap(signal),
-    enabled: Boolean(profileId),
   })
 }

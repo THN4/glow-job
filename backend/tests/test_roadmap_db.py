@@ -196,3 +196,29 @@ async def test_step_actions_and_in_progress_state(db):
             """SELECT s.step_key, p.status::text FROM app.user_roadmap_progress p
                JOIN app.roadmap_steps s USING (roadmap_step_id) WHERE p.user_id = %s""", (db.user_id,)).fetchall())
         assert rows[first["key"]] == "in_progress" and rows[second["key"]] == "skipped"
+
+async def test_recent_activity_includes_completed_tasks_and_skills(db):
+    client, svc = client_for(db, MockRoadmapModel())
+    base = f"/api/profiles/{db.profile_id}"
+    async with client:
+        await client.put(f"{base}/goal", json=GOAL)
+        assert (await run_job(client, svc, db))["status"] == "succeeded"
+        view = (await client.get(f"{base}/roadmaps/current")).json()["roadmap"]
+        node = next(n for n in view["nodes"] if not n["baselineComplete"] and len(n["checklist"]) > 1)
+        task = node["checklist"][0]
+        task_url = f"{base}/roadmaps/{view['roadmapId']}/tasks/{task['id']}"
+        assert (await client.put(task_url, json={"completed": True})).status_code == 200
+        events = (await client.get(f"{base}/progress-overview")).json()["activities"]
+        task_event = next(e for e in events if e["id"].startswith("task-"))
+        assert task_event["title"] == f"{task['label']} completed"
+        assert task_event["nodeKey"] == node["key"] and task_event["occurredAt"]
+        assert not any(e["id"].startswith("step-") for e in events)
+        denied = await client.get(f"{base}/progress-overview", headers={"X-Session-Id": "other"})
+        assert denied.status_code == 404
+        await client.put(task_url, json={"completed": False})
+        events = (await client.get(f"{base}/progress-overview")).json()["activities"]
+        assert not any(e["id"].startswith("task-") for e in events)
+        await client.put(f"{base}/roadmaps/{view['roadmapId']}/steps/{node['key']}", json={"status": "completed"})
+        events = (await client.get(f"{base}/progress-overview")).json()["activities"]
+        assert any(e["id"].startswith("step-") and e["nodeKey"] == node["key"] for e in events)
+        assert any(e["id"].startswith("task-") for e in events)

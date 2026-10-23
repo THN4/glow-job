@@ -55,6 +55,13 @@ class RoadmapRepository:
 
     # ------------------------------------------------------------------ ownership and goals
 
+    def progress_overview(self, user_id: int) -> dict[str, Any]:
+        from app.features.roadmap.progress import progress_overview
+
+        goal = self.get_goal(user_id)
+        with self._connect() as connection:
+            return progress_overview(connection, user_id, goal["careerProfileId"] if goal else None)
+
     def owner(self, profile_id: str, session_id: str) -> int | None:
         with self._connect() as connection:
             row = connection.execute(

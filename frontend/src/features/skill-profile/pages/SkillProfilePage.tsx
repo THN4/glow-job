@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RoadmapNodeIcon } from '../../roadmap/components/RoadmapNodeIcon'
@@ -7,12 +8,13 @@ import { toRoadmapScreen } from '../../roadmap/adapter'
 import type { RoadmapView } from '../../roadmap/api-types'
 import type { RoadmapEvidence } from '../../roadmap/type'
 import type { RoadmapNodeStatus } from '../../roadmap/type'
-import { getSavedProfileId } from '../../resume/api'
+import { getSavedProfileId, getSessionId } from '../../resume/api'
 import { SkillProfileHeader } from '../components/SkillProfileHeader'
 import { SkillProfileStats } from '../components/SkillProfileStats'
 import { LearningChecklist } from '../components/LearningChecklist'
 import { LevelCheckDialog } from '../../assessments/components/LevelCheckDialog'
 import { EvidenceForm } from '../../roadmap/components/EvidenceForm'
+import { currentRoadmapKey, useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
 
 type SkillFilter = 'all' | 'completed' | 'in-progress' | 'upcoming'
 
@@ -32,49 +34,32 @@ const roadmapNodePath = (nodeId: string) => `/app/roadmap?node=${encodeURICompon
 
 export function SkillProfilePage() {
   const profileId = getSavedProfileId()
-  const [view, setView] = useState<RoadmapView | null>(null)
+  const queryClient = useQueryClient()
+  const roadmapQuery = useCurrentRoadmap()
+  const view = roadmapQuery.data
+  const loading = roadmapQuery.isPending
+  const loadFailed = roadmapQuery.isError
+  function setView(next: RoadmapView | null) {
+    queryClient.setQueryData(currentRoadmapKey(profileId), next)
+    void queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
+  }
   const [selectedFilter, setSelectedFilter] = useState<SkillFilter>('all')
   const [expandedSkillIds, setExpandedSkillIds] = useState<Set<string>>(() => new Set())
-  const [loading, setLoading] = useState(true)
-  const [loadFailed, setLoadFailed] = useState(false)
   const [working, setWorking] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [reloadKey, setReloadKey] = useState(0)
+  const [mutationError, setError] = useState<string | null>(null)
   const [levelCheckTarget, setLevelCheckTarget] = useState<{ skillId: number; name: string } | null>(null)
-  const [evidence, setEvidence] = useState<SkillEvidence[]>([])
-  const [evidenceLoading, setEvidenceLoading] = useState(false)
+  const evidenceKey = ['skill-evidence', getSessionId(), profileId] as const
+  const evidenceQuery = useQuery({
+    queryKey: evidenceKey,
+    queryFn: loadSkillEvidence,
+    enabled: Boolean(view?.roadmapId),
+  })
+  const evidence = evidenceQuery.data ?? []
+  const evidenceLoading = evidenceQuery.isPending && Boolean(view?.roadmapId)
   const [deletingEvidenceId, setDeletingEvidenceId] = useState<string | null>(null)
-  const [evidenceError, setEvidenceError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    setLoading(true)
-    setLoadFailed(false)
-    setError(null)
-    loadCurrentRoadmap(controller.signal)
-      .then(setView)
-      .catch((caught: unknown) => {
-        if (!(caught instanceof DOMException && caught.name === 'AbortError')) {
-          setLoadFailed(true)
-          setError(caught instanceof Error ? caught.message : 'Could not load your skill profile.')
-        }
-      })
-      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
-    return () => controller.abort()
-  }, [reloadKey])
-
-  useEffect(() => {
-    if (!view?.roadmapId) return
-    let cancelled = false
-    setEvidenceLoading(true)
-    loadSkillEvidence()
-      .then((items) => { if (!cancelled) setEvidence(items) })
-      .catch((caught: unknown) => {
-        if (!cancelled) setEvidenceError(caught instanceof Error ? caught.message : 'Could not load skill evidence.')
-      })
-      .finally(() => { if (!cancelled) setEvidenceLoading(false) })
-    return () => { cancelled = true }
-  }, [view?.roadmapId])
+  const [evidenceMutationError, setEvidenceError] = useState<string | null>(null)
+  const evidenceError = evidenceMutationError ?? evidenceQuery.error?.message
+  const error = mutationError ?? roadmapQuery.error?.message
 
   const screen = useMemo(() => view ? toRoadmapScreen(view) : null, [view])
   const nodes = screen?.nodes ?? []
@@ -135,7 +120,8 @@ export function SkillProfilePage() {
   async function saveEvidence(skillId: number, item: RoadmapEvidence) {
     setEvidenceError(null)
     const saved = await addSkillEvidence(skillId, item)
-    setEvidence((current) => [saved, ...current])
+    queryClient.setQueryData<SkillEvidence[]>(evidenceKey, (current = []) => [saved, ...current])
+    void queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
   }
 
   async function removeEvidence(evidenceId: string) {
@@ -143,7 +129,8 @@ export function SkillProfilePage() {
     setEvidenceError(null)
     try {
       await deleteSkillEvidence(evidenceId)
-      setEvidence((current) => current.filter((item) => item.id !== evidenceId))
+      queryClient.setQueryData<SkillEvidence[]>(evidenceKey, (current = []) => current.filter((item) => item.id !== evidenceId))
+      void queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
     } catch (caught) {
       setEvidenceError(caught instanceof Error ? caught.message : 'Could not delete skill evidence.')
     } finally {
@@ -165,7 +152,7 @@ export function SkillProfilePage() {
     <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
       <h1 className="text-xl font-bold text-slate-900">Could not load your skill profile</h1>
       <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>
-      <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+      <button type="button" onClick={() => void roadmapQuery.refetch()} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
     </section>
   )
   if (!profileId) return (
