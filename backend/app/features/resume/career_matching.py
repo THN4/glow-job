@@ -414,7 +414,9 @@ class CareerMatchRepository:
             if result is None:
                 return None
             skills = result["skills"]
-            covered = [skill for skill in skills if skill["status"] == "covered"]
+            # Coverage measures presence, even when proficiency is unknown or
+            # below the market target. Keep the displayed matches consistent.
+            covered = [skill for skill in skills if skill["userHasSkill"]]
             gaps = [
                 skill for skill in skills
                 if skill["status"] in {"missing_from_profile", "proficiency_gap", "not_assessed"}

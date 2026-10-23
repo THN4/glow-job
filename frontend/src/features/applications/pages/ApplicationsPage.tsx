@@ -8,8 +8,10 @@ import { ApplicationsTabs } from '../components/shared/ApplicationsTabs'
 import { CompaniesTab } from '../components/companies/CompaniesTab'
 import { MyApplicationsTab } from '../components/my-applications/MyApplicationsTab'
 import { CareerRecommendationsTab } from '../components/recommendations/CareerRecommendationsTab'
-import { useRoadmapCounts } from '../../roadmap/useRoadmapCounts'
-import { roadmapSummary } from '../../roadmap/data/roadmapMockData'
+import { JobsForYouTab } from '../components/recommendations/JobsForYouTab'
+import { jobFilterParams, readJobFilters } from '../jobFilters'
+import { useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
+import { toRoadmapScreen } from '../../roadmap/adapter'
 import { useApplicationFilters } from '../hooks/useApplicationFilters'
 import { applicationsApi, applicationsKey, type ApplicationInput } from '../api'
 import { getSavedProfileId } from '../../resume/api'
@@ -45,6 +47,8 @@ export function ApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedTab = searchParams.get('tab')
   const activeTab: ApplicationTabKey = requestedTab === 'companies' || requestedTab === 'recommendations' ? requestedTab : 'my-applications'
+  const recommendationView = searchParams.get('view') === 'careers' ? 'careers' : 'jobs'
+  const jobFilters = readJobFilters(searchParams)
   const companyOpeningsQuery = useQuery({
     queryKey: ['company-job-postings'],
     queryFn: applicationsApi.jobPostings,
@@ -55,7 +59,16 @@ export function ApplicationsPage() {
   const careerRecommendationsQuery = useQuery({
     queryKey: ['career-recommendations', profileId],
     queryFn: applicationsApi.careerRecommendations,
-    enabled: activeTab === 'recommendations' && hasProfile,
+    enabled: activeTab === 'recommendations' && recommendationView === 'careers' && hasProfile,
+    retry: false,
+    staleTime: 60_000,
+  })
+  const jobRecommendationsQuery = useQuery({
+    queryKey: ['job-recommendations-v2', profileId, jobFilters],
+    queryFn: () => applicationsApi.jobRecommendations(jobFilters),
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[0] === 'job-recommendations-v2' && previousQuery.queryKey[1] === profileId ? previousData : undefined,
+    enabled: activeTab === 'recommendations' && recommendationView === 'jobs' && hasProfile,
     retry: false,
     staleTime: 60_000,
   })
@@ -65,7 +78,10 @@ export function ApplicationsPage() {
   const [selectedCompanyOpening, setSelectedCompanyOpening] = useState<CompanyOpening | null>(null)
   const [selectedCareerPath, setSelectedCareerPath] = useState<CareerPathRecommendation | null>(null)
   const [companySaveError, setCompanySaveError] = useState<string | null>(null)
-  const roadmap = useRoadmapCounts()
+  const roadmapQuery = useCurrentRoadmap()
+  const roadmap = roadmapQuery.data ? toRoadmapScreen(roadmapQuery.data) : null
+  const roadmapNodes = roadmap?.nodes ?? []
+  const targetRole = (recommendationView === 'careers' ? careerRecommendationsQuery.data?.targetRole : jobRecommendationsQuery.data?.targetRole) ?? roadmap?.summary.targetRole ?? 'Your career workspace'
   const filters = useApplicationFilters(applications)
   const showRecommendationList = activeTab === 'recommendations' && !selectedCareerPath
   const createMutation = useMutation({
@@ -118,6 +134,7 @@ export function ApplicationsPage() {
       setSearchParams({}, { replace: true })
     } catch (error) {
       setCompanySaveError(error instanceof Error ? error.message : 'Could not save this opening.')
+      throw error
     }
   }
 
@@ -129,16 +146,16 @@ export function ApplicationsPage() {
     <section aria-label="Applications" className={`mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 ${showRecommendationList ? 'lg:min-h-[calc(100dvh-3rem)]' : ''}`}>
       <ApplicationsHeader
         formOpen={showAddForm}
-        detailOpen={Boolean(selectedRecord)}
+        detailOpen={activeTab === 'my-applications' && Boolean(selectedRecord)}
         detailLabel={selectedRecord ? `${selectedRecord.company} / ${selectedRecord.role}` : undefined}
         onBack={() => setSelectedApplication(null)}
         activeTab={activeTab}
-        targetRole={roadmapSummary.targetRole}
-        duration={roadmapSummary.duration}
-        titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' ? selectedCareerPath?.title : undefined}
+        targetRole={targetRole}
+        duration={targetRole === roadmap?.summary.targetRole ? roadmap.summary.duration : ''}
+        titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' && recommendationView === 'careers' ? selectedCareerPath?.title : undefined}
         subtitleOverride={activeTab === 'companies' && selectedCompanyOpening
           ? `${selectedCompanyOpening.company} · ${selectedCompanyOpening.location} · ${selectedCompanyOpening.workStyle} · ${selectedCompanyOpening.experience}`
-          : activeTab === 'recommendations' && selectedCareerPath
+          : activeTab === 'recommendations' && recommendationView === 'careers' && selectedCareerPath
             ? `Career path · ${selectedCareerPath.summary}`
             : undefined}
         backLabel={selectedRecord ? 'Back to Applications' : undefined}
@@ -217,10 +234,34 @@ export function ApplicationsPage() {
           />
         )}
         {activeTab === 'recommendations' && !hasProfile && <div className="rounded-xl border border-blue-100 bg-white p-8 text-center shadow-sm"><h2 className="text-lg font-bold text-slate-900">Save your profile to see career recommendations</h2><p className="mt-2 text-sm text-slate-600">Recommendations compare your confirmed skills with market skill demand.</p><Link to="/onboarding" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Go to onboarding</Link></div>}
-        {activeTab === 'recommendations' && hasProfile && <CareerRecommendationsTab
+        {activeTab === 'recommendations' && <nav aria-label="Recommendation views" className="mb-4 flex flex-wrap gap-2">
+          {([{ id: 'jobs', label: 'Jobs for you' }, { id: 'careers', label: 'Career paths' }] as const).map((view) =>
+            <button key={view.id} type="button" aria-pressed={recommendationView === view.id}
+              onClick={() => { setSearchParams((current) => { const next = new URLSearchParams(current); next.set('tab', 'recommendations'); next.set('view', view.id); return next }); setSelectedCareerPath(null) }}
+              className="min-h-10 rounded-full border border-blue-100 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:bg-blue-50 aria-pressed:border-blue-600 aria-pressed:bg-blue-600 aria-pressed:text-white">
+              {view.label}
+            </button>)}
+        </nav>}
+        {activeTab === 'recommendations' && hasProfile && recommendationView === 'jobs' && <JobsForYouTab
+          key={`${profileId}:${JSON.stringify(jobFilters)}`}
+          filters={jobFilters}
+          onFiltersChange={(filters) => setSearchParams(jobFilterParams(filters, searchParams))}
+          data={jobRecommendationsQuery.data}
+          isLoading={jobRecommendationsQuery.isLoading}
+          isRefreshing={jobRecommendationsQuery.isFetching}
+          error={jobRecommendationsQuery.isError ? jobRecommendationsQuery.error instanceof Error ? jobRecommendationsQuery.error.message : 'Could not load job matches.' : null}
+          onRetry={() => jobRecommendationsQuery.refetch()}
+          applications={applications}
+          onAddOpening={addCompanyOpening}
+          isSaving={saveJobMutation.isPending}
+          saveError={companySaveError}
+          roadmapNodes={roadmapNodes}
+        />}
+        {activeTab === 'recommendations' && hasProfile && recommendationView === 'careers' && <CareerRecommendationsTab
           selectedPath={selectedCareerPath}
           onSelectPath={setSelectedCareerPath}
-          roadmapNodes={roadmap.nodes}
+          roadmapNodes={roadmapNodes}
+          roadmapNotice={roadmapQuery.isError ? 'Roadmap progress could not be loaded. Career recommendations are still based on your saved profile.' : roadmapQuery.isPending ? 'Loading saved roadmap progress…' : !roadmap ? 'No saved roadmap is available yet.' : undefined}
           targetRole={careerRecommendationsQuery.data?.targetRole ?? null}
           recommendations={careerRecommendationsQuery.data?.recommendations ?? []}
           isLoading={careerRecommendationsQuery.isLoading}
@@ -239,7 +280,7 @@ export function ApplicationsPage() {
             selectedOpening={selectedCompanyOpening}
             onSelectedOpeningChange={setSelectedCompanyOpening}
             onAddOpening={addCompanyOpening}
-            roadmapNodes={roadmap.nodes}
+            roadmapNodes={roadmapNodes}
             canSave={hasProfile}
             isSaving={saveJobMutation.isPending}
           />}

@@ -9,6 +9,7 @@ type CareerRecommendationsTabProps = {
   selectedPath: CareerPathRecommendation | null
   onSelectPath: (path: CareerPathRecommendation | null) => void
   roadmapNodes: RoadmapNodeData[]
+  roadmapNotice?: string
   targetRole: string | null
   recommendations: CareerPathRecommendation[]
   isLoading: boolean
@@ -23,7 +24,7 @@ const toneClasses = {
 }
 
 export function CareerRecommendationsTab({
-  selectedPath, onSelectPath, roadmapNodes, targetRole, recommendations,
+  selectedPath, onSelectPath, roadmapNodes, roadmapNotice, targetRole, recommendations,
   isLoading, error, onRetry,
 }: CareerRecommendationsTabProps) {
   if (selectedPath) return <CareerRecommendationDetail path={selectedPath} roadmapNodes={roadmapNodes} primaryTargetRole={targetRole} onBack={() => onSelectPath(null)} />
@@ -65,11 +66,12 @@ export function CareerRecommendationsTab({
       </div>}
 
       <section className="border border-slate-200 bg-white p-3 shadow-sm lg:sticky lg:bottom-0 lg:mt-auto">
+        {roadmapNotice && <p className="mb-3 text-xs text-slate-500" role="status">{roadmapNotice}</p>}
         <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50 text-blue-600"><Layers3 size={14} aria-hidden="true" /></span>What these suggestions are based on</h2>
         <div className="mt-2 grid gap-3 text-[11px] leading-relaxed text-slate-600 md:grid-cols-3">
           <div><h3 className="font-semibold text-slate-800">Saved career goal</h3><p className="mt-1">{targetRole || 'No primary career goal is saved.'}</p><Link to="/onboarding" className="mt-1 inline-block text-blue-700 hover:underline">Review career goal →</Link></div>
           <div><h3 className="font-semibold text-slate-800">Completed learning</h3><p className="mt-1">{completed.length ? completed.map(({ title }) => title).join(', ') : 'No roadmap skills or projects are completed yet.'}</p><Link to="/app/skill-profile" className="mt-1 inline-block text-blue-700 hover:underline">View Skill Profile →</Link></div>
-          <div><h3 className="font-semibold text-slate-800">Still developing</h3><p className="mt-1">{developing.length ? developing.map(({ title, status }) => `${title} (${status === 'in-progress' ? 'in progress' : 'up next'})`).join(', ') : 'All roadmap skills are completed.'}</p><Link to="/app/roadmap" className="mt-1 inline-block text-blue-700 hover:underline">View My Roadmap →</Link></div>
+          <div><h3 className="font-semibold text-slate-800">Still developing</h3><p className="mt-1">{developing.length ? developing.map(({ title, status }) => `${title} (${status === 'in-progress' ? 'in progress' : 'up next'})`).join(', ') : 'No unfinished skills are shown in the saved roadmap.'}</p><Link to="/app/roadmap" className="mt-1 inline-block text-blue-700 hover:underline">View My Roadmap →</Link></div>
         </div>
       </section>
     </section>

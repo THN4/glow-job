@@ -70,3 +70,41 @@ export type CareerPathRecommendation = {
   supportedProfile: { skill: string; detail: string }[]
   skillsToDevelop: { skill: string; detail: string }[]
 }
+
+export type JobRecommendation = CompanyOpening & {
+  scorePct: number
+  matchedWeight: number
+  totalWeight: number
+  matchesGoal: boolean
+  reasons: string[]
+  requiredMatches: string[]
+  requiredMissing: string[]
+  preferredMatches: string[]
+  preferredMissing: string[]
+  unscoredSkills: string[]
+}
+
+export type JobRecommendationsResponse = {
+  targetRole: string | null
+  policy: string
+  hasConfirmedSkills: boolean
+  totalCandidates: number
+  unscoredPostings: number
+  recommendations: JobRecommendation[]
+  limitations: string[]
+  totalMatched: number
+  filteredCount: number
+  returnedCount: number
+  filterOptions: {
+    locations: string[]
+    employmentTypes: string[]
+    skills: { skillId: number; name: string }[]
+  }
+}
+
+export type JobFilters = {
+  sort: 'coverage' | 'recent'
+  location: string
+  employmentType: string
+  skillId: string
+}
