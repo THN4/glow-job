@@ -1,7 +1,9 @@
 import { CurrentStepBorder } from './CurrentStepBorder'
+import { StatusIcon } from '../../../components/StatusIcon'
 import { RoadmapNodeIcon } from './RoadmapNodeIcon'
 import type { RoadmapNodeData } from '../type'
 import { nodeIconColors } from '../nodeAppearance'
+import { ROADMAP_NODE_HEIGHT } from '../graphLayout'
 
 type RoadmapNodeProps = {
   node: RoadmapNodeData
@@ -50,19 +52,20 @@ export function RoadmapNode({ node, width, selected, onSelect, compact = false }
         onClick={() => onSelect(node)}
         aria-pressed={selected}
         aria-current={node.status === 'in-progress' ? 'step' : undefined}
-        style={{ width, height: compact ? 48 : 60 }}
-        className={`relative z-10 flex h-[60px] shrink-0 items-center gap-2.5 rounded-xl border px-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${styles.card} ${selected && node.status !== 'in-progress' ? 'ring-2 ring-blue-300' : ''}`}
+        style={{ width, height: compact ? undefined : ROADMAP_NODE_HEIGHT }}
+        className={`relative z-10 flex shrink-0 items-center gap-2.5 rounded-xl border px-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${compact ? 'min-h-[76px] py-3' : ''} ${styles.card} ${selected && node.status !== 'in-progress' ? 'ring-2 ring-blue-300' : ''}`}
       >
         {node.status === 'in-progress' && <CurrentStepBorder />}
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${styles.icon}`}>
-          <RoadmapNodeIcon node={node} size={20} />
+        <span className={`flex shrink-0 items-center justify-center rounded-full ${compact ? 'size-10' : 'size-8'} ${styles.icon}`}>
+          <RoadmapNodeIcon node={node} size={compact ? 24 : 20} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="line-clamp-2 block break-words text-[10px] font-semibold leading-[1.05] text-slate-900 sm:text-[11px]">
+          <span className={`block line-clamp-2 break-words font-semibold text-slate-900 ${compact ? 'text-sm leading-5' : 'text-[13px] leading-4'}`}>
             {node.title}
           </span>
-          <span className={`mt-0.5 block truncate text-[8px] leading-tight ${styles.subtitle} sm:text-[9px]`}>
-            {node.subtitle}
+          <span className={`mt-1 flex items-center gap-1 leading-4 ${compact ? 'text-xs' : 'text-[11px]'} ${styles.subtitle}`}>
+            <StatusIcon status={node.status} size={compact ? 12 : 11} className="shrink-0" />
+            <span className="truncate">{node.subtitle}</span>
           </span>
         </span>
       </button>

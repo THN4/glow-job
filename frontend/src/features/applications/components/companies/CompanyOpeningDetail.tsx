@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ArrowLeft, CheckCircle2, FileText, Info, Plus } from 'lucide-react'
+import { StatusIcon } from '../../../../components/StatusIcon'
 import { Link } from 'react-router-dom'
 import type { CompanyOpening } from '../../type'
 import type { RoadmapNodeData } from '../../../roadmap/type'
@@ -63,7 +64,7 @@ export function CompanyOpeningDetail({ opening, alreadySaved, onAddToApplication
           <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900"><span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600"><CheckCircle2 size={15} aria-hidden="true" /></span>How your profile relates</h3>
           <p className="mt-2 text-[11px] leading-relaxed text-slate-500">These are name matches to roadmap skills, not an assessment of your experience.</p>
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {relatedSkills.map(({ name, node }) => <span key={name} className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${statusClass(node!.status)}`}>{name} · {statusLabel(node!.status)}</span>)}
+            {relatedSkills.map(({ name, node }) => <span key={name} className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${statusClass(node!.status)}`}><StatusIcon status={node!.status} size={12} />{name} · {statusLabel(node!.status)}</span>)}
           </div>
           {!relatedSkills.length && <p className="mt-2 text-[11px] text-slate-500">No posting skills match the current roadmap labels.</p>}
           <p className="mt-2 text-[11px] leading-relaxed text-slate-600">Roadmap status reflects learning progress; it does not verify job experience.</p>

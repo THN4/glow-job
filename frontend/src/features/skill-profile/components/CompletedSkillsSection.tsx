@@ -1,4 +1,4 @@
-import { CheckCircle2 } from 'lucide-react'
+import { StatusIcon } from '../../../components/StatusIcon'
 import { FoundationSummaryCard } from './FoundationSummaryCard'
 import { CompletedSkillCard } from './CompletedSkillCard'
 import type { SkillProfileSkill } from '../type'
@@ -16,7 +16,7 @@ export function CompletedSkillsSection({ skills, evidenceBySkill, onAddEvidence 
     <section aria-labelledby="completed-heading">
       <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2 gap-y-1">
         <h2 id="completed-heading" className="flex items-center gap-1.5 text-base font-bold text-emerald-600">
-          <CheckCircle2 size={18} className="text-emerald-600" aria-hidden="true" />
+          <StatusIcon status="completed" size={18} className="text-emerald-600" />
           Completed on roadmap
         </h2>
         <p className="text-xs text-slate-500">Skills you’ve completed on your roadmap.</p>

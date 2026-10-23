@@ -1,6 +1,37 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getFitZoom, getGraphFrame, getZoomScroll } from '../src/features/roadmap/viewport.ts'
+import { getDefaultGraphZoom, getFitZoom, getGraphFrame, getResponsivePadding, getZoomScroll } from '../src/features/roadmap/viewport.ts'
+
+test('the default fits normal roadmaps without enlarging cards and bounds shrinking on long maps', () => {
+  assert.equal(getDefaultGraphZoom(0.64), 0.8)
+  assert.equal(getDefaultGraphZoom(0.9), 0.9)
+  assert.equal(getDefaultGraphZoom(1.05), 1)
+  assert.equal(getDefaultGraphZoom(1.5), 1)
+})
+
+test('responsive fit fills narrow, short, tablet and desktop canvases without cropping the graph', () => {
+  const graph = { width: 1000, height: 660 }
+  for (const viewport of [
+    { width: 500, height: 420 },
+    { width: 730, height: 280 },
+    { width: 925, height: 560 },
+    { width: 1400, height: 900 },
+  ]) {
+    const padding = getResponsivePadding(viewport)
+    const zoom = getFitZoom(viewport, graph, padding, 0.25, 1.5)
+    const previousDefault = Math.min(0.7, getFitZoom(viewport, graph, 44, 0.25, 1.5))
+    assert.ok(zoom > previousDefault)
+    assert.ok(graph.width * zoom + padding * 2 <= viewport.width + 1e-9)
+    assert.ok(graph.height * zoom + padding * 2 <= viewport.height + 1e-9)
+  }
+})
+
+test('responsive padding preserves room on very short canvases and stays bounded on large screens', () => {
+  assert.equal(getResponsivePadding({ width: 600, height: 300 }), 12)
+  assert.equal(getResponsivePadding({ width: 800, height: 500 }), 20)
+  assert.equal(getResponsivePadding({ width: 1920, height: 1080 }), 24)
+  assert.equal(getResponsivePadding({ width: 0, height: 0 }), 12)
+})
 
 test('fit respects both viewport axes, padding and existing zoom limits', () => {
   const graph = { width: 1000, height: 2000 }

@@ -1,4 +1,5 @@
-import { CheckCircle2, Plus } from 'lucide-react'
+import { StatusIcon } from '../../../components/StatusIcon'
+import { Plus } from 'lucide-react'
 import { SkillIcon } from '../../../components/SkillIcon'
 import { Link } from 'react-router-dom'
 import type { SkillProfileSkill } from '../type'
@@ -18,7 +19,7 @@ export function CompletedSkillCard({ skill, evidence, onAddEvidence }: Completed
           <div className="flex flex-wrap items-center gap-1.5">
             <h4 className="text-sm font-semibold text-slate-900">{skill.title}</h4>
             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700">
-              <CheckCircle2 size={10} aria-hidden="true" /> Completed
+              <StatusIcon status="completed" size={10} /> Completed
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">

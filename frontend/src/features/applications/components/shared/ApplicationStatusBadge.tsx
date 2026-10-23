@@ -1,3 +1,4 @@
+import { StatusIcon } from '../../../../components/StatusIcon'
 import type { ApplicationStatus } from '../../type'
 
 const statusLabels: Record<ApplicationStatus, string> = {
@@ -20,7 +21,8 @@ const statusStyles: Record<ApplicationStatus, string> = {
 
 export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
   return (
-    <span className={`inline-flex min-h-6 items-center rounded-full px-2.5 text-xs font-medium ${statusStyles[status]}`}>
+    <span className={`inline-flex min-h-6 items-center gap-1 rounded-full px-2.5 text-xs font-medium ${statusStyles[status]}`}>
+      <StatusIcon status={status} size={12} />
       {statusLabels[status]}
     </span>
   )

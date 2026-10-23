@@ -1,5 +1,9 @@
-import { ArrowRight, CheckCircle2, ClipboardList, Compass, Target } from 'lucide-react'
+import { workspaceStyles } from '../../workspace/workspaceStyles'
+import { learningStatusIcons } from '../../../components/statusIcons'
+import { StatCard, StatGrid } from '../../workspace/components/StatCard'
+import { ArrowRight, ClipboardList, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { RoadmapNodeIcon } from '../components/RoadmapNodeIcon'
 import { UpdateReplanCard } from '../components/UpdateReplanCard'
 import { RecentActivity } from '../components/RecentActivity'
@@ -20,9 +24,9 @@ const roadmapLink = (nodeId: string) => `/app/roadmap?node=${encodeURIComponent(
 export function ProgressPage() {
   const roadmap = useCurrentRoadmap()
   const overview = useProgressOverview()
-  if (roadmap.isPending) return <p role="status" className="p-6 text-sm text-slate-600">Loading your progress…</p>
-  if (roadmap.isError) return <section className="p-6"><p role="alert">{roadmap.error.message}</p><button type="button" onClick={() => void roadmap.refetch()} className="mt-3 text-blue-700">Try again</button></section>
-  if (!roadmap.data) return <section className="p-6"><h1 className="text-2xl font-bold">Progress</h1><p className="mt-3">Create your roadmap to start tracking progress.</p><Link to="/app/roadmap" className="mt-3 inline-block text-blue-700">Open My Roadmap</Link></section>
+  if (roadmap.isPending) return <p role="status" className={workspaceStyles.loading}>Loading your progress…</p>
+  if (roadmap.isError) return <section className={workspaceStyles.statePanel}><h1 className={workspaceStyles.pageTitle}>Could not load your progress</h1><p role="alert" className="mt-3 text-sm leading-6 text-destructive">{roadmap.error.message}</p><button type="button" onClick={() => void roadmap.refetch()} className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button></section>
+  if (!roadmap.data) return <section className={workspaceStyles.statePanel}><h1 className={workspaceStyles.pageTitle}>Progress</h1><p className={workspaceStyles.stateDescription}>Create your roadmap to start tracking progress.</p><Link to="/app/roadmap" className={`mt-5 ${workspaceStyles.primaryAction}`}>Open My Roadmap</Link></section>
   const view = roadmap.data
   const screen = toRoadmapScreen(view)
   const { nodes } = screen
@@ -42,73 +46,56 @@ export function ProgressPage() {
   const nextSteps = nodes.filter((node) => statusById.get(node.id) === 'not_started' && node.id !== focusStep?.id).slice(0, 4)
 
   return (
-    <section aria-label="Progress" className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-4">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{screen.summary.targetRole}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Progress</h1>
-        <p className="mt-2 text-sm text-slate-600">Your saved roadmap progress, current learning step, and upcoming work.</p>
-      </header>
+    <section aria-label="Progress" className="@container/progress mx-auto flex w-full min-w-0 max-w-[1500px] flex-col gap-4 pb-4 sm:gap-5">
+      <WorkspacePageHeader
+        title="Progress"
+        description="Your saved roadmap progress, current learning step, and upcoming work."
+      />
 
       {overview.isPending && <p role="status" className="text-sm text-slate-600">Loading profile summary and activity…</p>}
       {overview.isError && <p role="alert" className="text-sm text-red-700">Could not load profile summary and activity: {overview.error.message} <button type="button" onClick={() => void overview.refetch()} className="underline">Try again</button></p>}
-      {overview.data && <UpdateReplanCard overview={overview.data} completedProjects={nodes.filter((node) => node.kind === 'project' && node.status === 'completed').length} />}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Target size={16} className="text-blue-600" aria-hidden="true" />Roadmap completion</p>
-          <p className="mt-2 text-3xl font-bold text-blue-700">{completionPercent}%</p>
-          <p className="mt-1 text-xs text-slate-500">{screen.summary.statusText}</p>
-          <div role="progressbar" aria-label="Roadmap completion" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionPercent} className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-            <div className="h-full rounded-full bg-blue-600 transition-[width]" style={{ width: `${completionPercent}%` }} />
-          </div>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><CheckCircle2 size={16} className="text-emerald-600" aria-hidden="true" />Completed</p>
-          <p className="mt-2 text-3xl font-bold text-emerald-700">{completed}</p>
-          <p className="mt-1 text-xs text-slate-500">Skills, projects, and career steps</p>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><Compass size={16} className="text-blue-600" aria-hidden="true" />In progress</p>
-          <p className="mt-2 text-3xl font-bold text-blue-700">{inProgress}</p>
-          <p className="mt-1 text-xs text-slate-500">{upcoming} upcoming · {skipped} skipped</p>
-        </section>
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <p className="flex items-center gap-2 text-xs font-semibold text-slate-600"><ClipboardList size={16} className="text-violet-600" aria-hidden="true" />Checklist items</p>
-          <p className="mt-2 text-3xl font-bold text-violet-700">{checkedItems}<span className="text-base font-medium text-slate-400"> / {checklistItems.length}</span></p>
-          <p className="mt-1 text-xs text-slate-500">Checked across your roadmap</p>
-        </section>
-      </div>
+      <StatGrid label="Roadmap progress statistics" mobileColumns={2}>
+        <StatCard compactOnMobile label="Roadmap completion" value={`${completionPercent}%`} icon={Target}
+          detail={screen.summary.statusText} progress={completionPercent} />
+        <StatCard compactOnMobile label="Completed" value={completed} icon={learningStatusIcons.completed} tone="success"
+          detail="Skills, projects, and career steps" />
+        <StatCard compactOnMobile label="In progress" value={inProgress} icon={learningStatusIcons['in-progress']}
+          detail={`${upcoming} upcoming · ${skipped} skipped`} />
+        <StatCard compactOnMobile label="Checklist items" value={`${checkedItems} / ${checklistItems.length}`} icon={ClipboardList} tone="info"
+          detail="Checked across your roadmap" />
+      </StatGrid>
 
-      <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-base font-bold text-slate-900">{currentStep ? 'Your current step' : focusStep ? 'Your next step' : completionPercent === 100 ? 'Roadmap complete' : 'Review your roadmap'}</h2>
+      <div className="grid min-w-0 items-start gap-3 @min-[52rem]/progress:grid-cols-[minmax(0,1.3fr)_minmax(280px,0.7fr)]">
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h2 className={workspaceStyles.sectionTitle}>{currentStep ? 'Your current step' : focusStep ? 'Your next step' : completionPercent === 100 ? 'Roadmap complete' : 'Review your roadmap'}</h2>
           {focusStep ? (
             <>
               <div className="mt-3 flex items-start gap-3">
                 <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700"><RoadmapNodeIcon node={focusStep} size={21} /></span>
                 <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-slate-900">{focusStep.title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">{focusStep.description}</p>
+                  <h3 className="break-words text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{focusStep.title}</h3>
+                  <p className="mt-1 break-words text-sm leading-6 text-slate-600 [overflow-wrap:anywhere]">{focusStep.description}</p>
                 </div>
               </div>
               {focusChecklist.length > 0 && <p className="mt-3 text-xs text-slate-600">{focusChecked} of {focusChecklist.length} checklist items checked</p>}
-              <Link to={roadmapLink(focusStep.id)} className="mt-4 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700">Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
+              <Link to={roadmapLink(focusStep.id)} className={`mt-4 w-full sm:w-auto ${workspaceStyles.primaryAction}`}>Open this step <ArrowRight size={14} aria-hidden="true" /></Link>
             </>
           ) : (
-            <p className="mt-3 text-sm text-slate-600">{completionPercent === 100 ? 'Every task on your roadmap is complete.' : view.nextAction.text}</p>
+            <p className={workspaceStyles.stateDescription}>{completionPercent === 100 ? 'Every task on your roadmap is complete.' : view.nextAction.text}</p>
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <h2 className="text-base font-bold text-slate-900">Coming up</h2>
+        <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <h2 className={workspaceStyles.sectionTitle}>Coming up</h2>
           {nextSteps.length ? (
             <ul className="mt-2 divide-y divide-slate-100">
               {nextSteps.map((node) => (
                 <li key={node.id}>
-                  <Link to={roadmapLink(node.id)} className="flex items-center gap-2 py-2 text-xs font-medium text-slate-700 hover:text-blue-700">
+                  <Link to={roadmapLink(node.id)} className="flex min-h-11 items-center gap-3 py-3 text-sm font-medium text-slate-700 hover:text-blue-700 focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-primary">
                     <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-slate-50 text-slate-600"><RoadmapNodeIcon node={node} size={15} /></span>
-                    <span className="min-w-0 flex-1">{node.title}</span>
-                    <ArrowRight size={13} aria-hidden="true" />
+                    <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]">{node.title}</span>
+                    <ArrowRight size={16} className="shrink-0" aria-hidden="true" />
                   </Link>
                 </li>
               ))}
@@ -117,12 +104,14 @@ export function ProgressPage() {
         </section>
       </div>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      {overview.data && <UpdateReplanCard overview={overview.data} completedProjects={nodes.filter((node) => node.kind === 'project' && node.status === 'completed').length} />}
+
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-base font-bold text-slate-900">Progress by type</h2>
-          <Link to="/app/skill-profile" className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700 hover:underline">View Skill Profile <ArrowRight size={13} aria-hidden="true" /></Link>
+          <h2 className={workspaceStyles.sectionTitle}>Progress by type</h2>
+          <Link to="/app/skill-profile" className="inline-flex min-h-11 w-full items-center justify-between gap-2 text-sm font-semibold text-primary hover:underline focus-visible:rounded-lg focus-visible:outline-2 focus-visible:outline-primary sm:min-h-0 sm:w-auto sm:justify-start">View Skill Profile <ArrowRight size={13} aria-hidden="true" /></Link>
         </div>
-        <div className="mt-4 grid gap-x-6 gap-y-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-x-6 gap-y-4 @min-[36rem]/progress:grid-cols-2">
           {categories.map(({ kind, label, color }) => {
             const group = nodes.filter((node) => node.kind === kind)
             const done = group.filter((node) => node.status === 'completed').length

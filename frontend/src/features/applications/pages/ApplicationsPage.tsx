@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -81,7 +82,6 @@ export function ApplicationsPage() {
   const roadmapQuery = useCurrentRoadmap()
   const roadmap = roadmapQuery.data ? toRoadmapScreen(roadmapQuery.data) : null
   const roadmapNodes = roadmap?.nodes ?? []
-  const targetRole = (recommendationView === 'careers' ? careerRecommendationsQuery.data?.targetRole : jobRecommendationsQuery.data?.targetRole) ?? roadmap?.summary.targetRole ?? 'Your career workspace'
   const filters = useApplicationFilters(applications)
   const showRecommendationList = activeTab === 'recommendations' && !selectedCareerPath
   const createMutation = useMutation({
@@ -150,8 +150,6 @@ export function ApplicationsPage() {
         detailLabel={selectedRecord ? `${selectedRecord.company} / ${selectedRecord.role}` : undefined}
         onBack={() => setSelectedApplication(null)}
         activeTab={activeTab}
-        targetRole={targetRole}
-        duration={targetRole === roadmap?.summary.targetRole ? roadmap.summary.duration : ''}
         titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' && recommendationView === 'careers' ? selectedCareerPath?.title : undefined}
         subtitleOverride={activeTab === 'companies' && selectedCompanyOpening
           ? `${selectedCompanyOpening.company} · ${selectedCompanyOpening.location} · ${selectedCompanyOpening.workStyle} · ${selectedCompanyOpening.experience}`
@@ -182,7 +180,7 @@ export function ApplicationsPage() {
       >
         {activeTab === 'my-applications' && !hasProfile && (
           <div className="rounded-xl border border-blue-100 bg-white p-8 text-center shadow-sm">
-            <h2 className="text-lg font-bold text-slate-900">Save your profile to start tracking applications</h2>
+            <h2 className={workspaceStyles.sectionTitle}>Save your profile to start tracking applications</h2>
             <p className="mt-2 text-sm text-slate-600">Your application records are attached to your saved profile.</p>
             <Link to="/onboarding" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Go to onboarding</Link>
           </div>
@@ -220,7 +218,7 @@ export function ApplicationsPage() {
             />
           ) : (
             <div className="rounded-xl border border-dashed border-blue-200 bg-white p-10 text-center">
-              <h2 className="text-lg font-bold text-slate-900">No applications saved yet</h2>
+              <h2 className={workspaceStyles.sectionTitle}>No applications saved yet</h2>
               <p className="mt-2 text-sm text-slate-600">Add a role to keep its status, dates and notes in your tracker.</p>
               <button type="button" onClick={() => setShowAddForm(true)} className="mt-4 min-h-10 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Add your first application</button>
             </div>
@@ -233,7 +231,7 @@ export function ApplicationsPage() {
             onEdit={() => { setEditingApplication(true); setShowAddForm(true) }}
           />
         )}
-        {activeTab === 'recommendations' && !hasProfile && <div className="rounded-xl border border-blue-100 bg-white p-8 text-center shadow-sm"><h2 className="text-lg font-bold text-slate-900">Save your profile to see career recommendations</h2><p className="mt-2 text-sm text-slate-600">Recommendations compare your confirmed skills with market skill demand.</p><Link to="/onboarding" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Go to onboarding</Link></div>}
+        {activeTab === 'recommendations' && !hasProfile && <div className="rounded-xl border border-blue-100 bg-white p-8 text-center shadow-sm"><h2 className={workspaceStyles.sectionTitle}>Save your profile to see career recommendations</h2><p className="mt-2 text-sm text-slate-600">Recommendations compare your confirmed skills with market skill demand.</p><Link to="/onboarding" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Go to onboarding</Link></div>}
         {activeTab === 'recommendations' && <nav aria-label="Recommendation views" className="mb-4 flex flex-wrap gap-2">
           {([{ id: 'jobs', label: 'Jobs for you' }, { id: 'careers', label: 'Career paths' }] as const).map((view) =>
             <button key={view.id} type="button" aria-pressed={recommendationView === view.id}

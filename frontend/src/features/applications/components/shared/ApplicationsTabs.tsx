@@ -16,7 +16,7 @@ const tabs: { id: ApplicationTabKey; label: string; icon: typeof BriefcaseBusine
 
 export function ApplicationsTabs({ activeTab, onChange, showAddApplication, onAddApplication }: ApplicationsTabsProps) {
   return (
-    <div className="flex shrink-0 items-end justify-between gap-3 border-b border-blue-100">
+    <div className="flex shrink-0 flex-wrap items-end justify-between gap-3 border-b border-border">
       <nav aria-label="Application sections" role="tablist" className="flex min-w-0 flex-1 gap-2 overflow-x-auto">
         {tabs.map(({ id, label, icon: Icon }) => (
           <button
@@ -35,8 +35,9 @@ export function ApplicationsTabs({ activeTab, onChange, showAddApplication, onAd
         ))}
       </nav>
       {showAddApplication && (
-        <button type="button" onClick={onAddApplication} className="mb-1 inline-flex min-h-9 shrink-0 items-center gap-2 rounded-lg bg-primary px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-primary/90 sm:px-4 sm:text-sm">
-          <Plus size={15} aria-hidden="true" /> Add Application
+        <button type="button" onClick={onAddApplication} aria-label="Add application" title="Add application"
+          className="mb-1 inline-flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          <Plus size={20} aria-hidden="true" />
         </button>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2, Info, Layers3, TrendingUp } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Info, Layers3, TrendingUp } from 'lucide-react'
+import { StatusIcon } from '../../../../components/StatusIcon'
 import { Link } from 'react-router-dom'
 import type { CareerPathRecommendation } from '../../type'
 import type { RoadmapNodeData } from '../../../roadmap/type'
@@ -42,7 +43,7 @@ export function CareerRecommendationDetail({ path, roadmapNodes, primaryTargetRo
                 const statusClass = node?.status === 'completed' ? 'bg-emerald-50 text-emerald-700' : node?.status === 'in-progress' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600'
                 return (
               <section key={item.skill} className="py-2 first:pt-0 last:pb-0">
-                <h3 className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-800"><CheckCircle2 size={13} className="text-emerald-600" aria-hidden="true" />{item.skill}<span className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${statusClass}`}>{statusLabel}</span></h3>
+                <h3 className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-slate-800"><Layers3 size={13} aria-hidden="true" />{item.skill}<span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-semibold ${statusClass}`}>{node && <StatusIcon status={node.status} size={11} />}{statusLabel}</span></h3>
                 <p className="mt-1 text-[11px] leading-relaxed text-slate-600">{item.detail}</p>
                 <Link to="/app/skill-profile" className="mt-1 inline-block text-[10px] text-blue-700 hover:underline">View {item.skill} in Skill Profile →</Link>
               </section>

@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -13,8 +14,10 @@ import { canStartNode } from '../progress'
 import { recordRoadmapActivity } from '../activity'
 import { loadEvidenceByNode, saveEvidenceByNode } from '../storage'
 import type { RoadmapEvidence, RoadmapNodeData } from '../type'
+import { useRoadmapFullscreen } from '../useRoadmapFullscreen'
 
 export function RoadmapPage() {
+  const { ref: fullscreenRef, isFullscreen, toggleFullscreen, onFullscreenKeyDown } = useRoadmapFullscreen()
   const [searchParams] = useSearchParams()
   const requestedNodeKey = searchParams.get('node')
   const queryClient = useQueryClient()
@@ -36,11 +39,12 @@ export function RoadmapPage() {
 
   useEffect(() => { saveEvidenceByNode(evidenceByNode) }, [evidenceByNode])
 
-  useEffect(() => {
-    if (requestedNodeKey && view?.nodes.some((node) => node.key === requestedNodeKey)) {
-      setSelectedNodeId(requestedNodeKey)
-    }
-  }, [requestedNodeKey, view])
+  const [prevNodeKey, setPrevNodeKey] = useState(requestedNodeKey)
+  if (requestedNodeKey !== prevNodeKey) {
+    setPrevNodeKey(requestedNodeKey)
+    setSelectedNodeId(requestedNodeKey)
+  }
+
 
   function setView(next: RoadmapView) {
     queryClient.setQueryData(currentRoadmapKey(getSavedProfileId()), next)
@@ -106,32 +110,36 @@ export function RoadmapPage() {
       description: evidence.title, nodeId: node.id })
   }
 
-  if (loading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your roadmap...</p>
+  if (loading) return <p role="status" className={workspaceStyles.loading}>Loading your roadmap...</p>
   if (loadFailed) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
-      <h1 className="text-xl font-bold text-slate-900">Could not load your roadmap</h1>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Could not load your roadmap</h1>
       <p role="alert" className="mt-3 text-sm text-red-700">{loadError?.message}</p>
       <button type="button" onClick={() => window.location.reload()}
-        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button>
     </section>
   )
   if (!screen) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-blue-100 bg-white p-8 text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Your Career Roadmap</h1>
-      <p className="mt-3 text-sm text-slate-600">Your roadmap has not been created yet. Complete onboarding, then create your plan.</p>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Your Career Roadmap</h1>
+      <p className={workspaceStyles.stateDescription}>Your roadmap has not been created yet. Complete onboarding, then create your plan.</p>
       {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
       {getSavedProfileId() ? <button type="button" disabled={working} onClick={() => createRoadmap()}
-        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>
         {working ? `Creating roadmap: ${stage ?? 'queued'}...` : 'Create my roadmap'}
       </button> : <Link to="/onboarding"
-        className="mt-5 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>
         Start onboarding
       </Link>}
     </section>
   )
 
   return (
-    <section aria-label="Career roadmap" className="mx-auto flex min-h-0 min-w-0 w-full max-w-[1500px] flex-1 flex-col">
+    <section ref={fullscreenRef} aria-label="Career roadmap"
+      role={isFullscreen ? 'dialog' : undefined}
+      aria-modal={isFullscreen || undefined}
+      onKeyDown={onFullscreenKeyDown}
+      className={`flex min-h-0 min-w-0 flex-col ${isFullscreen ? 'fixed inset-0 z-40 h-dvh w-screen overflow-hidden bg-background p-3 sm:p-5' : 'mx-auto w-full max-w-[1500px] flex-1'}`}>
       {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
       {historyQuery.data && historyQuery.data.length > 1 && <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm text-slate-700">
         <label htmlFor="roadmap-version" className="font-semibold">Roadmap version</label>
@@ -152,17 +160,18 @@ export function RoadmapPage() {
       </div>}
       <div className="relative flex min-h-0 min-w-0 flex-1 gap-4 min-[1200px]:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <RoadmapHeader summary={screen.summary} showProgress={!selectedNode}
-            onRegenerate={viewingRoadmapId === null ? () => { void createRoadmap(true) } : undefined}
-            regenerating={working} />
+          {!isFullscreen && <RoadmapHeader summary={screen.summary} />}
           <RoadmapCanvas
             targetRole={screen.summary.targetRole}
             nodes={screen.nodes}
             connections={screen.connections}
             selectedNodeId={selectedNodeId}
             onSelectNode={(node) => setSelectedNodeId(node.id)}
-            detailsOpen={Boolean(selectedNode)}
-            progressSummary={selectedNode ? screen.summary : undefined}
+            progressSummary={screen.summary}
+            onRegenerate={viewingRoadmapId === null ? () => createRoadmap(true) : undefined}
+            regenerating={working || viewingRoadmapId !== null}
+            isFullscreen={isFullscreen}
+            onToggleFullscreen={toggleFullscreen}
           />
         </div>
         {selectedNode && (
