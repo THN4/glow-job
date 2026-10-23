@@ -95,6 +95,13 @@ async def list_job_postings(limit: int = Query(default=60, gt=0, le=100),
     return await svc.list_job_postings(limit)
 
 
+@router.get("/profiles/{profile_id}/job-recommendations")
+async def job_recommendations(profile_id: str, session_id: str = SessionId,
+                              limit: int = Query(default=30, gt=0, le=100),
+                              svc: ApplicationsService = Depends(get_applications_service)) -> dict[str, Any]:
+    return await svc.job_recommendations(profile_id, session_id, limit)
+
+
 @router.post("/profiles/{profile_id}/applications/from-job", status_code=201)
 async def save_job_posting(profile_id: str, body: SaveJobPostingBody, session_id: str = SessionId,
                            svc: ApplicationsService = Depends(get_applications_service)) -> dict[str, Any]:

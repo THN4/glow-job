@@ -71,7 +71,7 @@ class ApplicationsRepository:
             histories = self._histories(connection, [row[0] for row in rows])
         return [self._view(row, histories.get(row[0], [])) for row in rows]
 
-    def list_job_postings(self, limit: int = 60) -> list[dict[str, Any]]:
+    def list_job_postings(self, limit: int | None = 60) -> list[dict[str, Any]]:
         with self._connect() as connection:
             rows = connection.execute(
                 """
@@ -113,6 +113,45 @@ class ApplicationsRepository:
             }
             for row in rows
         ]
+
+    def job_matching_inputs(self, user_id: int) -> dict[str, Any]:
+        # LIMIT NULL deliberately scans the catalog before ranking, rather than
+        # choosing matches from only the latest Companies page.
+        openings = {job["jobId"]: job for job in self.list_job_postings(None)}
+        with self._connect() as connection:
+            user_skills = connection.execute(
+                """SELECT skill_id FROM app.user_skills
+                   WHERE user_id = %s AND user_confirmed = true
+                     AND match_status = 'matched' AND skill_id IS NOT NULL""",
+                (user_id,),
+            ).fetchall()
+            goal = connection.execute(
+                """SELECT target_role_title, career_id FROM app.user_career_goals
+                   WHERE user_id = %s AND is_primary = true""", (user_id,),
+            ).fetchone()
+            rows = connection.execute(
+                """SELECT j.job_id, cp.career_id, js.skill_id, s.skill_name, js.requirement_type
+                   FROM market.job_postings AS j
+                   JOIN core.career_profiles AS cp USING (career_profile_id)
+                   LEFT JOIN market.job_skills AS js USING (job_id)
+                   LEFT JOIN core.skills AS s USING (skill_id)
+                   ORDER BY j.job_id, js.skill_id"""
+            ).fetchall()
+        jobs: dict[int, dict[str, Any]] = {}
+        for job_id, career_id, skill_id, name, requirement_type in rows:
+            if job_id not in openings:
+                continue
+            job = jobs.setdefault(job_id, {
+                "opening": openings[job_id], "careerId": career_id, "requirements": [],
+            })
+            if skill_id is not None:
+                job["requirements"].append({"skillId": skill_id, "name": name, "type": requirement_type})
+        return {
+            "userSkillIds": {row[0] for row in user_skills},
+            "targetRole": goal[0] if goal else None,
+            "goalCareerId": goal[1] if goal else None,
+            "jobs": list(jobs.values()),
+        }
 
     def save_job_posting(self, user_id: int, job_id: int) -> dict[str, Any] | None:
         with self._connect() as connection, connection.transaction():

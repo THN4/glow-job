@@ -1,0 +1,122 @@
+"""Deterministic ranking and HTTP ownership checks; no database or paid AI."""
+import httpx
+import pytest
+from unittest.mock import MagicMock
+from fastapi import FastAPI
+
+from app.features.applications.job_matching import rank_jobs
+from app.features.applications.router import get_applications_service, router
+from app.features.applications.service import ApplicationsService
+from app.features.resume.career_matching import CareerMatchRepository
+
+
+def job(job_id, requirements, career_id=1):
+    return {
+        "opening": {"jobId": job_id, "id": str(job_id), "company": "Example", "role": "Developer"},
+        "careerId": career_id,
+        "requirements": [
+            {"skillId": skill_id, "name": name, "type": kind}
+            for skill_id, name, kind in requirements
+        ],
+    }
+
+
+def test_required_skills_weigh_twice_preferred_and_do_not_claim_proficiency():
+    candidate = job(1, [(1, "Python", "required"), (2, "SQL", "preferred")])
+    result = rank_jobs([candidate], {1}, 1, 10)[0]
+    assert result["scorePct"] == 66.7
+    assert result["requiredMatches"] == ["Python"]
+    assert result["preferredMissing"] == ["SQL"]
+    assert result["matchedWeight"] == 2 and result["totalWeight"] == 3
+    assert "proficiency" not in result
+
+
+def test_canonical_ids_not_labels_and_unclassified_skills_do_not_inflate_score():
+    candidates = [
+        job(1, [(999, "Python", "required")]),
+        job(2, [(1, "Python", "unknown")]),
+        job(3, [(1, "Python", "required"), (2, "Other", "optional"), (3, "Unknown", "unknown")]),
+    ]
+    result = rank_jobs(candidates, {1}, None, 10)
+    assert [item["jobId"] for item in result] == [3]
+    assert result[0]["scorePct"] == 100
+    assert result[0]["unscoredSkills"] == ["Other", "Unknown"]
+
+
+def test_rank_before_limit_goal_only_breaks_ties_and_empty_profile_has_no_matches():
+    candidates = [
+        job(1, [(1, "Python", "required"), (2, "SQL", "required")], 7),
+        job(2, [(1, "Python", "required")], 8),
+        job(3, [(1, "Python", "required")], 7),
+    ]
+    assert [item["jobId"] for item in rank_jobs(candidates, {1}, 7, 2)] == [3, 2]
+    assert rank_jobs(candidates, set(), 7, 2) == []
+    assert rank_jobs([job(4, [])], {1}, 7, 2) == []
+
+
+def test_duplicate_skill_counts_once_with_required_precedence():
+    candidate = job(1, [(1, "Python", "preferred"), (1, "Python", "required"), (2, "SQL", "preferred")])
+    assert rank_jobs([candidate], {1}, None, 1)[0]["scorePct"] == 66.7
+
+
+def test_career_cards_show_present_skills_even_when_level_is_unknown(monkeypatch):
+    repo = CareerMatchRepository.__new__(CareerMatchRepository)
+    connection = MagicMock()
+    connection.execute.return_value.fetchone.return_value = ("Backend Engineer",)
+    monkeypatch.setattr(repo, "_connect", lambda: connection)
+    monkeypatch.setattr(repo, "_list_career_profiles", lambda: [
+        {"careerProfileId": 1, "profileName": "Backend Engineer", "seniorityLevel": "general"},
+    ])
+    monkeypatch.setattr(repo, "_calculate", lambda *args: {
+        "skills": [{
+            "userHasSkill": True, "status": "not_assessed", "skillName": "Python",
+            "weightedDemandScore": 10, "priorityRank": 1, "demandPercentage": 50,
+        }],
+        "scores": {"marketSkillCoveragePct": 100}, "status": "ready",
+        "marketSample": {"totalJobs": 10},
+    })
+    recommendation = repo._recommendations("profile", "session", 6)["recommendations"][0]
+    assert recommendation["transferableSkills"] == ["Python"]
+    assert recommendation["developmentAreas"] == ["Python"]
+
+
+class FakeRepository:
+    def __init__(self):
+        self.inputs_called = False
+
+    def owner(self, profile_id, session_id):
+        return 7 if (profile_id, session_id) == ("profile-1", "session-1") else None
+
+    def job_matching_inputs(self, user_id):
+        assert user_id == 7
+        self.inputs_called = True
+        return {
+            "userSkillIds": {1}, "targetRole": "Backend Engineer", "goalCareerId": 1,
+            "jobs": [job(1, []), job(2, [(1, "Python", "required")])],
+        }
+
+
+@pytest.mark.asyncio
+async def test_api_requires_ownership_and_returns_explanations():
+    repository = FakeRepository()
+    app = FastAPI()
+    app.include_router(router, prefix="/api")
+    app.dependency_overrides[get_applications_service] = lambda: ApplicationsService(repository)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        url = "/api/profiles/profile-1/job-recommendations"
+        denied = await client.get(url, headers={"X-Session-Id": "other-session"})
+        assert denied.status_code == 404
+        assert not repository.inputs_called
+        missing = await client.get(url)
+        assert missing.status_code == 400
+        for limit in ("0", "101", "invalid"):
+            response = await client.get(url + "?limit=" + limit, headers={"X-Session-Id": "session-1"})
+            assert response.status_code == 400
+        response = await client.get(url, headers={"X-Session-Id": "session-1"})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["targetRole"] == "Backend Engineer"
+        assert body["totalCandidates"] == 2 and body["unscoredPostings"] == 1
+        assert body["recommendations"][0]["matchesGoal"] is True
+        assert body["recommendations"][0]["reasons"]
+        assert body["limitations"] and body["policy"].endswith("-v1")
