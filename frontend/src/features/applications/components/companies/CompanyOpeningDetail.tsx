@@ -12,9 +12,10 @@ type CompanyOpeningDetailProps = {
   roadmapNodes: RoadmapNodeData[]
   canSave: boolean
   isSaving: boolean
+  backLabel?: string
 }
 
-export function CompanyOpeningDetail({ opening, alreadySaved, onAddToApplications, onBack, roadmapNodes, canSave, isSaving }: CompanyOpeningDetailProps) {
+export function CompanyOpeningDetail({ opening, alreadySaved, onAddToApplications, onBack, roadmapNodes, canSave, isSaving, backLabel = 'Back to Companies' }: CompanyOpeningDetailProps) {
   const [added, setAdded] = useState(false)
 
   async function addOpening() {
@@ -46,7 +47,7 @@ export function CompanyOpeningDetail({ opening, alreadySaved, onAddToApplication
 
       <div className="grid items-start gap-3 lg:grid-cols-[minmax(0,1.8fr)_minmax(250px,0.8fr)]">
         <div className="space-y-2">
-          <button type="button" onClick={onBack} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"><ArrowLeft size={14} aria-hidden="true" />Back to Companies</button>
+          <button type="button" onClick={onBack} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"><ArrowLeft size={14} aria-hidden="true" />{backLabel}</button>
           <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-blue-400 focus-within:border-blue-400 sm:p-5">
           <h3 className="flex items-center gap-2 text-base font-bold text-slate-900"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-50 text-violet-600"><FileText size={16} aria-hidden="true" /></span>Job description</h3>
           <div className="mt-3 space-y-3 text-xs leading-relaxed text-slate-600">

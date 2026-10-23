@@ -8,6 +8,7 @@ import { ApplicationsTabs } from '../components/shared/ApplicationsTabs'
 import { CompaniesTab } from '../components/companies/CompaniesTab'
 import { MyApplicationsTab } from '../components/my-applications/MyApplicationsTab'
 import { CareerRecommendationsTab } from '../components/recommendations/CareerRecommendationsTab'
+import { JobsForYouTab } from '../components/recommendations/JobsForYouTab'
 import { useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
 import { toRoadmapScreen } from '../../roadmap/adapter'
 import { useApplicationFilters } from '../hooks/useApplicationFilters'
@@ -60,6 +61,13 @@ export function ApplicationsPage() {
     retry: false,
     staleTime: 60_000,
   })
+  const jobRecommendationsQuery = useQuery({
+    queryKey: ['job-recommendations', profileId],
+    queryFn: applicationsApi.jobRecommendations,
+    enabled: activeTab === 'recommendations' && recommendationView === 'jobs' && hasProfile,
+    retry: false,
+    staleTime: 60_000,
+  })
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingApplication, setEditingApplication] = useState(false)
   const [selectedApplication, setSelectedApplication] = useState<ApplicationEntry | null>(null)
@@ -69,6 +77,7 @@ export function ApplicationsPage() {
   const roadmapQuery = useCurrentRoadmap()
   const roadmap = roadmapQuery.data ? toRoadmapScreen(roadmapQuery.data) : null
   const roadmapNodes = roadmap?.nodes ?? []
+  const targetRole = (recommendationView === 'careers' ? careerRecommendationsQuery.data?.targetRole : jobRecommendationsQuery.data?.targetRole) ?? roadmap?.summary.targetRole ?? 'Your career workspace'
   const filters = useApplicationFilters(applications)
   const showRecommendationList = activeTab === 'recommendations' && !selectedCareerPath
   const createMutation = useMutation({
@@ -121,6 +130,7 @@ export function ApplicationsPage() {
       setSearchParams({}, { replace: true })
     } catch (error) {
       setCompanySaveError(error instanceof Error ? error.message : 'Could not save this opening.')
+      throw error
     }
   }
 
@@ -132,16 +142,16 @@ export function ApplicationsPage() {
     <section aria-label="Applications" className={`mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 ${showRecommendationList ? 'lg:min-h-[calc(100dvh-3rem)]' : ''}`}>
       <ApplicationsHeader
         formOpen={showAddForm}
-        detailOpen={Boolean(selectedRecord)}
+        detailOpen={activeTab === 'my-applications' && Boolean(selectedRecord)}
         detailLabel={selectedRecord ? `${selectedRecord.company} / ${selectedRecord.role}` : undefined}
         onBack={() => setSelectedApplication(null)}
         activeTab={activeTab}
-        targetRole={careerRecommendationsQuery.data?.targetRole ?? roadmap?.summary.targetRole ?? 'Your career workspace'}
-        duration={roadmap?.summary.duration ?? ''}
-        titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' ? selectedCareerPath?.title : undefined}
+        targetRole={targetRole}
+        duration={targetRole === roadmap?.summary.targetRole ? roadmap.summary.duration : ''}
+        titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' && recommendationView === 'careers' ? selectedCareerPath?.title : undefined}
         subtitleOverride={activeTab === 'companies' && selectedCompanyOpening
           ? `${selectedCompanyOpening.company} · ${selectedCompanyOpening.location} · ${selectedCompanyOpening.workStyle} · ${selectedCompanyOpening.experience}`
-          : activeTab === 'recommendations' && selectedCareerPath
+          : activeTab === 'recommendations' && recommendationView === 'careers' && selectedCareerPath
             ? `Career path · ${selectedCareerPath.summary}`
             : undefined}
         backLabel={selectedRecord ? 'Back to Applications' : undefined}
@@ -228,8 +238,18 @@ export function ApplicationsPage() {
               {view.label}
             </button>)}
         </nav>}
-        {activeTab === 'recommendations' && hasProfile && recommendationView === 'jobs' &&
-          <p className="rounded-xl border border-blue-100 bg-white p-6 text-sm text-slate-600">Personalized job recommendations are being connected. Explore Career paths or browse Companies.</p>}
+        {activeTab === 'recommendations' && hasProfile && recommendationView === 'jobs' && <JobsForYouTab
+          data={jobRecommendationsQuery.data}
+          isLoading={jobRecommendationsQuery.isLoading}
+          isRefreshing={jobRecommendationsQuery.isFetching}
+          error={jobRecommendationsQuery.isError ? jobRecommendationsQuery.error instanceof Error ? jobRecommendationsQuery.error.message : 'Could not load job matches.' : null}
+          onRetry={() => jobRecommendationsQuery.refetch()}
+          applications={applications}
+          onAddOpening={addCompanyOpening}
+          isSaving={saveJobMutation.isPending}
+          saveError={companySaveError}
+          roadmapNodes={roadmapNodes}
+        />}
         {activeTab === 'recommendations' && hasProfile && recommendationView === 'careers' && <CareerRecommendationsTab
           selectedPath={selectedCareerPath}
           onSelectPath={setSelectedCareerPath}

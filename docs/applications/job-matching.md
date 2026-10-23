@@ -39,6 +39,18 @@ Uses existing app, market, and core tables. No new migration or model key is
 required. Data availability still depends on importing postings and extracting
 canonical market.job_skills.
 
+## Frontend flow
+
+- `/app/applications?tab=recommendations&view=jobs` opens Jobs for you (default).
+- `/app/applications?tab=recommendations&view=careers` opens Career paths.
+- Each view loads its own API. Roadmap headers and learning progress use the
+  saved Roadmap API, with loading/unavailable states rather than mock fallback.
+- View job shows matching reasons and the existing source-posting detail.
+- Save to My Applications calls the existing from-job endpoint and opens the
+  tracker. Already saved jobs are disabled in the list. API failures stay
+  visible and do not mark the job as saved.
+- Refresh matches fetches a new comparison after profile changes.
+
 ## Verification
 
 From backend:

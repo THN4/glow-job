@@ -70,3 +70,26 @@ export type CareerPathRecommendation = {
   supportedProfile: { skill: string; detail: string }[]
   skillsToDevelop: { skill: string; detail: string }[]
 }
+
+export type JobRecommendation = CompanyOpening & {
+  scorePct: number
+  matchedWeight: number
+  totalWeight: number
+  matchesGoal: boolean
+  reasons: string[]
+  requiredMatches: string[]
+  requiredMissing: string[]
+  preferredMatches: string[]
+  preferredMissing: string[]
+  unscoredSkills: string[]
+}
+
+export type JobRecommendationsResponse = {
+  targetRole: string | null
+  policy: string
+  hasConfirmedSkills: boolean
+  totalCandidates: number
+  unscoredPostings: number
+  recommendations: JobRecommendation[]
+  limitations: string[]
+}
