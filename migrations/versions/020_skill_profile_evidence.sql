@@ -11,7 +11,7 @@ CREATE TABLE app.user_skill_artifacts (
     photo_data text CHECK (
         photo_data IS NULL OR (
             length(photo_data) <= 700000
-            AND photo_data ~ '^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$'
+            AND photo_data ~ ('^data:image/(png|jpeg|webp)' || chr(59) || 'base64,[A-Za-z0-9+/=]+$')
         )
     ),
     created_at timestamptz NOT NULL DEFAULT now(),
