@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import date
 from pathlib import Path
 
-from ai.roadmap.cost import Pricing
+from ai.roadmap.cost import pricing_for_model
 from ai.roadmap.generate import GenerationFailed, generate_roadmap, prepare
 from ai.roadmap.providers import create_model
 from rag.context.agent_models import AgentContext
@@ -24,9 +25,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--context", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True, help="Where to write the RoadmapView JSON")
-    parser.add_argument("--provider", choices=("mock", "gemini", "anthropic", "bedrock"), default="mock")
+    parser.add_argument("--provider", choices=("mock", "gemini", "anthropic", "bedrock", "bedrock_converse"), default="mock")
     parser.add_argument("--model", help="Override the model ID")
-    parser.add_argument("--aws-region", help="Required for bedrock")
+    parser.add_argument("--aws-region", default=os.getenv("ROADMAP_AWS_REGION") or os.getenv("AWS_DEFAULT_REGION") or os.getenv("AWS_REGION"),
+                        help="AWS region for Bedrock (defaults to process environment)")
+    parser.add_argument("--input-price", type=float, default=os.getenv("ROADMAP_PRICE_INPUT_PER_MTOK") or None)
+    parser.add_argument("--output-price", type=float, default=os.getenv("ROADMAP_PRICE_OUTPUT_PER_MTOK") or None)
     parser.add_argument("--effort", choices=("low", "medium", "high", "xhigh", "max"), default="medium")
     parser.add_argument("--max-tokens", type=int, default=24000)
     parser.add_argument("--today", type=date.fromisoformat, help="Planning date, for reproducible runs")
@@ -40,13 +44,17 @@ def main() -> int:
         parser.error("--output must be a .json path")
 
     context = AgentContext.model_validate_json(args.context.read_bytes())
-    model = create_model(args.provider, model_id=args.model, aws_region=args.aws_region,
+    model_id = args.model
+    if not model_id and args.provider == "bedrock_converse":
+        model_id = os.getenv("BEDROCK_ROADMAP_MODEL") or "amazon.nova-pro-v1:0"
+    pricing = pricing_for_model(args.provider, model_id, input_price=args.input_price, output_price=args.output_price)
+    model = create_model(args.provider, model_id=model_id, aws_region=args.aws_region,
                          effort=args.effort, max_tokens=args.max_tokens)
     prepared = prepare(context, model, today=args.today, effort=args.effort)
     print(f"Context characters sent to the model: {len(json.dumps(prepared.compact, ensure_ascii=False)):,} "
           f"(full Agent Context: {len(args.context.read_text(encoding='utf-8')):,})")
     try:
-        result = generate_roadmap(context, model, prepared=prepared, pricing=Pricing())
+        result = generate_roadmap(context, model, prepared=prepared, pricing=pricing)
     except GenerationFailed as err:
         print(json.dumps({"error": err.code, "message": err.message, "issues": err.issues,
                           "usage": err.usage.as_dict(), "estimated_cost_usd": err.cost_usd}, indent=2))

@@ -1,0 +1,11 @@
+# Optional host AWS login/SSO profile, for local testing only.
+# Use after compose.yaml AND compose.nova-local.yaml.
+services:
+  backend:
+    environment:
+      AWS_PROFILE: ${AWS_PROFILE:-default}
+    volumes:
+      - type: bind
+        source: ${AWS_CONFIG_DIR:?Set AWS_CONFIG_DIR to your host AWS configuration directory}
+        target: /root/.aws
+        read_only: true
