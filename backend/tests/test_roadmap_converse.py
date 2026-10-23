@@ -1,6 +1,7 @@
 """Nova adapter and API integration, with no AWS credentials, network or real billing."""
 
 import copy
+import errno
 import json
 import os
 from datetime import date
@@ -117,6 +118,33 @@ def test_credentials_and_timeout_errors(failure, retryable):
     assert error.value.retryable is retryable
 
 
+@pytest.mark.parametrize("error_number", [errno.EROFS, errno.EACCES, errno.EPERM])
+def test_credentials_cache_write_failure_becomes_actionable_model_error(error_number):
+    failure = OSError(error_number, "PRIVATE cache path")
+    with pytest.raises(ModelError) as error:
+        BedrockConverseRoadmapModel(ConverseClient(failure)).generate({})
+    assert error.value.code == "MODEL_UNAVAILABLE"
+    assert "login cache" in error.value.message and "PRIVATE" not in error.value.message
+    assert error.value.usage.calls == 0
+
+
+def test_client_creation_handles_readonly_credentials_cache(monkeypatch):
+    import boto3
+    from ai.roadmap.bedrock_converse import create_converse_client
+
+    def fail(*args, **kwargs):
+        raise OSError(errno.EROFS, "PRIVATE cache path")
+
+    monkeypatch.setattr(boto3, "client", fail)
+    with pytest.raises(ModelError, match="login cache"):
+        create_converse_client("us-east-1")
+
+
+def test_unrelated_os_errors_are_not_mislabelled_as_credentials_errors():
+    with pytest.raises(OSError):
+        BedrockConverseRoadmapModel(ConverseClient(OSError(errno.ENOSPC, "disk full"))).generate({})
+
+
 def test_config_uses_requested_names_and_explicit_overrides(monkeypatch):
     for key in list(os.environ):
         if key.startswith(("ROADMAP_", "BEDROCK_", "AWS_")):
@@ -190,6 +218,78 @@ def test_semantic_validator_repairs_bad_citations_without_changing_pipeline(cont
     assert result.usage.calls == 2
     assert result.cost_usd == pytest.approx(0.0048)
     assert result.view.generation.provider == "bedrock_converse"
+
+
+def baseline_context(context):
+    main = context.roadmap_candidates[0]
+    baseline = main.model_copy(update={
+        "learning_recommendation": "reference_only",
+        "gap": main.gap.model_copy(update={"status": "not_assessed", "current_level": "unknown"}),
+    })
+    confirmed = context.user_context.confirmed_skills[0].model_copy(update={
+        "skill_id": main.skill_id, "skill_name": main.skill_name, "proficiency_level": "unknown",
+    })
+    def updated_counts(summary):
+        counts = summary.model_dump()
+        counts[main.gap.status] -= 1
+        counts["not_assessed"] += 1
+        return summary.model_validate(counts)
+
+    updated = context.model_copy(update={
+        "roadmap_candidates": (baseline, *context.roadmap_candidates[1:]),
+        "market_skill_assessments": tuple(item.model_copy(update={"gap": baseline.gap})
+                                          if item.market.skill_id == main.skill_id else item
+                                          for item in context.market_skill_assessments),
+        "selected_skill_gap_summary": updated_counts(context.selected_skill_gap_summary),
+        "skill_gap_summary": updated_counts(context.skill_gap_summary),
+        "user_context": context.user_context.model_copy(update={
+            "confirmed_skills": (*context.user_context.confirmed_skills, confirmed),
+        }),
+    })
+    return AgentContext.model_validate(updated.model_dump())
+
+
+def test_completed_skill_details_use_exact_reviewed_evidence_instead_of_model_quotes(context):
+    context = baseline_context(context)
+    compact = compact_context(context, planning_budget(context, TODAY))
+    draft = MockRoadmapModel().generate(compact).draft.model_dump()
+    baseline = next(step for step in draft["steps"] if step["kind"] == "completed_skill")
+    baseline["details"] = [{"title": "Invented topic", "detail": "UNSUPPORTED CLAIM",
+                             "citations": [{"chunk_id": 999999, "quote": "This invented quote does not exist in any source."}]}]
+    model = BedrockConverseRoadmapModel(ConverseClient(response(draft)))
+    result = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY))
+    result_step = next(step for step in result.draft.steps if step.kind == "completed_skill")
+    claims = context.roadmap_candidates[0].claims
+    assert result.usage.calls == 1
+    assert result_step.details
+    assert all(detail.detail in {claim.text for claim in claims} for detail in result_step.details)
+    assert all((cite.chunk_id, cite.quote) in {(c.chunk_id, c.quote) for claim in claims for c in claim.citations}
+               for detail in result_step.details for cite in detail.citations)
+    assert "UNSUPPORTED CLAIM" not in result.view.model_dump_json()
+
+
+def test_compaction_preserves_reviewed_quotes_for_main_and_completed_skills(context):
+    context = baseline_context(context)
+    compact = compact_context(context, planning_budget(context, TODAY))
+    for group in ("main_skills", "completed_skills"):
+        assert compact[group]
+        for skill in compact[group]:
+            candidate = next(item for item in context.roadmap_candidates if item.skill_id == skill["skill_id"])
+            for copied, original in zip(skill["claims"], candidate.claims, strict=True):
+                assert copied["citations"] == [{"chunk_id": cite.chunk_id, "quote": cite.quote}
+                                               for cite in original.citations]
+
+
+def test_baseline_with_no_verified_claims_does_not_bypass_evidence_requirement(context):
+    from ai.roadmap.validate import validate_draft
+
+    context = baseline_context(context)
+    compact = compact_context(context, planning_budget(context, TODAY))
+    draft = MockRoadmapModel().generate(compact).draft
+    candidate = context.roadmap_candidates[0].model_copy(update={"claims": ()})
+    context = context.model_copy(update={"roadmap_candidates": (candidate, *context.roadmap_candidates[1:])})
+    result = validate_draft(draft, context, planning_budget(context, TODAY))
+    assert any("needs at least one cited detail" in issue for issue in result.fatal)
 
 
 async def test_converse_api_job_saves_validated_roadmap_and_cost(payload):

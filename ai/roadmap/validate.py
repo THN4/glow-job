@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from ai.roadmap import layout
 from ai.roadmap.compact import Budget
-from ai.roadmap.contracts import DraftDeferred, DraftStep, RoadmapDraft
+from ai.roadmap.contracts import DraftCitation, DraftDeferred, DraftSkillDetail, DraftStep, RoadmapDraft
 from ai.roadmap.ordering import recommended_route_steps, recommended_skill_steps
 from rag.context.agent_models import AgentContext, RoadmapCandidate
 
@@ -113,6 +113,30 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                 fatal.append(f"{label} repeats completed skill {candidate.skill_name}.")
             else:
                 scheduled_completed.add(step.skill_id)
+            if candidate is not None and candidate.teaching_content_status == "available":
+                # Baseline skills are already confirmed. Reuse reviewed claims and
+                # their exact evidence instead of asking a model to quote them again.
+                # New learning tasks still go through the strict citation checks below.
+                reviewed_details = []
+                for claim in candidate.claims:
+                    citations = [DraftCitation(chunk_id=cite.chunk_id, quote=cite.quote)
+                                 for cite in claim.citations
+                                 if (source := sources.get(cite.chunk_id)) is not None
+                                 and step.skill_id in source.used_by_skill_ids
+                                 and len(_norm(cite.quote)) >= 20
+                                 and _norm(cite.quote) in _norm(source.content)]
+                    if not citations:
+                        continue
+                    source = sources[citations[0].chunk_id]
+                    reviewed_details.append(DraftSkillDetail(
+                        title=source.heading_path[-1] if source.heading_path else source.title,
+                        detail=claim.text, citations=citations,
+                    ))
+                    if len(reviewed_details) == 3:
+                        break
+                if step.details != reviewed_details:
+                    warnings.append(f"{label}: used reviewed profile skill details and their exact citations.")
+                step.details = reviewed_details
             if step.hours_min != 0 or step.hours_max != 0 or step.tasks or step.depends_on:
                 fatal.append(f"{label} is a profile-complete skill and must have zero hours, no tasks, and no dependencies.")
             if len(step.details) > 3:

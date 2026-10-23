@@ -16,6 +16,12 @@ login cache using the existing local profile override. Normal local startup is:
 docker compose up -d --build --no-deps backend
 ```
 
+Database settings come from the base Compose file and root environment; this
+override does not force a local database. For RDS through a host SSH tunnel,
+use `DB_HOST=host.docker.internal` and `DB_TARGET_PORT` for the tunnel's host
+port, plus `DB_TARGET_NAME`, `DB_TARGET_USER` and `DB_TARGET_PASSWORD`. Keep
+the tunnel running throughout context preparation, generation and saving.
+
 The AWS directory defaults to the user's `.aws` directory (`USERPROFILE` on
 Windows, `HOME` elsewhere); AWS_CONFIG_DIR and AWS_PROFILE can override it.
 No secret values are stored in this Compose file. Explicit `-f compose.yaml`

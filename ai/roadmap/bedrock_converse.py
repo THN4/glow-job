@@ -6,6 +6,7 @@ validation, persistence and progress stay in the shared generation pipeline.
 
 from __future__ import annotations
 
+import errno
 import json
 from typing import Any
 
@@ -15,6 +16,11 @@ from ai.roadmap.providers import ModelError, ModelTurn, Usage
 
 DEFAULT_NOVA_MODEL = "amazon.nova-pro-v1:0"
 NOVA_V1_MAX_TOKENS = 5000
+
+
+def credential_cache_error(usage: Usage | None = None) -> ModelError:
+    return ModelError("MODEL_UNAVAILABLE", "AWS could not update its credentials cache. Allow writes to the login cache directory and retry.",
+                      usage=usage)
 
 
 def create_converse_client(region: str) -> Any:
@@ -29,6 +35,10 @@ def create_converse_client(region: str) -> Any:
         ))
     except BotoCoreError as error:
         raise ModelError("MODEL_UNAVAILABLE", "Bedrock credentials or client configuration are unavailable.") from error
+    except OSError as error:
+        if error.errno in {errno.EROFS, errno.EACCES, errno.EPERM}:
+            raise credential_cache_error() from error
+        raise
 
 
 class BedrockConverseRoadmapModel:
@@ -74,6 +84,10 @@ class BedrockConverseRoadmapModel:
         except BotoCoreError as error:
             raise ModelError("MODEL_UNAVAILABLE", "Bedrock credentials or request configuration are unavailable.",
                              usage=usage) from error
+        except OSError as error:
+            if error.errno in {errno.EROFS, errno.EACCES, errno.EPERM}:
+                raise credential_cache_error(usage) from error
+            raise
 
         tokens = response.get("usage", {})
         usage.calls += 1
