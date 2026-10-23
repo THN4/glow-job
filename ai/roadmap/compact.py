@@ -91,6 +91,7 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
     learning_chunks = {
         entry.chunk_id for entry in context.evidence_registry if "learning_content" in entry.usage_roles
     }
+    focus_ids = set(context.replan_trigger.focus_skill_ids) if context.replan_trigger else set()
     return {
         "learner": {
             "background": user.background.model_dump(mode="json"),
@@ -129,6 +130,19 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
             "learner_note": goal.additional_context,
         },
         "planning_budget": budget.as_dict(),
+        "replan_trigger": None if context.replan_trigger is None else {
+            "kind": context.replan_trigger.kind,
+            "application_id": context.replan_trigger.application_id,
+            "job_title": context.replan_trigger.job_title,
+            "rejection_category": context.replan_trigger.rejection_category,
+            "reason_summary": context.replan_trigger.reason_summary,
+            "reason_source": context.replan_trigger.source,
+            "is_demo": context.replan_trigger.is_demo,
+            "market_window": (None if context.replan_trigger.market_window is None else
+                              context.replan_trigger.market_window.model_dump(mode="json")),
+            "focus_skill_ids": list(context.replan_trigger.focus_skill_ids),
+            "review_skill_ids": list(context.replan_trigger.review_skill_ids),
+        },
         "career": {
             "name": context.career_context.career_name,
             "jobs_in_market_sample": context.career_context.total_jobs,
@@ -163,7 +177,10 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
             for rank, c in enumerate(sorted(
                 (item for item in context.roadmap_candidates
                  if item.learning_recommendation != "reference_only"),
-                key=lambda item: item.priority.rank or 10_000,
+                key=lambda item: (0 if item.skill_id in focus_ids else 1,
+                                  context.replan_trigger.focus_skill_ids.index(item.skill_id)
+                                  if context.replan_trigger and item.skill_id in focus_ids
+                                  else item.priority.rank or 10_000),
             ), 1)
             if c.learning_recommendation != "reference_only"
         ],

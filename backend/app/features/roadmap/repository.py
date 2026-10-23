@@ -20,7 +20,7 @@ from ai.roadmap.generate import GenerationResult
 from ai.roadmap.view import apply_progress
 from app.features.resume.config import CvSettings
 from app.features.resume.errors import AppError
-from rag.context.agent_models import AgentContext
+from rag.context.agent_models import AgentContext, ReplanTrigger
 
 log = logging.getLogger("roadmap")
 
@@ -197,16 +197,239 @@ class RoadmapRepository:
             ).fetchone()
         return goal_body(row)
 
+    # ------------------------------------------------------------------ rejection replan
+
+    def rejection_options(self, user_id: int, profile_id: str, goal: dict[str, Any],
+                          application_id: int, date_basis: str) -> dict[str, Any]:
+        """Prefer skills explicitly named in feedback, including completed skills."""
+        from app.features.roadmap.feedback_skills import mentioned_skill_ids
+        from rag.context.assemble import score_market
+        from rag.context.repository import load_inputs
+        from src.documents.retrieval.skill_context import coverage
+
+        with self._connect() as connection:
+            inputs = load_inputs(connection, career_profile_id=goal["careerProfileId"],
+                                 profile_id=profile_id, date_basis=date_basis)
+            row = connection.execute(
+                """
+                SELECT a.job_title, COALESCE(a.company_name, c.company_name),
+                       a.status::text, a.rejection_category, a.rejection_reason,
+                       a.job_id, j.career_profile_id
+                FROM app.job_applications a
+                LEFT JOIN market.job_postings j USING (job_id)
+                LEFT JOIN core.companies c ON c.company_id = COALESCE(a.company_id, j.company_id)
+                WHERE a.user_id = %s AND a.application_id = %s
+                """, (user_id, application_id),
+            ).fetchone()
+            if row is None:
+                raise AppError("NOT_FOUND", "The saved application was not found.")
+            title, company, status, category, reason, job_id, job_career_profile_id = row
+            if status != "rejected" or category != "skill-gap":
+                raise AppError("REPLAN_NOT_ELIGIBLE", "Record a skill-gap rejection before considering a replan.")
+            if job_career_profile_id is not None and job_career_profile_id != goal["careerProfileId"]:
+                raise AppError("REPLAN_NOT_ELIGIBLE", "This posting belongs to a different career goal.")
+            requirements = {}
+            if job_id is not None:
+                requirement_rows = connection.execute(
+                    """SELECT skill_id, requirement_type::text FROM market.job_skills
+                       WHERE job_id = %s AND requirement_type IN ('required', 'preferred')""",
+                    (job_id,),
+                ).fetchall()
+                for skill_id, requirement_type in requirement_rows:
+                    if skill_id not in requirements or requirement_type == "required":
+                        requirements[skill_id] = requirement_type
+            plan_rows = connection.execute(
+                """SELECT s.skill_id, p.status::text FROM app.roadmap_steps s
+                   JOIN app.roadmaps r USING (roadmap_id)
+                   LEFT JOIN app.user_roadmap_progress p
+                     ON p.roadmap_step_id = s.roadmap_step_id AND p.user_id = r.user_id
+                   WHERE r.user_id = %s AND r.goal_id = %s AND r.status = 'active'
+                     AND s.skill_id IS NOT NULL""", (user_id, goal["goalId"]),
+            ).fetchall()
+            planned = {skill_id for skill_id, _ in plan_rows}
+            completed = {row[0] for row in connection.execute(
+                """SELECT DISTINCT s.skill_id FROM app.roadmap_steps s
+                   JOIN app.roadmaps r USING (roadmap_id)
+                   JOIN app.user_roadmap_progress p
+                     ON p.roadmap_step_id = s.roadmap_step_id AND p.user_id = r.user_id
+                   WHERE r.user_id = %s AND r.goal_id = %s AND p.status = 'completed'
+                     AND s.skill_id IS NOT NULL""", (user_id, goal["goalId"]),
+            ).fetchall()}
+            spellings = connection.execute(
+                """SELECT s.skill_id, s.skill_name FROM core.skills s
+                   UNION ALL SELECT a.skill_id, a.alias FROM core.skill_aliases a""",
+            ).fetchall()
+            connection.commit()
+            assessments, _ = score_market(
+                inputs, inputs.user.confirmed_skills,
+                min_total_jobs=self._settings.MATCH_MIN_TOTAL_JOBS,
+                max_market_age_days=self._settings.MATCH_MAX_MARKET_AGE_DAYS,
+                min_level_observations=self._settings.MATCH_MIN_LEVEL_OBSERVATIONS,
+                min_target_level_confidence=self._settings.MATCH_MIN_TARGET_LEVEL_CONFIDENCE,
+            )
+            confirmed_ids = {item.skill_id for item in inputs.user.confirmed_skills}
+            eligible = {item.market.skill_id: item for item in assessments
+                        if item.gap.status in {"missing_from_profile", "proficiency_gap"}
+                        or (item.market.skill_id in confirmed_ids
+                            and item.gap.status in {"covered", "not_assessed"})}
+            detected = mentioned_skill_ids(reason or "", spellings)
+            mentions = [skill_id for skill_id in detected
+                        if skill_id in eligible]
+            if detected:
+                choices = [eligible[skill_id] for skill_id in mentions]
+                matching_mode = "feedback_mentions"
+            elif (reason or "").strip():
+                choices = []
+                matching_mode = "no_mentions"
+            else:
+                choices = [item for item in assessments if item.priority_rank is not None
+                           and item.gap.status in {"missing_from_profile", "proficiency_gap"}]
+                if job_id is not None:
+                    choices = [item for item in choices if item.market.skill_id in requirements]
+                choices.sort(key=lambda item: (0 if requirements.get(item.market.skill_id) == "required" else 1,
+                                               item.priority_rank))
+                choices = choices[:12]
+                matching_mode = "market_gaps"
+            available = coverage(connection, [item.market.skill_id for item in choices]) if choices else {}
+
+        return {
+            "applicationId": application_id, "role": title, "company": company or "Company not specified",
+            "rejectionCategory": category, "rejectionReason": reason or "",
+            "reasonSource": "user_reported", "goalCareerProfileId": goal["careerProfileId"],
+            "matchingMode": matching_mode,
+            "options": [{
+                "skillId": item.market.skill_id, "name": item.market.skill_name,
+                "gapStatus": item.gap.status, "priorityRank": item.priority_rank,
+                "requirementType": requirements.get(item.market.skill_id),
+                "source": "feedback_mention" if matching_mode == "feedback_mentions"
+                          else "job_requirement" if item.market.skill_id in requirements else "career_market",
+                "alreadyPlanned": item.market.skill_id in planned,
+                "completedInRoadmap": item.market.skill_id in completed,
+                "inProfile": item.market.skill_id in confirmed_ids,
+                "alreadyCompleted": (item.market.skill_id in completed
+                                     or item.market.skill_id in confirmed_ids
+                                     and item.gap.status in {"covered", "not_assessed"}),
+                "learningContentAvailable": bool(available.get(item.market.skill_id, {}).get("embedded_chunks")),
+            } for item in choices],
+        }
+
+    def market_replan_options(self, user_id: int, profile_id: str, goal: dict[str, Any],
+                              date_basis: str) -> dict[str, Any]:
+        """Offer unplanned skills from the active Agent Context's market snapshot.
+
+        This is a demo story based on saved market frequencies, not a claim that
+        demand increased over time. Content availability is informational only: a
+        selected skill may still be added as a placeholder node when its evidence
+        is not ready.
+        """
+        from src.documents.retrieval.skill_context import coverage
+
+        saved = self.current_agent_context(user_id)
+        if saved is None:
+            return {"careerProfileId": goal["careerProfileId"], "careerName": goal["targetRoleTitle"],
+                    "isDemo": True, "notice": "Demo alert based on the saved market snapshot.",
+                    "marketWindow": None, "options": []}
+        roadmap_id, context = saved
+        with self._connect() as connection:
+            planned = {row[0] for row in connection.execute(
+                """SELECT DISTINCT s.skill_id FROM app.roadmap_steps s
+                   JOIN app.roadmaps r USING (roadmap_id)
+                   WHERE r.user_id = %s AND r.goal_id = %s AND r.status = 'active'
+                     AND s.skill_id IS NOT NULL""", (user_id, goal["goalId"]),
+            ).fetchall()}
+            # coverage() opens its own repeatable-read transaction and requires
+            # the connection to be idle; finish this SELECT transaction first.
+            connection.commit()
+            assessments = context.market_skill_assessments
+            choices = [item for item in assessments if item.market.skill_id not in planned]
+            choices.sort(key=lambda item: (
+                0 if item.priority_rank is not None else 1,
+                item.priority_rank or 10_000,
+                -item.market.demand_percentage,
+                item.market.skill_name.casefold(),
+            ))
+            available = coverage(connection, [item.market.skill_id for item in choices]) if choices else {}
+        window = context.career_context.market_window
+
+        options = [{
+            "skillId": item.market.skill_id,
+            "name": item.market.skill_name,
+            "gapStatus": item.gap.status,
+            "priorityRank": item.priority_rank,
+            "importanceTier": item.market.importance_tier,
+            "demandCount": item.market.demand_count,
+            "totalJobs": item.market.total_jobs,
+            "demandPercentage": item.market.demand_percentage,
+            "learningContentAvailable": bool(available.get(item.market.skill_id, {}).get("embedded_chunks")),
+            "alreadyInAgentContext": any(candidate.skill_id == item.market.skill_id
+                                          for candidate in context.roadmap_candidates),
+            "alertDetail": (
+                f"Demo story: {item.market.skill_name} is showing up in "
+                f"{item.market.demand_count} of {item.market.total_jobs} postings for "
+                f"{context.career_context.profile_name}. It may be worth building into "
+                "your skills. Would you like to add it to your next roadmap version?"
+            ),
+        } for item in choices[:20]]
+        return {
+            "careerProfileId": context.career_context.career_profile_id,
+            "careerName": context.career_context.profile_name,
+            "isDemo": True,
+            "notice": "Demo alert: this is a sample story based on the saved market snapshot, not a measured increase in demand.",
+            "baseRoadmapId": roadmap_id,
+            "marketWindow": ({
+                "analysisStartDate": window.analysis_start_date.isoformat(),
+                "analysisEndDate": window.analysis_end_date.isoformat(),
+                "analysisDateBasis": window.analysis_date_basis,
+            } if window else None),
+            "options": options,
+        }
+
     # ------------------------------------------------------------------ Agent Context
 
+    def current_agent_context(self, user_id: int) -> tuple[int, AgentContext] | None:
+        """Load the context snapshot that produced the active roadmap, if any."""
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT r.roadmap_id, g.agent_context
+                FROM app.roadmaps AS r
+                JOIN app.roadmap_generations AS g USING (roadmap_id)
+                WHERE r.user_id = %s AND r.status = 'active'
+                ORDER BY r.version DESC, r.roadmap_id DESC
+                LIMIT 1
+                """,
+                (user_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return row[0], AgentContext.model_validate(row[1])
+
     def build_context(self, profile_id: str, career_profile_id: int,
-                      date_basis: str) -> AgentContext:
+                      date_basis: str, replan_trigger: ReplanTrigger | None = None) -> AgentContext:
         from rag.context.build import build_agent_context
 
         with self._connect() as connection:
             return build_agent_context(
                 connection, profile_id=profile_id, career_profile_id=career_profile_id,
                 date_basis=date_basis,
+                min_total_jobs=self._settings.MATCH_MIN_TOTAL_JOBS,
+                max_market_age_days=self._settings.MATCH_MAX_MARKET_AGE_DAYS,
+                min_level_observations=self._settings.MATCH_MIN_LEVEL_OBSERVATIONS,
+                min_target_level_confidence=self._settings.MATCH_MIN_TARGET_LEVEL_CONFIDENCE,
+                replan_trigger=replan_trigger,
+            )
+
+    def extend_agent_context(self, previous: AgentContext, *, profile_id: str,
+                             career_profile_id: int, date_basis: str,
+                             replan_trigger: ReplanTrigger) -> AgentContext:
+        """Append only selected-skill knowledge to the saved Agent Context snapshot."""
+        from rag.context.build import extend_agent_context
+
+        with self._connect() as connection:
+            return extend_agent_context(
+                connection, previous, profile_id=profile_id,
+                career_profile_id=career_profile_id, date_basis=date_basis,
+                replan_trigger=replan_trigger,
                 min_total_jobs=self._settings.MATCH_MIN_TOTAL_JOBS,
                 max_market_age_days=self._settings.MATCH_MAX_MARKET_AGE_DAYS,
                 min_level_observations=self._settings.MATCH_MIN_LEVEL_OBSERVATIONS,
@@ -290,6 +513,29 @@ class RoadmapRepository:
                 """,
                 (goal["goalId"], goal["goalId"]),
             ).fetchone()
+            previous_skill_progress: dict[int, dict[str, Any]] = {}
+            focus_ids = set(context.replan_trigger.focus_skill_ids) if context.replan_trigger else set()
+            if previous is not None and reason in {"application_rejection", "market_update"}:
+                rows = connection.execute(
+                    """
+                    SELECT s.skill_id, s.target_level::text, sp.status::text,
+                           t.title, t.description, t.task_kind, tp.completed_at
+                    FROM app.roadmap_steps s
+                    LEFT JOIN app.user_roadmap_progress sp
+                      ON sp.roadmap_step_id = s.roadmap_step_id AND sp.user_id = %s
+                    LEFT JOIN app.roadmap_tasks t
+                      ON t.roadmap_step_id = s.roadmap_step_id
+                    LEFT JOIN app.user_task_progress tp
+                      ON tp.task_id = t.task_id AND tp.user_id = %s AND tp.status = 'completed'
+                    WHERE s.roadmap_id = %s AND s.step_kind = 'skill' AND s.skill_id IS NOT NULL
+                    """, (user_id, user_id, previous),
+                ).fetchall()
+                for skill_id, target_level, step_status, title, description, task_kind, completed_at in rows:
+                    saved = previous_skill_progress.setdefault(skill_id, {
+                        "target_level": target_level, "status": step_status, "tasks": {},
+                    })
+                    if title is not None and completed_at is not None:
+                        saved["tasks"][(title, description, task_kind)] = completed_at
             connection.execute(
                 "UPDATE app.roadmaps SET status = 'replaced', updated_at = now() "
                 "WHERE goal_id = %s AND status = 'active'",
@@ -328,15 +574,44 @@ class RoadmapRepository:
                      Jsonb([c.model_dump(by_alias=True) for c in node.citations])),
                 ).fetchone()[0]
                 for task_number, item in enumerate(node.checklist, 1):
-                    connection.execute(
+                    task_id = connection.execute(
                         """
                         INSERT INTO app.roadmap_tasks (roadmap_step_id, task_number, title, description,
                                                        is_required, task_kind, citations)
                         VALUES (%s, %s, %s, %s, true, %s, %s)
+                        RETURNING task_id
                         """,
                         (step_id, task_number, item.label, item.detail, item.task_kind,
                          Jsonb([c.model_dump(by_alias=True) for c in item.citations])),
-                    )
+                    ).fetchone()[0]
+                    previous_progress = (previous_skill_progress.get(node.skill.skill_id)
+                                         if step.kind == "skill" and node.skill
+                                         and node.skill.skill_id not in focus_ids else None)
+                    if (previous_progress and previous_progress["target_level"] == _level(node.skill.target_level)
+                            and (item.label, item.detail, item.task_kind) in previous_progress["tasks"]):
+                        connection.execute(
+                            """INSERT INTO app.user_task_progress
+                               (user_id, task_id, status, completed_at, updated_at)
+                               VALUES (%s, %s, 'completed', %s, now())""",
+                            (user_id, task_id, previous_progress["tasks"][(item.label, item.detail, item.task_kind)]),
+                        )
+                previous_progress = (previous_skill_progress.get(node.skill.skill_id)
+                                     if step.kind == "skill" and node.skill
+                                     and node.skill.skill_id not in focus_ids else None)
+                if previous_progress and previous_progress["target_level"] == _level(node.skill.target_level):
+                    carried = sum((item.label, item.detail, item.task_kind) in previous_progress["tasks"]
+                                  for item in node.checklist)
+                    if carried:
+                        status = ("completed" if carried == len(node.checklist)
+                                  and previous_progress["status"] == "completed" else "in_progress")
+                        connection.execute(
+                            """INSERT INTO app.user_roadmap_progress
+                               (user_id, roadmap_step_id, status, progress_percentage,
+                                started_at, completed_at, updated_at)
+                               VALUES (%s, %s, %s::app.progress_status, %s, now(),
+                                       CASE WHEN %s = 'completed' THEN now() END, now())""",
+                            (user_id, step_id, status, round(100 * carried / len(node.checklist), 2), status),
+                        )
             connection.execute(
                 """
                 INSERT INTO app.roadmap_generations (
@@ -353,17 +628,37 @@ class RoadmapRepository:
             )
         return roadmap_id
 
-    def current(self, user_id: int) -> RoadmapView | None:
+    def history(self, user_id: int) -> list[dict[str, Any]]:
         with self._connect() as connection:
-            row = connection.execute(
-                """
-                SELECT r.roadmap_id, r.version, r.status::text, g.view
+            rows = connection.execute(
+                """SELECT r.roadmap_id, r.version, r.status::text, r.generation_reason,
+                          r.previous_roadmap_id, r.generated_at,
+                          g.agent_context->'replan_trigger'
+                   FROM app.roadmaps r
+                   JOIN app.roadmap_generations g USING (roadmap_id)
+                   WHERE r.user_id = %s
+                   ORDER BY r.version DESC, r.roadmap_id DESC""", (user_id,),
+            ).fetchall()
+        return [{"roadmapId": row[0], "version": row[1], "status": row[2],
+                 "generationReason": row[3], "previousRoadmapId": row[4],
+                 "generatedAt": row[5].isoformat(), "replanTrigger": row[6]}
+                for row in rows]
+
+    def current(self, user_id: int, roadmap_id: int | None = None) -> RoadmapView | None:
+        with self._connect() as connection:
+            query = """
+                SELECT r.roadmap_id, r.version, r.status::text, g.view,
+                       g.agent_context->'foundation_mentions'
                 FROM app.roadmaps AS r JOIN app.roadmap_generations AS g USING (roadmap_id)
-                WHERE r.user_id = %s AND r.status IN ('active', 'completed')
-                ORDER BY r.generated_at DESC, r.roadmap_id DESC LIMIT 1
-                """,
-                (user_id,),
-            ).fetchone()
+                WHERE r.user_id = %s
+            """
+            if roadmap_id is None:
+                query += " AND r.status IN ('active', 'completed') ORDER BY r.generated_at DESC, r.roadmap_id DESC LIMIT 1"
+                params = (user_id,)
+            else:
+                query += " AND r.roadmap_id = %s"
+                params = (user_id, roadmap_id)
+            row = connection.execute(query, params).fetchone()
             if row is None:
                 return None
             tasks = connection.execute(
@@ -391,8 +686,12 @@ class RoadmapRepository:
                 """,
                 (user_id, row[0]),
             ).fetchall()
+        from ai.roadmap.dependencies import remove_unsupported_view_dependencies, required_skill_pairs
+
         view = RoadmapView.model_validate(row[3]).model_copy(
             update={"roadmap_id": row[0], "version": row[1], "status": row[2]})
+        view = remove_unsupported_view_dependencies(
+            view, required_skill_pairs(row[4] or []))
         return apply_progress(
             view, completed_tasks={r[0] for r in done},
             skipped_steps={key for key, status in marked if status == "skipped"},
@@ -416,6 +715,7 @@ class RoadmapRepository:
                 LEFT JOIN app.user_roadmap_progress AS p
                   ON p.roadmap_step_id = s.roadmap_step_id AND p.user_id = r.user_id
                 WHERE r.roadmap_id = %s AND r.user_id = %s AND s.step_key = %s AND t.task_number = %s
+                  AND r.status = 'active'
                 """,
                 (roadmap_id, user_id, step_key, int(number)),
             ).fetchone()
@@ -450,6 +750,7 @@ class RoadmapRepository:
                 JOIN app.roadmap_steps AS s USING (roadmap_step_id)
                 JOIN app.roadmaps AS r USING (roadmap_id)
                 WHERE r.roadmap_id = %s AND r.user_id = %s AND s.step_key = %s
+                  AND r.status = 'active'
                 """,
                 (roadmap_id, user_id, step_key),
             ).fetchall()
@@ -494,6 +795,7 @@ class RoadmapRepository:
                 SELECT s.roadmap_step_id FROM app.roadmap_steps AS s
                 JOIN app.roadmaps AS r USING (roadmap_id)
                 WHERE r.roadmap_id = %s AND r.user_id = %s AND s.step_key = %s
+                  AND r.status = 'active'
                 """,
                 (roadmap_id, user_id, step_key),
             ).fetchone()

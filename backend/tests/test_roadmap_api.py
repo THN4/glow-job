@@ -81,11 +81,25 @@ class FakeRepo:
                      "additionalContext": goal["additional_context"], "updatedAt": "2026-10-19T00:00:00+00:00"}
         return self.goal
 
-    def build_context(self, profile_id, career_profile_id, date_basis):
+    def rejection_options(self, user_id, profile_id, goal, application_id, date_basis):
+        assert (user_id, profile_id, application_id) == (USER, PROFILE, 42)
+        return {"applicationId": 42, "role": "Data Engineer", "company": "Example Co",
+                "rejectionCategory": "skill-gap", "rejectionReason": "More Airflow practice",
+                "reasonSource": "user_reported", "goalCareerProfileId": goal["careerProfileId"],
+                "options": [{"skillId": 103, "name": "Apache Airflow", "gapStatus": "missing_from_profile",
+                             "priorityRank": 1, "requirementType": "required", "source": "job_requirement",
+                             "alreadyPlanned": True, "learningContentAvailable": True}]}
+
+    def build_context(self, profile_id, career_profile_id, date_basis, replan_trigger=None):
         self.contexts_built += 1
         if self.missing_knowledge:
             raise KnowledgeNotReady("The selected skill gaps have no reviewed instructional evidence")
-        return AgentContext.model_validate_json(FIXTURE.read_bytes())
+        context = AgentContext.model_validate_json(FIXTURE.read_bytes())
+        if replan_trigger:
+            context = AgentContext.model_validate_json(
+                context.model_copy(update={"replan_trigger": replan_trigger}).model_dump_json()
+            )
+        return context
 
     def reusable_roadmap(self, user_id, goal_id, input_sha256):
         return next((rid for rid, r in self.roadmaps.items()
@@ -107,16 +121,28 @@ class FakeRepo:
             r["status"] = "replaced"
         roadmap_id = len(self.roadmaps) + 1
         self.roadmaps[roadmap_id] = {"view": result.view, "sha": result.input_sha256, "status": "active",
-                                     "done": set(), "version": roadmap_id, "started": set(), "skipped": set()}
+                                     "done": set(), "version": roadmap_id, "started": set(), "skipped": set(),
+                                     "reason": reason, "context": context}
         return roadmap_id
 
-    def current(self, user_id):
-        rid = next((rid for rid, r in self.roadmaps.items() if r["status"] == "active"), None)
+    def history(self, user_id):
+        return [{"roadmapId": rid, "version": r["version"], "status": r["status"],
+                 "generationReason": r["reason"], "previousRoadmapId": rid - 1 if rid > 1 else None,
+                 "generatedAt": "2026-10-23T00:00:00+00:00",
+                 "replanTrigger": r["context"].replan_trigger.model_dump(mode="json")
+                 if r["context"].replan_trigger else None}
+                for rid, r in sorted(self.roadmaps.items(), reverse=True)]
+
+    def current(self, user_id, roadmap_id=None):
+        rid = roadmap_id if roadmap_id is not None else next(
+            (rid for rid, r in self.roadmaps.items() if r["status"] == "active"), None)
         if rid is None:
             return None
-        r = self.roadmaps[rid]
+        r = self.roadmaps.get(rid)
+        if r is None:
+            return None
         view = RoadmapView.model_validate(r["view"].model_dump(by_alias=True))
-        view = view.model_copy(update={"roadmap_id": rid, "version": r["version"], "status": "active"})
+        view = view.model_copy(update={"roadmap_id": rid, "version": r["version"], "status": r["status"]})
         return apply_progress(view, completed_tasks=r["done"], skipped_steps=r["skipped"],
                               started_steps=r["started"], today=date(2026, 10, 19))
 
@@ -211,6 +237,42 @@ async def test_identical_inputs_reuse_the_saved_roadmap(tmp_path):
         forced = await generate(client, svc, {"force": True})
     assert again == {**first, "jobId": again["jobId"], "reused": True}
     assert forced["roadmapId"] == 2 and forced["reused"] is False
+
+
+async def test_rejection_replan_requires_user_choice_and_saves_trigger(tmp_path):
+    client, svc, repo = make(tmp_path)
+    base = f"/api/profiles/{PROFILE}"
+    async with client:
+        await client.put(f"{base}/goal", json=GOAL_BODY)
+        preview = await client.get(f"{base}/applications/42/replan-options")
+        assert preview.status_code == 200
+        assert preview.json()["options"][0]["skillId"] == 103
+        denied = await client.get(f"{base}/applications/42/replan-options",
+                                  headers={"X-Session-Id": "another-session"})
+        assert denied.status_code == 404
+        without_plan = await client.post(f"{base}/roadmaps", json={
+            "rejectionApplicationId": 42, "focusSkillIds": [103],
+        })
+        assert without_plan.status_code == 404
+        first = await generate(client, svc)
+        invalid = await client.post(f"{base}/roadmaps", json={
+            "rejectionApplicationId": 42, "focusSkillIds": [999],
+        })
+        assert invalid.status_code == 409 and invalid.json()["error"]["code"] == "REPLAN_SKILL_UNAVAILABLE"
+        revised = await generate(client, svc, {"rejectionApplicationId": 42, "focusSkillIds": [103]})
+        history = await client.get(f"{base}/roadmaps/history")
+        old = await client.get(f"{base}/roadmaps/{first['roadmapId']}")
+        old_write = await client.put(f"{base}/roadmaps/{first['roadmapId']}/steps/airflow",
+                                     json={"status": "in_progress"})
+    assert revised["status"] == "succeeded" and revised["roadmapId"] != first["roadmapId"]
+    assert history.status_code == 200 and history.json()["roadmaps"][0]["generationReason"] == "application_rejection"
+    assert old.status_code == 200 and old.json()["roadmap"]["status"] == "replaced"
+    assert old_write.status_code == 404
+    assert repo.roadmaps[first["roadmapId"]]["status"] == "replaced"
+    saved = repo.roadmaps[revised["roadmapId"]]
+    assert saved["reason"] == "application_rejection"
+    assert saved["context"].replan_trigger.application_id == 42
+    assert saved["context"].replan_trigger.focus_skill_ids == (103,)
 
 
 async def test_other_sessions_cannot_read_or_poll(tmp_path):

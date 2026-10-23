@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from ai.roadmap import layout
 from ai.roadmap.compact import Budget
 from ai.roadmap.contracts import DraftDeferred, DraftStep, RoadmapDraft
+from ai.roadmap.dependencies import remove_unsupported_skill_dependencies, required_skill_pairs
 from ai.roadmap.ordering import recommended_route_steps, recommended_skill_steps
 from rag.context.agent_models import AgentContext, RoadmapCandidate
 
@@ -100,6 +101,13 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
     if duplicates:
         fatal.append(f"Step keys must be unique; repeated: {', '.join(duplicates)}.")
     known = set(keys)
+
+    for source_key, target_key in remove_unsupported_skill_dependencies(
+        draft, required_skill_pairs(context.foundation_mentions)
+    ):
+        warnings.append(
+            f"Step '{target_key}': removed unsupported required prerequisite '{source_key}'."
+        )
 
     scheduled: set[int] = set()
     scheduled_completed: set[int] = set()

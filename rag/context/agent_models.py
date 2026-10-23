@@ -202,6 +202,34 @@ class RoadmapCandidate(Record):
     warnings: tuple[str, ...]
 
 
+class ReplanTrigger(Record):
+    kind: Literal["application_rejection", "market_update"]
+    application_id: int | None = Field(default=None, gt=0)
+    job_title: str | None = None
+    rejection_category: Literal["skill-gap"] | None = None
+    reason_summary: str = ""
+    focus_skill_ids: tuple[int, ...]
+    review_skill_ids: tuple[int, ...] = ()
+    source: Literal["user_reported_application", "demo_market_snapshot"]
+    is_demo: bool = False
+    market_window: MarketWindow | None = None
+
+    @model_validator(mode="after")
+    def valid_focus(self):
+        if not self.focus_skill_ids or len(self.focus_skill_ids) > 3 or len(set(self.focus_skill_ids)) != len(self.focus_skill_ids):
+            raise ValueError("A replan needs 1..3 distinct focus skills")
+        if not set(self.review_skill_ids) <= set(self.focus_skill_ids):
+            raise ValueError("Review skills must be selected focus skills")
+        if self.kind == "application_rejection":
+            if (self.application_id is None or not self.job_title or self.rejection_category != "skill-gap"
+                    or self.source != "user_reported_application" or self.is_demo or self.market_window is not None):
+                raise ValueError("Application replan trigger is incomplete or has market-only fields")
+        elif (self.application_id is not None or self.job_title is not None or self.rejection_category is not None
+              or self.source != "demo_market_snapshot" or not self.is_demo or self.market_window is None):
+            raise ValueError("Market replan trigger must identify its demo market snapshot")
+        return self
+
+
 class AgentContext(Record):
     schema_version: Literal["0.5"] = "0.5"
     context_id: str = Field(default_factory=lambda: "ctx_" + uuid4().hex)
@@ -218,6 +246,7 @@ class AgentContext(Record):
     foundation_mentions: tuple[FoundationMention, ...]
     evidence_registry: tuple[EvidenceEntry, ...]
     warnings: tuple[str, ...]
+    replan_trigger: ReplanTrigger | None = None
 
     @model_validator(mode="after")
     def linked_context(self):
@@ -247,6 +276,8 @@ class AgentContext(Record):
             raise ValueError("Market gap summary must cover every market skill assessment")
         if self.status != self.career_context.scores.status:
             raise ValueError("Agent Context status must reflect its career score quality")
+        if self.replan_trigger and not set(self.replan_trigger.focus_skill_ids) <= candidates.keys():
+            raise ValueError("Replan focus skills must be selected roadmap candidates")
         core_ranks = sorted(item.core_rank for item in market_assessments.values() if item.core_rank is not None)
         priority_ranks = sorted(item.priority_rank for item in market_assessments.values() if item.priority_rank is not None)
         if core_ranks != list(range(1, len(core_ranks) + 1)):

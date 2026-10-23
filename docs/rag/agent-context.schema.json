@@ -235,7 +235,9 @@
           "enum": [
             "explicit",
             "inferred",
-            "unknown"
+            "unknown",
+            "self_reported",
+            "assessed"
           ],
           "title": "Proficiency Basis",
           "type": "string"
@@ -1154,6 +1156,128 @@
       "title": "Priority",
       "type": "object"
     },
+    "ProjectSkill": {
+      "additionalProperties": false,
+      "properties": {
+        "skill_id": {
+          "exclusiveMinimum": 0,
+          "title": "Skill Id",
+          "type": "integer"
+        },
+        "skill_name": {
+          "title": "Skill Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skill_id",
+        "skill_name"
+      ],
+      "title": "ProjectSkill",
+      "type": "object"
+    },
+    "ReplanTrigger": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "application_rejection",
+            "market_update"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "application_id": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Application Id"
+        },
+        "job_title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job Title"
+        },
+        "rejection_category": {
+          "anyOf": [
+            {
+              "const": "skill-gap",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rejection Category"
+        },
+        "reason_summary": {
+          "default": "",
+          "title": "Reason Summary",
+          "type": "string"
+        },
+        "focus_skill_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Focus Skill Ids",
+          "type": "array"
+        },
+        "review_skill_ids": {
+          "default": [],
+          "items": {
+            "type": "integer"
+          },
+          "title": "Review Skill Ids",
+          "type": "array"
+        },
+        "source": {
+          "enum": [
+            "user_reported_application",
+            "demo_market_snapshot"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "is_demo": {
+          "default": false,
+          "title": "Is Demo",
+          "type": "boolean"
+        },
+        "market_window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarketWindow"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind",
+        "focus_skill_ids",
+        "source"
+      ],
+      "title": "ReplanTrigger",
+      "type": "object"
+    },
     "RoadmapCandidate": {
       "additionalProperties": false,
       "properties": {
@@ -1181,7 +1305,9 @@
               "enum": [
                 "explicit",
                 "inferred",
-                "unknown"
+                "unknown",
+                "self_reported",
+                "assessed"
               ],
               "type": "string"
             },
@@ -1542,11 +1668,6 @@
           "title": "Unresolved Skills",
           "type": "array"
         },
-        "evidence_excerpts_truncated": {
-          "default": false,
-          "title": "Evidence Excerpts Truncated",
-          "type": "boolean"
-        },
         "projects": {
           "default": [],
           "items": {
@@ -1554,6 +1675,11 @@
           },
           "title": "Projects",
           "type": "array"
+        },
+        "evidence_excerpts_truncated": {
+          "default": false,
+          "title": "Evidence Excerpts Truncated",
+          "type": "boolean"
         },
         "projects_truncated": {
           "default": false,
@@ -1569,26 +1695,6 @@
         "unresolved_skills"
       ],
       "title": "UserContext",
-      "type": "object"
-    },
-    "ProjectSkill": {
-      "additionalProperties": false,
-      "properties": {
-        "skill_id": {
-          "exclusiveMinimum": 0,
-          "title": "Skill Id",
-          "type": "integer"
-        },
-        "skill_name": {
-          "title": "Skill Name",
-          "type": "string"
-        }
-      },
-      "required": [
-        "skill_id",
-        "skill_name"
-      ],
-      "title": "ProjectSkill",
       "type": "object"
     },
     "UserProject": {
@@ -1777,6 +1883,17 @@
       },
       "title": "Warnings",
       "type": "array"
+    },
+    "replan_trigger": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ReplanTrigger"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

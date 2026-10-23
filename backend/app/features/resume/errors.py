@@ -32,6 +32,8 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "KNOWLEDGE_NOT_READY": (409, False, "The selected skill gaps need reviewed learning content."),
     "ROADMAP_CONTEXT_FAILED": (409, False, "The roadmap inputs could not be prepared."),
     "ROADMAP_NOT_FOUND": (404, False, "No roadmap was found."),
+    "REPLAN_NOT_ELIGIBLE": (409, False, "This application is not ready for a skill-gap replan."),
+    "REPLAN_SKILL_UNAVAILABLE": (409, False, "Select an eligible skill gap for this application."),
     "TASK_NOT_FOUND": (404, False, "The roadmap task was not found."),
     "ROADMAP_STEP_LOCKED": (409, False, "Complete the connected prerequisite steps first."),
     "CHECKLIST_INCOMPLETE": (409, False, "Complete every checklist item before confirming this step."),

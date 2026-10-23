@@ -7,14 +7,13 @@ from rag.context.agent_models import AgentContext
 
 
 def recommended_skill_steps(draft: RoadmapDraft, context: AgentContext) -> list[DraftStep]:
-    """Order planned skill gaps by market priority, while honoring explicit skill prerequisites.
+    """Order planned skill gaps by selected context order, honoring explicit prerequisites.
 
     Priority is a recommendation, not a prerequisite. Only existing ``depends_on`` links
-    between planned skills can override the priority order.
+    between planned skills can override that order.
     """
     candidates = [item for item in context.roadmap_candidates
                   if item.learning_recommendation != "reference_only"]
-    candidates.sort(key=lambda item: item.priority.rank or 10_000)
     rank = {item.skill_id: index for index, item in enumerate(candidates)}
 
     steps = {step.key: step for step in draft.steps if step.kind == "skill"}
@@ -62,7 +61,7 @@ def recommended_route_steps(draft: RoadmapDraft, context: AgentContext) -> list[
     """Return every roadmap step in one connected display route.
 
     Already-complete skills form the starting context. Foundation checks come before
-    skills when dependency constraints allow, skill gaps follow market priority, and
+    skills when dependency constraints allow, skill gaps follow context selection order, and
     projects/career activities follow the learning steps. Real dependencies always win.
     """
     completed = [step for step in draft.steps if step.kind == "completed_skill"]
@@ -70,16 +69,15 @@ def recommended_route_steps(draft: RoadmapDraft, context: AgentContext) -> list[
         step.key: step for step in draft.steps
         if step.kind in {"foundation_check", "skill", "project", "career_activity"}
     }
-    candidates = {item.skill_id: item for item in context.roadmap_candidates}
+    selected_rank = {item.skill_id: index for index, item in enumerate(context.roadmap_candidates)
+                     if item.learning_recommendation != "reference_only"}
 
     def priority(key: str) -> tuple[int, int, str]:
         step = active[key]
         if step.kind == "foundation_check":
             return (0, 0, key)
         if step.kind == "skill":
-            candidate = candidates.get(step.skill_id)
-            rank = candidate.priority.rank if candidate else None
-            return (1, rank or 10_000, key)
+            return (1, selected_rank.get(step.skill_id, 10_000), key)
         return (2, 10_000, key)
 
     remaining = {

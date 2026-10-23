@@ -363,12 +363,14 @@ class MockRoadmapModel:
                 continue
 
             check_keys = []
+            required_check_keys = []
             for foundation_id in main["foundation_skill_ids"]:
                 foundation = foundations.get(foundation_id)
                 if not foundation or not _needs_check(foundation, main["skill_id"]):
                     continue
                 key = f"check-{_slug(foundation['name'])}"
                 mandatory = any(r["for_skill_id"] == main["skill_id"]
+                                and r.get("type") == "prerequisite"
                                 and r.get("blocks_unconditional_progress")
                                 and r.get("runtime_role") == "global_ordering"
                                 for r in foundation["relationships"])
@@ -388,6 +390,8 @@ class MockRoadmapModel:
                                           "question": f"How comfortable are you with {foundation['name']}?"})
                 if key in {s["key"] for s in steps}:
                     check_keys.append(key)
+                    if mandatory:
+                        required_check_keys.append(key)
 
             tasks = []
             for claim in main["claims"][:3]:
@@ -415,7 +419,7 @@ class MockRoadmapModel:
                 "key": key, "kind": "skill", "skill_id": main["skill_id"],
                 "title": f"Learn {main['name']}", "summary": f"Work through the core {main['name']} concepts.",
                 "why": why, "hours_min": low, "hours_max": high,
-                "depends_on": check_keys, "tasks": tasks or [{
+                "depends_on": required_check_keys, "tasks": tasks or [{
                     "title": f"Find the {main['name']} tutorial pages", "detail": "Full lessons are needed.",
                     "task_kind": "practice", "citations": []}],
             })

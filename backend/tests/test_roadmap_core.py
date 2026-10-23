@@ -11,7 +11,9 @@ import pytest
 
 from ai.roadmap import layout
 from ai.roadmap.compact import compact_context, planning_budget
-from ai.roadmap.contracts import RoadmapDraft
+from ai.roadmap.contracts import Edge, RoadmapDraft
+from ai.roadmap.dependencies import (remove_unsupported_skill_dependencies,
+                                      remove_unsupported_view_dependencies, required_skill_pairs)
 from ai.roadmap.cost import Pricing, estimate_cost
 from ai.roadmap.generate import GenerationFailed, generate_roadmap, prepare
 from ai.roadmap.providers import ClaudeRoadmapModel, GeminiRoadmapModel, MockRoadmapModel, ModelError, ModelTurn, Usage, output_schema
@@ -30,7 +32,7 @@ def context() -> AgentContext:
 
 
 def draft(**overrides) -> RoadmapDraft:
-    """A small valid draft: Docker check -> Airflow -> project; RAG and Java deferred."""
+    """A small valid draft: optional Docker check, Airflow, then project."""
     base = {
         "title": "Data Engineer roadmap", "overview": "Airflow first.", "planning_note": "Fits 2-5 h/week.",
         "steps": [
@@ -40,7 +42,7 @@ def draft(**overrides) -> RoadmapDraft:
                  {"title": "Run a container", "detail": "Try docker run.", "task_kind": "check", "citations": []}]},
             {"key": "airflow", "kind": "skill", "skill_id": AIRFLOW, "title": "Learn Airflow",
              "summary": "DAGs and operators.", "why": ["Required in 3 job posts."], "hours_min": 10,
-             "hours_max": 16, "depends_on": ["check-docker"], "tasks": [
+             "hours_max": 16, "depends_on": [], "tasks": [
                  {"title": "What is a Dag?", "detail": "Read the intro.", "task_kind": "learn", "citations": [
                      {"chunk_id": 2, "quote": "a Dag is a collection of tasks organized in a way that reflects their relationships"}]}]},
             {"key": "project", "kind": "project", "skill_id": None, "title": "Build a pipeline",
@@ -95,10 +97,11 @@ def test_global_prerequisite_is_sent_and_enforced(context):
     assert docker["relationships"][0]["runtime_role"] == "global_ordering"
     assert docker["relationships"][0]["blocks_unconditional_progress"] is True
 
-    valid = validate_draft(draft(), required, planning_budget(required, TODAY))
+    with_prerequisite = draft()
+    with_prerequisite.steps[1].depends_on = ["check-docker"]
+    valid = validate_draft(with_prerequisite, required, planning_budget(required, TODAY))
     assert valid.fatal == []
     unordered = draft()
-    unordered.steps[1].depends_on = []
     rejected = validate_draft(unordered, required, planning_budget(required, TODAY))
     assert any("must depend on prerequisite Docker" in issue for issue in rejected.fatal)
 
@@ -123,6 +126,41 @@ def test_global_prerequisite_is_sent_and_enforced(context):
 def test_valid_draft_passes(context):
     check = validate_draft(draft(), context, planning_budget(context, TODAY))
     assert check.fatal == [] and check.warnings == []
+
+
+def test_unverified_skill_prerequisites_do_not_lock_learning(context):
+    proposed = draft()
+    proposed.steps[1].depends_on = ["check-docker"]
+    checked = validate_draft(proposed, context, planning_budget(context, TODAY))
+    assert checked.fatal == []
+    assert checked.draft.steps[1].depends_on == []
+    assert any("removed unsupported required prerequisite" in warning for warning in checked.warnings)
+
+    another_skill = proposed.steps[1].model_copy(deep=True)
+    another_skill.key = "rag"
+    another_skill.skill_id = RAG
+    another_skill.depends_on = ["airflow"]
+    proposed.steps.append(another_skill)
+    removed = remove_unsupported_skill_dependencies(
+        proposed, required_skill_pairs(context.foundation_mentions))
+    assert ("airflow", "rag") in removed
+    assert another_skill.depends_on == []
+
+
+def test_saved_roadmap_view_filters_unverified_prerequisites(context):
+    model = MockRoadmapModel()
+    view = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY)).view
+    skill = next(node for node in view.nodes if node.key == "apache-airflow")
+    skill.depends_on.append("check-docker")
+    view.edges.append(Edge(from_="check-docker", to="apache-airflow", kind="prerequisite"))
+
+    corrected = remove_unsupported_view_dependencies(
+        view, required_skill_pairs(context.foundation_mentions))
+    corrected_skill = next(node for node in corrected.nodes if node.key == "apache-airflow")
+    assert corrected_skill.depends_on == []
+    assert not any(edge.from_ == "check-docker" and edge.to == "apache-airflow"
+                   and not edge.optional for edge in corrected.edges)
+    assert skill.depends_on == ["check-docker"]  # Stored view remains an audit snapshot.
 
 
 def test_bad_citations_and_foundation_lessons_are_fixed_in_code(context):
@@ -156,7 +194,8 @@ def test_forgotten_main_skill_is_deferred(context):
 @pytest.mark.parametrize("change, message", [
     (lambda d: setattr(d.steps[1], "skill_id", 999), "not a main skill"),
     (lambda d: setattr(d.steps[1], "skill_id", 91), "not a main skill"),  # Python is a foundation
-    (lambda d: setattr(d.steps[0], "depends_on", ["project"]), "cycle"),
+    (lambda d: (setattr(d.steps[0], "depends_on", ["project"]),
+                setattr(d.steps[2], "depends_on", ["check-docker"])), "cycle"),
     (lambda d: setattr(d.steps[1], "hours_min", 90), "budget"),
     (lambda d: setattr(d.steps[2], "key", "airflow"), "unique"),
 ])

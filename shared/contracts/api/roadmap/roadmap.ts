@@ -163,6 +163,56 @@ export type CareerGoalInput = Omit<CareerGoal, 'goalId' | 'careerId' | 'updatedA
   targetRoleTitle?: string | null
 }
 
+export type RejectionReplanOptions = {
+  applicationId: number
+  role: string
+  company: string
+  rejectionCategory: 'skill-gap'
+  rejectionReason: string
+  reasonSource: 'user_reported'
+  goalCareerProfileId: number
+  matchingMode: 'feedback_mentions' | 'market_gaps' | 'no_mentions'
+  options: Array<{
+    skillId: number
+    name: string
+    gapStatus: 'missing_from_profile' | 'proficiency_gap' | 'covered' | 'not_assessed'
+    priorityRank: number | null
+    requirementType: 'required' | 'preferred' | null
+    source: 'feedback_mention' | 'job_requirement' | 'career_market'
+    alreadyPlanned: boolean
+    completedInRoadmap: boolean
+    inProfile: boolean
+    alreadyCompleted: boolean
+    learningContentAvailable: boolean
+  }>
+}
+
+export type RoadmapHistoryEntry = {
+  roadmapId: number
+  version: number
+  status: RoadmapView['status']
+  generationReason: string
+  previousRoadmapId: number | null
+  generatedAt: string
+  replanTrigger: {
+    kind: 'application_rejection'
+    application_id: number
+    job_title: string
+    rejection_category: 'skill-gap'
+    reason_summary: string
+    focus_skill_ids: number[]
+    review_skill_ids: number[]
+    source: 'user_reported_application'
+  } | {
+    kind: 'market_update'
+    focus_skill_ids: number[]
+    review_skill_ids: number[]
+    source: 'demo_market_snapshot'
+    is_demo: true
+    market_window: { analysis_start_date: string; analysis_end_date: string; analysis_date_basis: string }
+  } | null
+}
+
 /** Body of PUT .../steps/{stepKey}: "Start learning" = in_progress, "Mark as completed" = completed. */
 export type StepStatusInput = { status: ProgressStatus }
 
@@ -191,5 +241,7 @@ export type RoadmapErrorCode =
   | 'MODEL_REFUSAL'
   | 'MODEL_UNAVAILABLE'
   | 'ROADMAP_GENERATION_FAILED'
+  | 'REPLAN_NOT_ELIGIBLE'
+  | 'REPLAN_SKILL_UNAVAILABLE'
   | 'INVALID_REQUEST'
   | 'INTERNAL_ERROR'

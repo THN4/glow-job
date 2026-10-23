@@ -56,6 +56,9 @@ class GoalBody(Camel):
 
 class StartRoadmapBody(Camel):
     force: bool = False
+    rejection_application_id: int | None = Field(default=None, gt=0)
+    focus_skill_ids: tuple[int, ...] = ()
+    market_focus_skill_ids: tuple[int, ...] = ()
 
 
 class TaskProgressBody(Camel):
@@ -126,8 +129,23 @@ async def put_goal(profile_id: str, body: GoalBody, session_id: str = SessionId,
 @router.post("/profiles/{profile_id}/roadmaps", status_code=202)
 async def start_roadmap(profile_id: str, body: StartRoadmapBody | None = None, session_id: str = SessionId,
                         svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
-    job = await svc.start(profile_id, session_id, force=bool(body and body.force))
+    job = await svc.start(profile_id, session_id, force=bool(body and body.force),
+                          rejection_application_id=body.rejection_application_id if body else None,
+                          focus_skill_ids=body.focus_skill_ids if body else (),
+                          market_focus_skill_ids=body.market_focus_skill_ids if body else ())
     return job.body()
+
+
+@router.get("/profiles/{profile_id}/applications/{application_id}/replan-options")
+async def rejection_replan_options(profile_id: str, application_id: int, session_id: str = SessionId,
+                                   svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    return await svc.rejection_options(profile_id, session_id, application_id)
+
+
+@router.get("/profiles/{profile_id}/market-replan-options")
+async def market_replan_options(profile_id: str, session_id: str = SessionId,
+                                svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    return await svc.market_replan_options(profile_id, session_id)
 
 
 @router.get("/roadmap-jobs/{job_id}")
@@ -140,6 +158,19 @@ async def get_roadmap_job(job_id: str, session_id: str = SessionId,
 async def get_current_roadmap(profile_id: str, session_id: str = SessionId,
                               svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
     view = await svc.current(profile_id, session_id)
+    return {"roadmap": view.model_dump(mode="json", by_alias=True)}
+
+
+@router.get("/profiles/{profile_id}/roadmaps/history")
+async def get_roadmap_history(profile_id: str, session_id: str = SessionId,
+                              svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    return {"roadmaps": await svc.history(profile_id, session_id)}
+
+
+@router.get("/profiles/{profile_id}/roadmaps/{roadmap_id}")
+async def get_roadmap_version(profile_id: str, roadmap_id: int, session_id: str = SessionId,
+                              svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    view = await svc.version(profile_id, session_id, roadmap_id)
     return {"roadmap": view.model_dump(mode="json", by_alias=True)}
 
 
