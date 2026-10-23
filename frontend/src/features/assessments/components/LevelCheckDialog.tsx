@@ -133,7 +133,7 @@ export function LevelCheckDialog({ onClose, onDecision, skillId, skillName, entr
         )}
         {phase.kind === 'result' && (
           <div className="flex flex-wrap gap-2">
-            <button type="button" disabled={busy} onClick={() => void decide(true)}
+            <button type="button" disabled={busy || !phase.result.level} onClick={() => void decide(true)}
               className="min-h-9 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:bg-slate-400">Use this result</button>
             <button type="button" disabled={busy} onClick={() => void decide(false)}
               className="min-h-9 rounded-lg border border-blue-200 px-4 text-xs font-semibold text-blue-700 hover:bg-blue-50">Keep my profile as is</button>
@@ -141,7 +141,7 @@ export function LevelCheckDialog({ onClose, onDecision, skillId, skillName, entr
         )}
         {phase.kind === 'done' && (
           <p role="status" className={`rounded-lg px-3 py-2 text-sm ${phase.kept ? 'bg-emerald-50 text-emerald-800' : 'bg-blue-50 text-blue-800'}`}>
-            {phase.kept ? `Saved to your profile: ${skillName} · ${phase.result.level}.` : 'Not saved. You can find this result in your activity.'}
+            {phase.kept ? 'Result saved. Your profile uses your latest accepted quiz result when available; otherwise it uses your self-rating.' : 'Not saved. You can find this result in your activity.'}
           </p>
         )}
       </DialogContent>
@@ -154,7 +154,8 @@ function LevelResultView({ result }: { result: LevelResult }) {
     <div className="space-y-3">
       <div>
         <p className="text-xs text-slate-500">Your result for {result.skill.name}</p>
-        <p className="text-2xl font-bold text-slate-900">{capitalize(result.level)}</p>
+        <p className="text-2xl font-bold text-slate-900">{result.level ? capitalize(result.level) : 'Foundations not yet confirmed'}</p>
+        {result.method === 'quiz' && <p className="text-sm text-slate-600">{result.correct} of {result.asked} questions correct</p>}
         <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${CONFIDENCE_STYLE[result.confidence]}`}>
           {capitalize(result.confidence)} confidence
         </span>
