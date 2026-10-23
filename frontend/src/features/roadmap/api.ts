@@ -5,6 +5,8 @@ import type { ProgressOverview } from './progressOverview'
 import type { RoadmapEvidence } from './type'
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
+// RAG reviews multiple skills before generation; a healthy job can exceed five minutes.
+const ROADMAP_POLL_TIMEOUT_MS = 15 * 60_000
 
 type ApiErrorBody = { error?: { message?: string } }
 
@@ -250,13 +252,16 @@ export async function generateRoadmap(onStage: (stage: RoadmapJob['stage']) => v
   onStage(started.stage)
   const startedAt = Date.now()
   let job = started
-  while (Date.now() - startedAt < 300_000) {
+  while (true) {
     if (job.status === 'failed') throw new Error(job.error?.message ?? 'สร้าง roadmap ไม่สำเร็จ')
     if (job.status === 'succeeded') {
       const roadmap = await loadCurrentRoadmap(signal)
       if (!roadmap) throw new Error('สร้าง roadmap แล้วแต่ไม่พบข้อมูลที่บันทึกไว้')
       return roadmap
     }
+    // Inspect the latest terminal status before checking the deadline, including
+    // a success received by the final poll at the timeout boundary.
+    if (Date.now() - startedAt >= ROADMAP_POLL_TIMEOUT_MS) break
     await wait(2000, signal)
     job = await request<RoadmapJob>(`/roadmap-jobs/${encodeURIComponent(started.jobId)}`, { signal })
     onStage(job.stage)

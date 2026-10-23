@@ -1,0 +1,18 @@
+# Local Nova test only. Uses shell credentials; never inserts empty AWS credentials.
+# docker compose -f compose.yaml -f compose.nova-local.yaml up -d --build --no-deps backend
+services:
+  backend:
+    environment:
+      RESUME_EXTRACTOR: bedrock_converse
+      BEDROCK_EXTRACTION_MODEL: ${BEDROCK_EXTRACTION_MODEL:-amazon.nova-pro-v1:0}
+      BEDROCK_RAG_MODEL: ${BEDROCK_RAG_MODEL:-amazon.nova-pro-v1:0}
+      ROADMAP_PROVIDER: bedrock_converse
+      ROADMAP_MODEL_ID: ${BEDROCK_ROADMAP_MODEL:-amazon.nova-pro-v1:0}
+      ROADMAP_AWS_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      # Avoid inheriting the old Gemini price overrides from the root .env.
+      ROADMAP_PRICE_INPUT_PER_MTOK: ${NOVA_PRICE_INPUT_PER_MTOK:-0.8}
+      ROADMAP_PRICE_OUTPUT_PER_MTOK: ${NOVA_PRICE_OUTPUT_PER_MTOK:-3.2}
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:
+      AWS_BEARER_TOKEN_BEDROCK:

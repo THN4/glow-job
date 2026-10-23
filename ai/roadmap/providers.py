@@ -5,6 +5,7 @@
 - ``gemini``: Gemini through Google's Gen AI SDK and GEMINI_API_KEY.
 - ``anthropic``: Claude through the Anthropic API (ANTHROPIC_API_KEY or `ant auth login`).
 - ``bedrock``: Claude through Amazon Bedrock (AWS credential chain; region required).
+- ``bedrock_converse``: Amazon Nova through Bedrock Runtime Converse.
 
 Gemini uses structured JSON output and a configurable thinking level. The SDKs are
 imported lazily so the mock path runs without a live model connection.
@@ -268,6 +269,13 @@ def create_model(provider: str, *, model_id: str | None = None, aws_region: str 
         client = AnthropicBedrockMantle(aws_region=aws_region)
         return ClaudeRoadmapModel(client, provider=provider, model_id=model_id or DEFAULT_BEDROCK_MODEL,
                                   effort=effort, max_tokens=max_tokens, cache_context=cache_context)
+    if provider == "bedrock_converse":
+        from ai.roadmap.bedrock_converse import BedrockConverseRoadmapModel, DEFAULT_NOVA_MODEL, create_converse_client
+
+        if not aws_region:
+            raise ValueError("An AWS region is required for bedrock_converse")
+        return BedrockConverseRoadmapModel(create_converse_client(aws_region),
+                                          model_id=model_id or DEFAULT_NOVA_MODEL, max_tokens=max_tokens)
     raise ValueError(f"Unknown roadmap provider: {provider}")
 
 

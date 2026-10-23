@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from ai.roadmap.contracts import RoadmapView
-from ai.roadmap.cost import Pricing
+from ai.roadmap.cost import pricing_for_model
 from ai.roadmap.generate import GenerationFailed, generate_roadmap, prepare
 from ai.roadmap.providers import RoadmapModel, create_model
 from app.features.resume.errors import AppError
@@ -60,13 +60,15 @@ class RoadmapService:
         self.settings = settings
         self.repo = repo
         self._model_factory = model_factory or (lambda: create_model(
-            settings.ROADMAP_PROVIDER, model_id=settings.ROADMAP_MODEL_ID, aws_region=settings.ROADMAP_AWS_REGION,
+            settings.ROADMAP_PROVIDER, model_id=settings.model_id, aws_region=settings.aws_region,
             effort=settings.ROADMAP_EFFORT, max_tokens=settings.ROADMAP_MAX_TOKENS,
             cache_context=settings.ROADMAP_CACHE_CONTEXT))
         self._model: RoadmapModel | None = None
         self.jobs: TtlDict[RoadmapJob] = TtlDict(JOB_TTL_SECONDS)
         self.queue = JobQueue(self._run)
-        self.pricing = Pricing(settings.ROADMAP_PRICE_INPUT_PER_MTOK, settings.ROADMAP_PRICE_OUTPUT_PER_MTOK)
+        self.pricing = pricing_for_model(settings.ROADMAP_PROVIDER, settings.model_id,
+                                         input_price=settings.ROADMAP_PRICE_INPUT_PER_MTOK,
+                                         output_price=settings.ROADMAP_PRICE_OUTPUT_PER_MTOK)
 
     @property
     def model(self) -> RoadmapModel:

@@ -169,7 +169,8 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 },
                 "claims": [
                     {"text": claim.text, "kind": claim.support_kind,
-                     "chunk_ids": sorted({cite.chunk_id for cite in claim.citations})}
+                     "chunk_ids": sorted({cite.chunk_id for cite in claim.citations}),
+                     "citations": [{"chunk_id": cite.chunk_id, "quote": cite.quote} for cite in claim.citations]}
                     for claim in c.claims
                 ],
                 "foundation_skill_ids": list(c.foundation_skill_ids),
@@ -195,7 +196,8 @@ def compact_context(context: AgentContext, budget: Budget) -> dict[str, Any]:
                 "rank": rank,
                 "claims": [
                     {"text": claim.text, "kind": claim.support_kind,
-                     "chunk_ids": sorted({cite.chunk_id for cite in claim.citations})}
+                     "chunk_ids": sorted({cite.chunk_id for cite in claim.citations}),
+                     "citations": [{"chunk_id": cite.chunk_id, "quote": cite.quote} for cite in claim.citations]}
                     for claim in c.claims
                 ],
                 "teaching_content": c.teaching_content_status,
