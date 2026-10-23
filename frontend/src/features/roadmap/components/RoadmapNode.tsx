@@ -51,7 +51,7 @@ export function RoadmapNode({ node, width, selected, onSelect, compact = false }
         aria-pressed={selected}
         aria-current={node.status === 'in-progress' ? 'step' : undefined}
         style={{ width, height: compact ? 48 : 60 }}
-        className={`relative z-10 flex h-[60px] shrink-0 items-center gap-2.5 rounded-xl border px-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${styles.card} ${selected && node.status !== 'in-progress' ? 'ring-2 ring-blue-300' : ''}`}
+        className={`relative z-10 flex h-[60px] shrink-0 items-center gap-2.5 rounded-xl border px-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${styles.card} ${selected && node.status !== 'in-progress' ? 'ring-2 ring-blue-300' : ''}`}
       >
         {node.status === 'in-progress' && <CurrentStepBorder />}
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${styles.icon}`}>

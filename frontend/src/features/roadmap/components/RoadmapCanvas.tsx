@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
+import { Maximize, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
 import { arrowColors, isConnectionDashed } from '../connectionAppearance'
+import { getFitZoom, getGraphFrame, getZoomScroll } from '../viewport'
 import type {
   RoadmapConnection,
   RoadmapNodeData,
@@ -127,12 +128,13 @@ export function RoadmapCanvas({
   const dragRef = useRef<DragState | null>(null)
   const panRef = useRef<PanState | null>(null)
   const positionsRef = useRef<Record<string, CanvasPoint>>({})
-  const userChangedZoomRef = useRef(false)
+  const pendingViewRef = useRef<'center' | { zoom: number; left: number; top: number } | null>(null)
+  const suppressNodeClickRef = useRef(false)
   const layoutKey = `${NODE_LAYOUT_STORAGE_PREFIX}${nodes.map((node) => node.id).sort().join('|')}`
   const layoutFingerprint = nodes.map((node) => `${node.id}:${node.position.row}:${node.position.column}`).sort().join('|')
   const [positions, setPositions] = useState<Record<string, CanvasPoint>>({})
   const [connectionStyle, setConnectionStyle] = useState<ConnectionStyle>('curved')
-  const [zoom, setZoom] = useState(DEFAULT_GRAPH_ZOOM)
+  const [manualZoom, setManualZoom] = useState<number | null>(null)
   const [isPanning, setIsPanning] = useState(false)
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
   const [graphSize, setGraphSize] = useState<GraphSize>({
@@ -248,15 +250,66 @@ export function RoadmapCanvas({
     ...terminalSkillConnections,
   ]
 
-  const fitZoom = Math.max(MIN_GRAPH_ZOOM, Math.min(
-    DEFAULT_GRAPH_ZOOM,
-    viewportSize.width > 0
-      ? (viewportSize.width - GRAPH_CANVAS_PADDING * 2 - 24) / minimumGraphWidth
-      : DEFAULT_GRAPH_ZOOM,
-    viewportSize.height > 0
-      ? (viewportSize.height - GRAPH_CANVAS_PADDING * 2 - 24) / minimumGraphHeight
-      : DEFAULT_GRAPH_ZOOM,
-  ))
+  const canvasSize = { width: minimumGraphWidth, height: minimumGraphHeight }
+  const fitZoom = getFitZoom(viewportSize, canvasSize, GRAPH_CANVAS_PADDING + 12, MIN_GRAPH_ZOOM, MAX_GRAPH_ZOOM)
+  const defaultZoom = Math.min(DEFAULT_GRAPH_ZOOM, fitZoom)
+  const zoom = manualZoom ?? defaultZoom
+  const frame = getGraphFrame(viewportSize, canvasSize, zoom, GRAPH_CANVAS_PADDING)
+
+  function changeZoom(nextZoom: number, center = false) {
+    const viewport = viewportRef.current
+    pendingViewRef.current = center || !viewport ? 'center' : {
+      zoom, left: viewport.scrollLeft, top: viewport.scrollTop,
+    }
+    setManualZoom(Math.max(MIN_GRAPH_ZOOM, Math.min(MAX_GRAPH_ZOOM, nextZoom)))
+  }
+
+  function centerViewport() {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    viewport.scrollTo({ left: (viewport.scrollWidth - viewport.clientWidth) / 2,
+      top: (viewport.scrollHeight - viewport.clientHeight) / 2, behavior: 'instant' })
+  }
+
+  function fitToView() {
+    changeZoom(fitZoom, true)
+    // A repeated Fit click must work even when React can skip the state update.
+    if (zoom === fitZoom) {
+      centerViewport()
+      pendingViewRef.current = null
+    }
+  }
+
+  function resetZoom() {
+    pendingViewRef.current = 'center'
+    setManualZoom(null)
+    if (zoom === defaultZoom) {
+      centerViewport()
+      pendingViewRef.current = null
+    }
+  }
+
+  // Update scroll offsets after the existing CSS scale has changed, without a
+  // competing animation or modifying any saved node coordinates.
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current
+    if (!viewport) return
+    const pending = pendingViewRef.current
+    if (pending && pending !== 'center') {
+      const scroll = getZoomScroll(
+        viewportSize, { width: minimumGraphWidth, height: minimumGraphHeight },
+        GRAPH_CANVAS_PADDING, pending, zoom,
+      )
+      viewport.scrollTo({ ...scroll, behavior: 'instant' })
+    } else if (pending === 'center' || manualZoom === null) {
+      viewport.scrollTo({
+        left: (viewport.scrollWidth - viewport.clientWidth) / 2,
+        top: (viewport.scrollHeight - viewport.clientHeight) / 2,
+        behavior: 'instant',
+      })
+    }
+    pendingViewRef.current = null
+  }, [zoom, manualZoom, viewportSize, minimumGraphWidth, minimumGraphHeight])
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -295,23 +348,31 @@ export function RoadmapCanvas({
     setPositions(next)
   }
 
-  function finishDrag() {
+  function finishDrag(cancelled = false) {
     const drag = dragRef.current
     if (!drag) return
     dragRef.current = null
-    if (!drag.moved) {
+    suppressNodeClickRef.current = true
+    if (!drag.moved && !cancelled) {
       const selected = nodesById.get(drag.id)
       if (selected) onSelectNode(selected)
       return
     }
-    try { localStorage.setItem(layoutKey, JSON.stringify(positionsRef.current)) } catch { /* browser storage may be disabled */ }
+    if (drag.moved) {
+      try { localStorage.setItem(layoutKey, JSON.stringify(positionsRef.current)) } catch { /* browser storage may be disabled */ }
+    }
   }
 
   function startPan(event: React.PointerEvent<HTMLDivElement>) {
-    if (event.button !== 0) return
+    if (event.button !== 0 || event.pointerType === 'touch' || !event.isPrimary) return
     const target = event.target as HTMLElement
     if (target.closest('[data-roadmap-node], button, a, .roadmap-connection')) return
     const viewport = event.currentTarget
+    const bounds = viewport.getBoundingClientRect()
+    // Native scrollbar thumbs/tracks must remain draggable.
+    if (event.clientX >= bounds.left + viewport.clientLeft + viewport.clientWidth
+      || event.clientY >= bounds.top + viewport.clientTop + viewport.clientHeight) return
+    viewport.focus({ preventScroll: true })
     panRef.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
@@ -335,6 +396,9 @@ export function RoadmapCanvas({
     if (panRef.current?.pointerId !== event.pointerId) return
     panRef.current = null
     setIsPanning(false)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
   }
 
   useEffect(() => {
@@ -361,37 +425,38 @@ export function RoadmapCanvas({
     return () => observer.disconnect()
   }, [])
 
-  useEffect(() => {
-    if (!userChangedZoomRef.current) setZoom(fitZoom)
-  }, [fitZoom])
-
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#DCE8F7] bg-white shadow-sm">
       <div className="shrink-0 border-b border-[#E4ECF8] bg-white px-4 py-3 sm:px-5 [@media(max-height:760px)]:py-2">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1 basis-64">
             <h2 className="text-sm font-semibold text-slate-800">Your roadmap relationships</h2>
             <p className="mt-0.5 text-[10px] text-slate-500">
               Your path to {targetRole}. Labels distinguish prerequisites from suggested links; completed links are solid, while other links are dashed. Skills without prerequisites can be started anytime. Drag steps to arrange them.
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex max-w-full flex-wrap items-center gap-2">
             <div role="group" className="hidden items-center gap-1 rounded-lg border border-slate-200 px-1 py-0.5 min-[640px]:flex" aria-label="Roadmap zoom controls">
-              <button type="button" onClick={() => { userChangedZoomRef.current = true; setZoom((value) => Math.max(MIN_GRAPH_ZOOM, Math.round((value - GRAPH_ZOOM_STEP) * 10) / 10)) }}
+              <button type="button" onClick={() => changeZoom(Math.round((zoom - GRAPH_ZOOM_STEP) * 100) / 100)}
                 disabled={zoom <= MIN_GRAPH_ZOOM} aria-label="Zoom out" title="Zoom out"
                 className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">
                 <ZoomOut size={14} aria-hidden="true" />
               </button>
               <span className="w-9 text-center text-[10px] tabular-nums text-slate-600">{Math.round(zoom * 100)}%</span>
-              <button type="button" onClick={() => { userChangedZoomRef.current = true; setZoom((value) => Math.min(MAX_GRAPH_ZOOM, Math.round((value + GRAPH_ZOOM_STEP) * 10) / 10)) }}
+              <button type="button" onClick={() => changeZoom(Math.round((zoom + GRAPH_ZOOM_STEP) * 100) / 100)}
                 disabled={zoom >= MAX_GRAPH_ZOOM} aria-label="Zoom in" title="Zoom in"
                 className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">
                 <ZoomIn size={14} aria-hidden="true" />
               </button>
-              <button type="button" onClick={() => { userChangedZoomRef.current = false; setZoom(fitZoom) }} disabled={Math.abs(zoom - fitZoom) < 0.01}
+              <button type="button" onClick={resetZoom}
                 aria-label="Reset zoom" title="Reset zoom"
                 className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">
                 <RotateCcw size={12} aria-hidden="true" />
+              </button>
+              <button type="button" onClick={fitToView} aria-label="Fit roadmap to view" title="Fit to view"
+                className="inline-flex items-center gap-1 rounded p-1 text-slate-600 hover:bg-[#EAF1FB] focus-visible:outline-2 focus-visible:outline-primary">
+                <Maximize size={14} aria-hidden="true" />
+                <span className="text-[10px]">Fit to view</span>
               </button>
             </div>
             <div>
@@ -428,7 +493,7 @@ export function RoadmapCanvas({
         </div>
       </div>
       <div className="min-h-0 flex-1 bg-white p-3 sm:p-4">
-        <div className="h-full overflow-y-auto overscroll-contain min-[640px]:hidden">
+        <div className="roadmap-scrollbar h-full overflow-y-auto overscroll-contain min-[640px]:hidden" tabIndex={0} role="region" aria-label="Roadmap stages">
           <ol className="mx-auto w-[92%] max-w-xs space-y-3 px-1 py-4">
             {rows.map((row, rowIndex) => {
               const rowNodes = nodes
@@ -489,25 +554,29 @@ export function RoadmapCanvas({
 
         <div
           ref={viewportRef}
-          className={`hidden h-full min-h-0 overflow-auto overscroll-contain min-[640px]:block ${isPanning ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+          className={`roadmap-scrollbar hidden h-full min-h-0 select-none overflow-auto overscroll-contain rounded-md focus-visible:outline-2 focus-visible:outline-primary min-[640px]:block ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`}
+          tabIndex={0}
+          role="region"
+          aria-label="Interactive roadmap. Drag empty space or use arrow keys to pan. Tab to explore steps and connections."
           onPointerDown={startPan}
           onPointerMove={movePan}
           onPointerUp={finishPan}
           onPointerCancel={finishPan}
+          onLostPointerCapture={finishPan}
         >
           <div
-            className="relative mx-auto shrink-0"
+            className="relative shrink-0 overflow-clip"
             style={{
-              width: minimumGraphWidth * zoom + GRAPH_CANVAS_PADDING * 2,
-              height: minimumGraphHeight * zoom + GRAPH_CANVAS_PADDING * 2,
+              width: frame.width,
+              height: frame.height,
             }}
           >
           <div
             ref={graphRef}
-            className="absolute left-0 top-0 touch-none"
+            className="absolute left-0 top-0"
             style={{
-              left: GRAPH_CANVAS_PADDING,
-              top: GRAPH_CANVAS_PADDING,
+              left: frame.left,
+              top: frame.top,
               width: minimumGraphWidth,
               height: minimumGraphHeight,
               transform: `scale(${zoom})`,
@@ -645,7 +714,7 @@ export function RoadmapCanvas({
               <div
                 key={node.id}
                 data-roadmap-node
-                className="pointer-events-auto absolute z-10 cursor-grab active:cursor-grabbing [&>div]:pointer-events-auto"
+                className="pointer-events-auto absolute z-10 touch-none cursor-grab active:cursor-grabbing [&>div]:pointer-events-auto"
                 style={{
                   left: `${(positions[node.id]?.x ?? defaultPosition(node).x) * 100}%`,
                   top: `${(positions[node.id]?.y ?? defaultPosition(node).y) * 100}%`,
@@ -654,6 +723,7 @@ export function RoadmapCanvas({
                 }}
                 onPointerDown={(event) => {
                   if (event.button !== 0) return
+                  suppressNodeClickRef.current = false
                   dragRef.current = { id: node.id, pointerId: event.pointerId,
                     startX: event.clientX, startY: event.clientY, moved: false }
                   event.currentTarget.setPointerCapture(event.pointerId)
@@ -667,8 +737,17 @@ export function RoadmapCanvas({
                 onPointerUp={(event) => {
                   if (dragRef.current?.pointerId !== event.pointerId) return
                   finishDrag()
+                  if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
                 }}
-                onPointerCancel={finishDrag}
+                onPointerCancel={() => finishDrag(true)}
+                onLostPointerCapture={() => finishDrag(true)}
+                onClickCapture={(event) => {
+                  if (event.detail > 0 && suppressNodeClickRef.current) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    suppressNodeClickRef.current = false
+                  }
+                }}
               >
                 {node.kind === 'skill' && !connections.some((edge) => edge.to === node.id
                   && edge.kind === 'prerequisite' && !edge.optional) && (

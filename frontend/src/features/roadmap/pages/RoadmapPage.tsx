@@ -121,9 +121,9 @@ export function RoadmapPage() {
   )
 
   return (
-    <section aria-label="Career roadmap" className="mx-auto flex min-h-0 w-full max-w-[1500px] flex-1 flex-col">
+    <section aria-label="Career roadmap" className="mx-auto flex min-h-0 min-w-0 w-full max-w-[1500px] flex-1 flex-col">
       {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
-      <div className="relative flex min-h-0 flex-1 gap-4 min-[1200px]:flex-row">
+      <div className="relative flex min-h-0 min-w-0 flex-1 gap-4 min-[1200px]:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <RoadmapHeader summary={screen.summary} showProgress={!selectedNode}
             onRegenerate={() => createRoadmap(true)} regenerating={working} />

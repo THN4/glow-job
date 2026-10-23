@@ -3,6 +3,67 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+/* Scoped scroll surfaces; leave browser scrolling elsewhere unchanged. */
+.scrollbar-subtle {
+  --scrollbar-size: 6px;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-hover: #94A3B8;
+}
+
+.roadmap-scrollbar {
+  --scrollbar-size: 7px;
+  --scrollbar-track: #EAF1FB;
+  --scrollbar-thumb: #93B4F5;
+  --scrollbar-hover: #2563EB;
+}
+
+.scrollbar-subtle, .roadmap-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scroll-behavior: auto;
+}
+
+.scrollbar-subtle:hover, .roadmap-scrollbar:hover {
+  scrollbar-color: var(--scrollbar-hover) var(--scrollbar-track);
+}
+
+@supports selector(::-webkit-scrollbar) {
+  .scrollbar-subtle, .roadmap-scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-track,
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+    border-radius: 999px;
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar):hover::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-hover);
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .scrollbar-subtle, .roadmap-scrollbar {
+    --scrollbar-thumb: ButtonText;
+    --scrollbar-hover: Highlight;
+    --scrollbar-track: Canvas;
+  }
+}
+
 @keyframes cv-analysis-float {
   50% { translate: 0 -7px; }
 }

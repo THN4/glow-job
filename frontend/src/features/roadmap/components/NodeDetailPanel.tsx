@@ -69,7 +69,7 @@ export function NodeDetailPanel({
         </button>
       </header>
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 pb-6 [scrollbar-gutter:stable]">
+      <div className="scrollbar-subtle min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 pb-6 [scrollbar-gutter:stable]">
         <section className="px-0.5 text-xs text-slate-600">
           {extra?.profileLabel && <p className="font-medium text-blue-700">{extra.profileLabel}</p>}
           {extra?.timeText && <p className="mt-1">Estimated time: {extra.timeText}</p>}
