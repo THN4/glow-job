@@ -27,11 +27,12 @@ export function RoadmapPage() {
 
   useEffect(() => { saveEvidenceByNode(evidenceByNode) }, [evidenceByNode])
 
-  useEffect(() => {
-    if (requestedNodeKey && view?.nodes.some((node) => node.key === requestedNodeKey)) {
-      setSelectedNodeId(requestedNodeKey)
-    }
-  }, [requestedNodeKey, view])
+  const [prevNodeKey, setPrevNodeKey] = useState(requestedNodeKey)
+  if (requestedNodeKey !== prevNodeKey) {
+    setPrevNodeKey(requestedNodeKey)
+    setSelectedNodeId(requestedNodeKey)
+  }
+
 
   function setView(next: RoadmapView) {
     queryClient.setQueryData(currentRoadmapKey(getSavedProfileId()), next)

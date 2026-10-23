@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getSavedProfileId, getSessionId, loadCareerMatch, loadCareerProfiles } from '../../resume/api'
-import { loadRoadmapGoal } from '../../roadmap/api'
+import { useCareerGoal } from '../../roadmap/useCareerGoal'
 
 const percent = (value: number | null) => value === null || !Number.isFinite(value) ? 'Unavailable' : `${Math.round(value)}%`
 
@@ -10,11 +11,7 @@ export function MarketInsightsPage() {
   const profileId = getSavedProfileId()
   const sessionId = getSessionId()
   const [selection, setSelection] = useState('')
-  const goal = useQuery({
-    queryKey: ['career-goal', sessionId, profileId],
-    queryFn: ({ signal }) => loadRoadmapGoal(signal),
-    enabled: Boolean(profileId),
-  })
+  const goal = useCareerGoal()
   const careers = useQuery({ queryKey: ['market-career-profiles'], queryFn: loadCareerProfiles, enabled: Boolean(profileId) })
   const savedGoal = goal.data
   const careerProfileId = selection ? Number(selection) : savedGoal?.careerProfileId
@@ -23,8 +20,6 @@ export function MarketInsightsPage() {
     queryFn: () => loadCareerMatch(profileId!, careerProfileId!),
     enabled: Boolean(profileId && careerProfileId),
   })
-  const selectedCareer = careers.data?.find((career) => career.careerProfileId === careerProfileId)
-  const targetRole = selectedCareer?.profileName ?? (careerProfileId === savedGoal?.careerProfileId ? savedGoal?.targetRoleTitle : null)
   const data = match.data
   const skills = [...(data?.skills ?? [])].sort((a, b) => (b.demandPercentage ?? 0) - (a.demandPercentage ?? 0))
 
@@ -47,11 +42,10 @@ export function MarketInsightsPage() {
 
   return (
     <section aria-label="Market insights" className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-4">
-      <header>
-        {targetRole && <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{targetRole}</p>}
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Market Insights</h1>
-        <p className="mt-2 text-sm text-slate-600">Explore skills from collected job postings and compare them with your saved profile.</p>
-      </header>
+      <WorkspacePageHeader
+        title="Market Insights"
+        description="Explore skills from collected job postings and compare them with your saved profile."
+      />
       {!profileId ? <p>Save your profile during <Link to="/onboarding" className="text-blue-700 underline">onboarding</Link> to view market insights.</p> : <>
         {data && <>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">

@@ -1,6 +1,7 @@
 import { AlertCircle, BadgeCheck, Check, CheckCircle2, ChevronRight, CircleDashed, ClipboardCheck, Clock3, FileText, History, ListChecks, PlayCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { SkillIcon } from '../../../components/SkillIcon'
+import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { Link, useNavigate } from 'react-router-dom'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../../../components/ui/dialog'
 import { applyStepCheck } from '../../roadmap/progress'
@@ -86,13 +87,11 @@ export function AssessmentsPage() {
   }
 
   return (
-    <section aria-label="Assessments" className="mx-auto flex min-h-full w-full max-w-[1200px] flex-col gap-5 pb-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Assessments</h1>
-          <p className="mt-1 text-sm text-slate-600">Check your roadmap learning and skill levels.</p>
-        </div>
-        {data && (
+    <section aria-label="Assessments" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-6">
+      <WorkspacePageHeader
+        title="Assessments"
+        description="Check your roadmap learning and skill levels."
+        actions={data && (
           <div className="flex flex-wrap gap-2 text-xs text-slate-600">
             <span className="rounded-full border border-blue-100 bg-white px-3 py-1.5"><b className="text-slate-900 tabular-nums">{data.stats.verifiedTasks}</b> tasks verified</span>
             <span className="rounded-full border border-blue-100 bg-white px-3 py-1.5"><b className="text-slate-900 tabular-nums">{data.stats.skillsWithLevel} of {data.stats.profileSkills}</b> skills with a level</span>
@@ -103,7 +102,7 @@ export function AssessmentsPage() {
             </button>
           </div>
         )}
-      </header>
+      />
 
       {!hasProfile && (
         <div className="rounded-xl border border-blue-100 bg-white p-5 text-sm text-slate-700">

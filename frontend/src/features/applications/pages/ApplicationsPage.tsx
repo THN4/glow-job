@@ -9,7 +9,6 @@ import { CompaniesTab } from '../components/companies/CompaniesTab'
 import { MyApplicationsTab } from '../components/my-applications/MyApplicationsTab'
 import { CareerRecommendationsTab } from '../components/recommendations/CareerRecommendationsTab'
 import { useRoadmapCounts } from '../../roadmap/useRoadmapCounts'
-import { roadmapSummary } from '../../roadmap/data/roadmapMockData'
 import { useApplicationFilters } from '../hooks/useApplicationFilters'
 import { applicationsApi, applicationsKey, type ApplicationInput } from '../api'
 import { getSavedProfileId } from '../../resume/api'
@@ -133,8 +132,6 @@ export function ApplicationsPage() {
         detailLabel={selectedRecord ? `${selectedRecord.company} / ${selectedRecord.role}` : undefined}
         onBack={() => setSelectedApplication(null)}
         activeTab={activeTab}
-        targetRole={roadmapSummary.targetRole}
-        duration={roadmapSummary.duration}
         titleOverride={activeTab === 'companies' ? selectedCompanyOpening?.role : activeTab === 'recommendations' ? selectedCareerPath?.title : undefined}
         subtitleOverride={activeTab === 'companies' && selectedCompanyOpening
           ? `${selectedCompanyOpening.company} · ${selectedCompanyOpening.location} · ${selectedCompanyOpening.workStyle} · ${selectedCompanyOpening.experience}`

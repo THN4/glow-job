@@ -1,5 +1,6 @@
 import { ArrowRight, CheckCircle2, ClipboardList, Compass, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { RoadmapNodeIcon } from '../components/RoadmapNodeIcon'
 import { UpdateReplanCard } from '../components/UpdateReplanCard'
 import { RecentActivity } from '../components/RecentActivity'
@@ -43,11 +44,10 @@ export function ProgressPage() {
 
   return (
     <section aria-label="Progress" className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-4">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{screen.summary.targetRole}</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Progress</h1>
-        <p className="mt-2 text-sm text-slate-600">Your saved roadmap progress, current learning step, and upcoming work.</p>
-      </header>
+      <WorkspacePageHeader
+        title="Progress"
+        description="Your saved roadmap progress, current learning step, and upcoming work."
+      />
 
       {overview.isPending && <p role="status" className="text-sm text-slate-600">Loading profile summary and activity…</p>}
       {overview.isError && <p role="alert" className="text-sm text-red-700">Could not load profile summary and activity: {overview.error.message} <button type="button" onClick={() => void overview.refetch()} className="underline">Try again</button></p>}

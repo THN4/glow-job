@@ -172,7 +172,7 @@ export function SkillProfilePage() {
 
   return (
     <section aria-label="Skill profile" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 [@media(max-height:960px)]:gap-3">
-      <SkillProfileHeader targetRole={screen.summary.targetRole} duration={screen.summary.duration} />
+      <SkillProfileHeader />
       {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {evidenceError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{evidenceError}</p>}
 
