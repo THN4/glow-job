@@ -70,6 +70,12 @@ async def get_goal(profile_id: str, session_id: str = SessionId,
     return {"goal": await svc.get_goal(profile_id, session_id)}
 
 
+@router.get("/profiles/{profile_id}/progress-overview")
+async def get_progress_overview(profile_id: str, session_id: str = SessionId,
+                                svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:
+    return await svc.progress_overview(profile_id, session_id)
+
+
 @router.put("/profiles/{profile_id}/goal")
 async def put_goal(profile_id: str, body: GoalBody, session_id: str = SessionId,
                    svc: RoadmapService = Depends(get_roadmap_service)) -> dict[str, Any]:

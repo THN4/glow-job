@@ -101,6 +101,7 @@ GET  /api/cv/extractions/{jobId}      -> { status, stage, result?, error? }
 GET  /api/profiles/empty              -> { profile }
 PUT  /api/profiles                    { sessionId, profileId?, profile } -> { profileId, updatedAt }
 GET  /api/profiles/{profileId}        -> { profileId, updatedAt, profile }
+GET  /api/profiles/{profileId}/progress-overview (header: X-Session-Id) -> saved skill/evidence counts, analysis and market dates, recent activity
 GET  /api/career-profiles             -> active career profiles with market stats
 GET  /api/profiles/{profileId}/career-match?careerProfileId=12 (header: X-Session-Id) -> market skill coverage (requires DB)
 GET  /api/health
