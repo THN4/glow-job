@@ -1,6 +1,7 @@
 import { learningStatusIcons } from '../../../components/statusIcons'
 import { StatCard, StatGrid } from '../../workspace/components/StatCard'
-import { BookOpen } from 'lucide-react'
+import { FilterSelect } from '../../applications/components/shared/FilterSelect'
+import { BookOpen, ListFilter } from 'lucide-react'
 
 type SkillProfileStatsProps = {
   total: number
@@ -29,16 +30,34 @@ export function SkillProfileStats({ total, completed, inProgress, upcoming, tota
     { label: 'In progress', value: inProgress, projects: inProgressProjects, filter: 'in-progress' as const },
     { label: 'Up next', value: upcoming, projects: upcomingProjects, filter: 'upcoming' as const },
   ]
+  const selectedIndex = Math.max(0, stats.findIndex((stat) => stat.filter === selected))
+  const stat = stats[selectedIndex]
 
   return (
-    <StatGrid label="Skill progress summary">
-      {stats.map(({ label, value, projects, filter }, index) => (
-        <StatCard key={label} label={label} value={value}
-          icon={statStyles[index].icon} tone={statStyles[index].tone}
-          detail={`${projects} ${projects === 1 ? 'project' : 'projects'}`}
-          progress={total > 0 ? value / total * 100 : null}
-          selected={selected === filter} onClick={() => onSelect(filter)} />
-      ))}
-    </StatGrid>
+    <section aria-label="Skill progress summary">
+      <div className="space-y-3 sm:hidden">
+        <FilterSelect label="Status" icon={ListFilter} value={selected}
+          options={stats.map(({ label, value, filter }) => ({ value: filter, label: `${label} (${value})` }))}
+          onChange={(value) => {
+            const next = stats.find((item) => item.filter === value)
+            if (next) onSelect(next.filter)
+          }} />
+        <StatCard label={stat.label} value={stat.value}
+          icon={statStyles[selectedIndex].icon} tone={statStyles[selectedIndex].tone}
+          detail={`${stat.projects} ${stat.projects === 1 ? 'project' : 'projects'}`}
+          progress={total > 0 ? stat.value / total * 100 : null} />
+      </div>
+      <div className="hidden sm:block">
+        <StatGrid>
+          {stats.map(({ label, value, projects, filter }, index) => (
+            <StatCard key={label} label={label} value={value}
+              icon={statStyles[index].icon} tone={statStyles[index].tone}
+              detail={`${projects} ${projects === 1 ? 'project' : 'projects'}`}
+              progress={total > 0 ? value / total * 100 : null}
+              selected={selected === filter} onClick={() => onSelect(filter)} />
+          ))}
+        </StatGrid>
+      </div>
+    </section>
   )
 }

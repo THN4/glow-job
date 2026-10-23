@@ -45,7 +45,7 @@ function CareerMatchMetricCard({ metric, value }: {
 }) {
   const formattedValue = value === null ? '—' : `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`
   const tone = { blue: 'primary', green: 'success', amber: 'warning', purple: 'info' } as const
-  return <StatCard label={metric.label} value={formattedValue} icon={metric.icon} tone={tone[metric.tone]}
+  return <StatCard compactOnMobile label={metric.label} value={formattedValue} icon={metric.icon} tone={tone[metric.tone]}
     detail={metric.detail} progress={value} />
 }
 
@@ -57,7 +57,7 @@ function RoadmapMetricCard({ metric }: { metric: {
   progress?: number
 } }) {
   const tone = { blue: 'primary', green: 'success', amber: 'warning', purple: 'info' } as const
-  return <StatCard label={metric.label} value={metric.value} icon={metric.icon} tone={tone[metric.tone]} progress={metric.progress} />
+  return <StatCard compactOnMobile label={metric.label} value={metric.value} icon={metric.icon} tone={tone[metric.tone]} progress={metric.progress} />
 }
 
 function CareerMatchSection({ careerMatch, loading, error }: {
@@ -70,17 +70,17 @@ function CareerMatchSection({ careerMatch, loading, error }: {
   const skillSummary = match?.skillSummary
 
   return (
-    <section aria-labelledby="career-match-title" className="space-y-3">
+    <section aria-labelledby="career-match-title" className="space-y-3 max-sm:order-4">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
           <h2 id="career-match-title" className={workspaceStyles.sectionTitle}>Career Match</h2>
-          <p className="mt-1 text-xs text-slate-500 sm:text-sm">Scores use separate market skill sets and describe profile coverage, not job readiness.</p>
+          <p className="mt-1 text-xs text-slate-500 max-sm:leading-5 sm:text-sm">Scores use separate market skill sets and describe profile coverage, not job readiness.</p>
         </div>
         {match && <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${match.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
           {match.status === 'ready' ? 'Market data ready' : 'Estimated · review notes'}
         </span>}
       </div>
-      <StatGrid label="Career match statistics">
+      <StatGrid label="Career match statistics" mobileColumns={2}>
         {careerMatchMetrics.map((metric) => <CareerMatchMetricCard key={metric.label} metric={metric}
           value={scores?.[metric.key] ?? null} />)}
       </StatGrid>
@@ -89,10 +89,10 @@ function CareerMatchSection({ careerMatch, loading, error }: {
       {!loading && !error && !careerMatch && <p className="rounded-lg border border-blue-100 bg-white/70 px-4 py-3 text-xs text-slate-600">
         Complete onboarding and choose a target role available in the career catalog to calculate these scores.
       </p>}
-      {skillSummary && careerMatch && <div aria-label="Profile skills and availability" className="flex flex-wrap gap-x-5 gap-y-1 rounded-xl border border-blue-100 bg-white/70 px-4 py-2.5 text-xs text-slate-600">
+      {skillSummary && careerMatch && <div aria-label="Profile skills and availability" className="flex flex-wrap gap-x-5 gap-y-1 rounded-xl border border-blue-100 bg-white/70 px-4 py-2.5 text-xs text-slate-600 max-sm:grid max-sm:grid-cols-2 max-sm:gap-3 max-sm:p-3">
         <span><strong className="font-semibold text-slate-900">{skillSummary.covered} / {skillSummary.considered}</strong> market skills in profile</span>
         <span><strong className="font-semibold text-slate-900">{skillSummary.missingFromProfile}</strong> skills missing</span>
-        {careerMatch.goal.availableHoursPerWeek !== null && <span><strong className="font-semibold text-slate-900">{careerMatch.goal.availableHoursPerWeek} hrs</strong> per week</span>}
+        {careerMatch.goal.availableHoursPerWeek !== null && <span className="max-sm:col-span-2"><strong className="font-semibold text-slate-900">{careerMatch.goal.availableHoursPerWeek} hrs</strong> per week</span>}
       </div>}
       {match?.warnings.map((warning) => <p key={warning} className="text-xs text-amber-700">{warning}</p>)}
     </section>
@@ -111,30 +111,30 @@ function RoadmapMilestones({ view }: { view: RoadmapView }) {
   }, [view.nodes])
 
   return (
-    <article className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm max-sm:order-3 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className={workspaceStyles.sectionTitle}>Career Roadmap</h2>
           <p className="mt-1 text-xs text-slate-500">{progressLabel}</p>
         </div>
-        <Link to="/app/roadmap" className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-800 sm:text-sm">
+        <Link to="/app/roadmap" className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-800 max-sm:min-h-11 max-sm:w-full max-sm:justify-between max-sm:rounded-lg max-sm:border max-sm:border-border max-sm:px-3 max-sm:py-2 sm:text-sm">
           Open full roadmap <ArrowRight className="size-4" aria-hidden="true" />
         </Link>
       </div>
       {milestones.length ? (
-        <div className="mt-5 overflow-x-auto">
-          <ol aria-label="Career roadmap progress" className="flex min-w-[700px] items-start px-2 pb-2 sm:min-w-0 sm:px-0">
+        <div className="mt-5 overflow-x-auto max-sm:overflow-visible">
+          <ol aria-label="Career roadmap progress" className="flex min-w-[700px] items-start px-2 pb-2 max-sm:min-w-0 max-sm:flex-col max-sm:gap-4 max-sm:px-0 sm:min-w-0 sm:px-0">
             {milestones.map((node, index) => {
               const complete = node.status === 'completed' || node.baselineComplete
               const current = !complete && node.key === view.currentNodeKey
               const goal = node.kind === 'goal'
               return (
-                <li key={node.key} className="relative flex flex-1 flex-col items-center text-center">
-                  {index > 0 && <span aria-hidden="true" className={`absolute right-1/2 top-5 h-px w-full ${complete || current ? 'bg-blue-300' : 'bg-slate-200'}`} />}
-                  <span className={`relative z-10 flex size-9 items-center justify-center rounded-full border-2 ${complete ? 'border-blue-500 bg-blue-500 text-white' : current ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-100' : goal ? 'border-amber-500 bg-amber-500 text-white' : 'border-blue-200 bg-slate-50 text-blue-300'}`}>
+                <li key={node.key} className="relative flex flex-1 flex-col items-center text-center max-sm:w-full max-sm:flex-none max-sm:flex-row max-sm:gap-3 max-sm:text-left">
+                  {index > 0 && <span aria-hidden="true" className={`absolute right-1/2 top-5 h-px w-full max-sm:-top-4 max-sm:left-[18px] max-sm:right-auto max-sm:h-4 max-sm:w-px ${complete || current ? 'bg-blue-300' : 'bg-slate-200'}`} />}
+                  <span className={`relative z-10 flex size-9 items-center justify-center rounded-full border-2 max-sm:shrink-0 ${complete ? 'border-blue-500 bg-blue-500 text-white' : current ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-100' : goal ? 'border-amber-500 bg-amber-500 text-white' : 'border-blue-200 bg-slate-50 text-blue-300'}`}>
                     {complete ? <StatusIcon status="completed" size={16} /> : current ? <StatusIcon status="in-progress" size={16} /> : goal ? <Star className="size-4" aria-hidden="true" /> : <StatusIcon status="upcoming" size={16} />}
                   </span>
-                  <span className={`mt-2 max-w-28 text-xs ${current ? 'font-semibold text-blue-600' : 'text-slate-500'}`}>{node.title}</span>
+                  <span className={`mt-2 max-w-28 text-xs max-sm:mt-0 max-sm:max-w-none max-sm:flex-1 max-sm:break-words max-sm:text-sm max-sm:leading-5 ${current ? 'font-semibold text-blue-600' : 'text-slate-500'}`}>{node.title}</span>
                 </li>
               )
             })}
@@ -159,21 +159,23 @@ function RoadmapContent({ view }: { view: RoadmapView }) {
 
   return (
     <>
-      <StatGrid label="Roadmap summary statistics">
-        {metrics.map((metric) => <RoadmapMetricCard key={metric.label} metric={metric} />)}
-      </StatGrid>
-      <article className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-white via-sky-50 to-blue-100/80 p-4 shadow-sm sm:p-5 lg:p-6">
+      <div className="max-sm:order-2">
+        <StatGrid label="Roadmap summary statistics" mobileColumns={2}>
+          {metrics.map((metric) => <RoadmapMetricCard key={metric.label} metric={metric} />)}
+        </StatGrid>
+      </div>
+      <article className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-white via-sky-50 to-blue-100/80 p-4 shadow-sm max-sm:order-1 sm:p-5 lg:p-6">
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-20 size-72 rounded-full border-[32px] border-white/45" />
         <div className="relative max-w-4xl">
           <p className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-white">
             <Zap className="size-4" aria-hidden="true" /> Your best next action
           </p>
-          <h2 className="mt-3 text-lg font-bold tracking-tight text-slate-900 sm:text-xl lg:text-2xl">{view.nextAction.text}</h2>
+          <h2 className="mt-3 text-lg font-bold tracking-tight text-slate-900 max-sm:break-words sm:text-xl lg:text-2xl">{view.nextAction.text}</h2>
           <p className="mt-2 max-w-3xl text-sm leading-5 text-slate-500 sm:leading-6">
             {nextNode?.summary ?? 'Continue with the next step in your saved career roadmap.'}
           </p>
-          <div className="mt-4 grid gap-3 border-t border-blue-100 pt-3 sm:grid-cols-3 sm:border-0 sm:pt-0">
-            <div className="border-blue-100 sm:border-r sm:pr-5">
+          <div className="mt-4 grid gap-3 border-t border-blue-100 pt-3 max-sm:grid-cols-2 sm:grid-cols-3 sm:border-0 sm:pt-0">
+            <div className="border-blue-100 max-sm:col-span-2 max-sm:border-b max-sm:pb-3 sm:border-r sm:pr-5">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Why it matters</p>
               <ul className="mt-1.5 space-y-1 text-xs leading-5 text-slate-600 sm:text-sm">
                 {(nextNode?.whyItMatters.length ? nextNode.whyItMatters.slice(0, 2) : ['Build progress toward your saved career goal.'])
@@ -193,7 +195,7 @@ function RoadmapContent({ view }: { view: RoadmapView }) {
             </div>
           </div>
           <Link to={nextNode ? `/app/roadmap?node=${encodeURIComponent(nextNode.key)}` : '/app/roadmap'}
-            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700">
+            className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 max-sm:min-h-11 max-sm:w-full max-sm:justify-center">
             Start this action <ArrowRight className="size-4" aria-hidden="true" />
           </Link>
         </div>
@@ -239,25 +241,25 @@ export function OverviewPage() {
   )
 
   return (
-    <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-4">
+    <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-4 max-sm:flex max-sm:min-w-0 max-sm:flex-col max-sm:gap-4 max-sm:space-y-0">
       <header className="relative overflow-hidden">
-        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-28 size-64 rounded-full bg-blue-100/45 sm:-right-2 sm:-top-40 sm:size-80" />
+        <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-28 size-64 rounded-full bg-blue-100/45 max-sm:hidden sm:-right-2 sm:-top-40 sm:size-80" />
         <p className={`relative ${workspaceStyles.pageContext}`}>
           {new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
         </p>
-        <h1 id="overview-title" className={`relative ${workspaceStyles.pageTitle}`}>{targetRole}</h1>
-        <p className={`relative ${workspaceStyles.pageDescription}`}>{goalSubtitle}</p>
+        <h1 id="overview-title" className={`relative max-sm:break-words ${workspaceStyles.pageTitle}`}>{targetRole}</h1>
+        <p className={`relative max-sm:break-words ${workspaceStyles.pageDescription}`}>{goalSubtitle}</p>
       </header>
       <CareerMatchSection careerMatch={careerMatch} loading={loadingMatch} error={matchError} />
       {view ? <RoadmapContent view={view} /> : (
-        <section className="rounded-2xl border border-blue-100 bg-white p-8 text-center">
+        <section className="rounded-2xl border border-blue-100 bg-white p-8 text-center max-sm:p-5">
           <h2 className={workspaceStyles.sectionTitle}>Your roadmap is not ready yet</h2>
           <p className={workspaceStyles.stateDescription}>
             {hasProfile ? 'Create a roadmap to see your learning progress and next action here.'
               : 'Save your profile and career goal to see a personalized overview.'}
           </p>
           <Link to={hasProfile ? '/app/roadmap' : '/onboarding'}
-            className={`mt-5 ${workspaceStyles.primaryAction}`}>
+            className={`mt-5 max-sm:min-h-11 max-sm:w-full ${workspaceStyles.primaryAction}`}>
             {hasProfile ? 'Open roadmap' : 'Start onboarding'}
           </Link>
         </section>

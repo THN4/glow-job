@@ -1,6 +1,6 @@
 import { workspaceStyles } from '../../../workspace/workspaceStyles'
 import { useState } from 'react'
-import { ArrowRight, BriefcaseBusiness, MapPin, Search } from 'lucide-react'
+import { ArrowRight, BriefcaseBusiness, ChevronLeft, ChevronRight, MapPin, Search } from 'lucide-react'
 import { CompanyOpeningDetail } from './CompanyOpeningDetail'
 import { companyAvatarColor } from '../shared/companyAvatar'
 import { FilterSelect } from '../shared/FilterSelect'
@@ -26,6 +26,7 @@ export function CompaniesTab({ applications, openings, selectedOpening, onAddOpe
   const [role, setRole] = useState('all')
   const [location, setLocation] = useState('all')
   const [experience, setExperience] = useState('all')
+  const [page, setPage] = useState(1)
 
   if (selectedOpening) {
     const alreadySaved = applications.some((application) => application.jobId === String(selectedOpening.jobId))
@@ -48,21 +49,26 @@ export function CompaniesTab({ applications, openings, selectedOpening, onAddOpe
     && (location === 'all' || opening.location === location)
     && (experience === 'all' || opening.experience === experience),
   )
+  const pageSize = 12
+  const pageCount = Math.max(1, Math.ceil(filteredOpenings.length / pageSize))
+  const currentPage = Math.min(page, pageCount)
+  const firstIndex = (currentPage - 1) * pageSize
+  const pageOpenings = filteredOpenings.slice(firstIndex, firstIndex + pageSize)
 
   return (
     <section aria-label="Companies and job openings" className="space-y-3">
       <div className="grid gap-2 sm:grid-cols-3">
-        <FilterSelect label="Role" icon={Search} value={role} onChange={setRole}
+        <FilterSelect label="Role" icon={Search} value={role} onChange={(value) => { setRole(value); setPage(1) }}
           options={[{ value: 'all', label: 'All job titles' }, ...roles.map((value) => ({ value, label: value }))]} />
-        <FilterSelect label="Location" icon={MapPin} value={location} onChange={setLocation}
+        <FilterSelect label="Location" icon={MapPin} value={location} onChange={(value) => { setLocation(value); setPage(1) }}
           options={[{ value: 'all', label: 'All locations' }, ...locations.map((value) => ({ value, label: value }))]} />
-        <FilterSelect label="Employment" icon={BriefcaseBusiness} value={experience} onChange={setExperience}
+        <FilterSelect label="Employment" icon={BriefcaseBusiness} value={experience} onChange={(value) => { setExperience(value); setPage(1) }}
           options={[{ value: 'all', label: 'All types' }, ...experiences.map((value) => ({ value, label: value }))]} />
       </div>
 
       {filteredOpenings.length ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {filteredOpenings.map((opening) => (
+          {pageOpenings.map((opening) => (
             <article key={opening.id} className="flex min-h-40 flex-col rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition-[border-color,box-shadow] hover:border-blue-400 hover:shadow-md focus-within:border-blue-400">
               <div className="flex items-center gap-2">
                 <span aria-hidden="true" className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-xs font-bold ${companyAvatarColor(opening.company)}`}>{opening.company.slice(0, 2).toUpperCase()}</span>
@@ -87,6 +93,20 @@ export function CompaniesTab({ applications, openings, selectedOpening, onAddOpe
           {openings.length ? 'No job postings match these filters.' : 'There are no job postings in the database yet.'}
         </p>
       )}
+      {filteredOpenings.length > 0 && <nav aria-label="Company opening pages" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
+        <p aria-live="polite" className="text-xs text-muted-foreground">
+          Showing {firstIndex + 1}–{Math.min(firstIndex + pageSize, filteredOpenings.length)} of {filteredOpenings.length} openings
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className={workspaceStyles.outlineAction}>
+            <ChevronLeft size={16} aria-hidden="true" />Previous
+          </button>
+          <span className="text-xs text-muted-foreground">Page {currentPage} of {pageCount}</span>
+          <button type="button" disabled={currentPage >= pageCount} onClick={() => setPage(currentPage + 1)} className={workspaceStyles.outlineAction}>
+            Next<ChevronRight size={16} aria-hidden="true" />
+          </button>
+        </div>
+      </nav>}
       <p className="text-xs leading-relaxed text-slate-500">Postings and skill requirements come from the shared job database. Verify the source before relying on the details.</p>
     </section>
   )

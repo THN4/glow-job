@@ -16,28 +16,31 @@ const legendItems = [
 
 export function RoadmapLegend() {
   return (
-    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-[9px] text-slate-500 sm:gap-x-5 sm:gap-y-2 sm:text-[11px]">
-      {typeItems.map(({ label, icon: Icon, color }) => (
-        <span key={label} className="inline-flex items-center gap-1.5">
-          <span className={`inline-flex size-6 items-center justify-center rounded-full ${color}`}>
-            <Icon size={15} aria-hidden="true" />
+    <div className="text-[11px] leading-4 text-slate-600">
+      <div role="group" aria-label="Step types" className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5">
+        {typeItems.map(({ label, icon: Icon, color }) => (
+          <span key={label} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className={`inline-flex size-4 shrink-0 items-center justify-center rounded-full ${color}`}>
+              <Icon size={12} aria-hidden="true" />
+            </span>
+            {label}
           </span>
-          {label}
+        ))}
+      </div>
+      <div role="group" aria-label="Progress statuses" className="mt-2 grid grid-cols-2 items-center gap-x-3 gap-y-1.5 border-t border-border pt-2">
+        {legendItems.map(({ kind, label, color }) => (
+          <span key={kind} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <StatusIcon status={kind} size={14} className={`shrink-0 ${color}`} />
+            {label}
+          </span>
+        ))}
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span className="relative inline-flex h-4 w-6 shrink-0 rounded-xl bg-blue-50">
+            <CurrentStepBorder />
+          </span>
+          Current step
         </span>
-      ))}
-      {legendItems.map(({ kind, label, color }) => (
-        <span key={kind} className="inline-flex items-center gap-1.5">
-          <StatusIcon status={kind} size={14} className={color} />
-          {label}
-        </span>
-      ))}
-      <span className="inline-flex items-center gap-1.5">
-        <span className="relative inline-flex h-5 w-8 rounded-xl bg-blue-50">
-          <CurrentStepBorder />
-        </span>
-        Current step
-      </span>
-
+      </div>
     </div>
   )
 }

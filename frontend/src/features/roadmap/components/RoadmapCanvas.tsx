@@ -1,13 +1,19 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import { Maximize, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react'
+import { Expand, ListTree, Route, Shrink } from 'lucide-react'
+import { Popover } from 'radix-ui'
 import { arrowColors, isConnectionDashed } from '../connectionAppearance'
-import { getFitZoom, getGraphFrame, getZoomScroll } from '../viewport'
+import { getDefaultGraphZoom, getFitZoom, getGraphFrame, getResponsivePadding, getZoomScroll } from '../viewport'
+import { getCompactGraphLayout, ROADMAP_NODE_HEIGHT, ROADMAP_NODE_WIDTH } from '../graphLayout'
 import type {
   RoadmapConnection,
   RoadmapNodeData,
   RoadmapSummary,
 } from '../type'
 import { RoadmapNode } from './RoadmapNode'
+import { RoadmapLegend } from './RoadmapLegend'
+import { RoadmapControls } from './RoadmapControls'
+import type { ConnectionStyle } from './RoadmapControls'
+import { workspaceStyles } from '../../workspace/workspaceStyles'
 import { RoadmapProgressBadge } from './RoadmapProgressBadge'
 
 type RoadmapCanvasProps = {
@@ -16,25 +22,21 @@ type RoadmapCanvasProps = {
   connections: RoadmapConnection[]
   selectedNodeId: string | null
   onSelectNode: (node: RoadmapNodeData) => void
-  detailsOpen?: boolean
   progressSummary?: RoadmapSummary
+  onRegenerate?: () => void
+  regenerating?: boolean
+  isFullscreen?: boolean
+  onToggleFullscreen?: () => void
 }
 
-const GRAPH_WIDTH = 1000
-const GRAPH_CANVAS_PADDING = 32
-const GRID_COLUMNS = 3
-const NODE_HEIGHT = 60
-const MIN_NODE_WIDTH = 96
-const MAX_NODE_WIDTH = 200
-const NODE_LAYOUT_STORAGE_PREFIX = 'glow-roadmap-node-layout:v8:'
+const NODE_HEIGHT = ROADMAP_NODE_HEIGHT
+const NODE_LAYOUT_STORAGE_PREFIX = 'glow-roadmap-node-layout:v10:'
 const INDEPENDENT_ROUTE_ID = '__independent_skill_route'
 const MIN_GRAPH_ZOOM = 0.25
 const MAX_GRAPH_ZOOM = 1.5
 const GRAPH_ZOOM_STEP = 0.1
-const DEFAULT_GRAPH_ZOOM = 0.7
 
 type CanvasPoint = { x: number; y: number }
-type ConnectionStyle = 'curved' | 'orthogonal'
 type DragState = {
   id: string
   pointerId: number
@@ -98,8 +100,11 @@ export function RoadmapCanvas({
   connections,
   selectedNodeId,
   onSelectNode,
-  detailsOpen = false,
   progressSummary,
+  onRegenerate,
+  regenerating = false,
+  isFullscreen = false,
+  onToggleFullscreen,
 }: RoadmapCanvasProps) {
   const arrowId = useId()
   const nodesById = new Map(nodes.map((node) => [node.id, node]))
@@ -137,89 +142,20 @@ export function RoadmapCanvas({
   const [manualZoom, setManualZoom] = useState<number | null>(null)
   const [isPanning, setIsPanning] = useState(false)
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
-  const [graphSize, setGraphSize] = useState<GraphSize>({
-    width: GRAPH_WIDTH,
-    height: 660,
-  })
-  const nodeWidth = Math.max(
-    detailsOpen ? MIN_NODE_WIDTH : 120,
-    Math.min(MAX_NODE_WIDTH, graphSize.width / GRID_COLUMNS - 24),
-  )
-  const independentIndex = new Map(sortedIndependent.map((node, index) => [node.id, index]))
-  const maxRow = Math.max(...nodes.map((node) => node.position.row), 1)
-  const minimumGraphHeight = Math.max(
-    660,
-    Math.ceil((maxRow * (NODE_HEIGHT + 18 + 36)) / 0.88),
-    sortedIndependent.length > 1 ? Math.ceil((sortedIndependent.length + 1) * 90 / 0.88) : 0,
-  )
-  const maxConnectionLabelWidth = Math.max(
-    0,
-    ...connections.map((connection) => (connection.label?.length ?? 0) * 5.7 + 12),
-    routeHub ? 'Suggested'.length * 5.7 + 12 : 0,
-  )
-  const laneGap = Math.max(48, maxConnectionLabelWidth)
-  const minimumGraphWidth = Math.max(
-    independentSkills.length > 0 ? 840 : 576,
-    independentSkills.length > 0
-      ? Math.ceil(nodeWidth * 4 + laneGap * 3)
-      : Math.ceil((nodeWidth + Math.max(36, maxConnectionLabelWidth) + 28) / (1 / GRID_COLUMNS)),
-  )
-  const defaultPosition = (node: RoadmapNodeData): CanvasPoint => {
-    const y = Math.min(0.94, Math.max(0.06, 0.06 + ((node.position.row - 0.5) / maxRow) * 0.88))
-    const independentPosition = independentIndex.get(node.id)
-    if (independentPosition !== undefined) {
-      const fraction = (independentPosition + 1) / (sortedIndependent.length + 1)
-      return { x: nodeWidth / (2 * minimumGraphWidth), y: 0.06 + fraction * 0.88 }
-    }
-
-    // Keep independent skills in a left lane and distribute the remaining roadmap
-    // across three lanes to their right. Positions are derived from node width and
-    // actual lane gaps, so the graph ends at the outer edge of its rightmost node.
-    const lane = Math.max(0, Math.min(GRID_COLUMNS - 1, node.position.column - 1))
-    if (independentSkills.length > 0) {
-      return {
-        x: (nodeWidth / 2 + (nodeWidth + laneGap) * (lane + 1)) / minimumGraphWidth,
-        y,
-      }
-    }
-    return { x: (node.position.column - 0.5) / GRID_COLUMNS, y }
-  }
-
+  const layout = getCompactGraphLayout(nodes, sortedIndependent.map((node) => node.id), Boolean(routeHub))
+  const graphSize = { width: layout.width, height: layout.height }
+  const nodeWidth = ROADMAP_NODE_WIDTH
+  const defaultPosition = (node: RoadmapNodeData): CanvasPoint => layout.positions[node.id]
   const positionFor = (node: RoadmapNodeData): CanvasPoint => positions[node.id] ?? defaultPosition(node)
   const independentCenters = sortedIndependent.map(positionFor)
-  const defaultIndependentY = sortedIndependent.length
-    ? sortedIndependent.reduce((sum, node) => sum + defaultPosition(node).y, 0) / sortedIndependent.length
-    : 0.5
-  const defaultRouteHubPosition = (() => {
-    if (!routeHub) return { x: 0.5, y: 0.5 }
-    const independentLaneX = nodeWidth / (2 * minimumGraphWidth)
-    const firstSkillLaneX = (nodeWidth / 2 + nodeWidth + laneGap) / minimumGraphWidth
-    const nearestIndependentRouteX = (independentLaneX + firstSkillLaneX) / 2
-    const columns = [nearestIndependentRouteX, nearestIndependentRouteX + 0.2, nearestIndependentRouteX + 0.4]
-    const rowCount = Math.max(5, Math.min(13, Math.ceil(minimumGraphHeight / 54)))
-    // The join is anchored to the generated layout. Dragging another node must not
-    // make this non-draggable group jump to a different slot.
-    const occupied = nodes.map((node) => defaultPosition(node))
-    const candidates = columns.flatMap((x) => Array.from({ length: rowCount }, (_, index) => ({
-      x,
-      y: 0.08 + (0.84 * index) / Math.max(1, rowCount - 1),
-    })))
-    const safe = candidates.filter((candidate) => occupied.every((point) =>
-      Math.abs(candidate.x - point.x) * minimumGraphWidth >= nodeWidth + 20
-      || Math.abs(candidate.y - point.y) * minimumGraphHeight >= NODE_HEIGHT + 20))
-    const pool = safe.length ? safe : candidates
-    return pool.sort((a, b) => {
-      const score = (point: CanvasPoint) => Math.abs(point.x - nearestIndependentRouteX) + Math.abs(point.y - defaultIndependentY)
-      return score(a) - score(b)
-    })[0]
-  })()
-  const routeHubPosition = defaultRouteHubPosition
+  const routeHubPosition = layout.hub
   const independentRightEdge = independentCenters.length
     ? Math.max(...independentCenters.map((point) => point.x)) + nodeWidth / (2 * graphSize.width)
     : nodeWidth / (2 * graphSize.width)
   const routeHubLeftEdge = routeHubPosition.x - nodeWidth / (2 * graphSize.width)
   const independentTrunkX = Math.min(independentRightEdge + 0.025, routeHubLeftEdge - 0.025)
   const canvasPositions: Record<string, CanvasPoint> = {
+    ...layout.positions,
     ...positions,
     ...(routeHub ? {
       [routeHub.id]: routeHubPosition,
@@ -250,11 +186,12 @@ export function RoadmapCanvas({
     ...terminalSkillConnections,
   ]
 
-  const canvasSize = { width: minimumGraphWidth, height: minimumGraphHeight }
-  const fitZoom = getFitZoom(viewportSize, canvasSize, GRAPH_CANVAS_PADDING + 12, MIN_GRAPH_ZOOM, MAX_GRAPH_ZOOM)
-  const defaultZoom = Math.min(DEFAULT_GRAPH_ZOOM, fitZoom)
+  const canvasPadding = getResponsivePadding(viewportSize)
+  const canvasSize = graphSize
+  const fitZoom = getFitZoom(viewportSize, canvasSize, canvasPadding, MIN_GRAPH_ZOOM, MAX_GRAPH_ZOOM)
+  const defaultZoom = getDefaultGraphZoom(fitZoom)
   const zoom = manualZoom ?? defaultZoom
-  const frame = getGraphFrame(viewportSize, canvasSize, zoom, GRAPH_CANVAS_PADDING)
+  const frame = getGraphFrame(viewportSize, canvasSize, zoom, canvasPadding)
 
   function changeZoom(nextZoom: number, center = false) {
     const viewport = viewportRef.current
@@ -268,16 +205,12 @@ export function RoadmapCanvas({
     const viewport = viewportRef.current
     if (!viewport) return
     viewport.scrollTo({ left: (viewport.scrollWidth - viewport.clientWidth) / 2,
-      top: (viewport.scrollHeight - viewport.clientHeight) / 2, behavior: 'instant' })
+      top: manualZoom === null ? 0 : (viewport.scrollHeight - viewport.clientHeight) / 2, behavior: 'instant' })
   }
 
   function fitToView() {
+    // Fit is intentional: unlike the readable default it may shrink long maps.
     changeZoom(fitZoom, true)
-    // A repeated Fit click must work even when React can skip the state update.
-    if (zoom === fitZoom) {
-      centerViewport()
-      pendingViewRef.current = null
-    }
   }
 
   function resetZoom() {
@@ -297,19 +230,19 @@ export function RoadmapCanvas({
     const pending = pendingViewRef.current
     if (pending && pending !== 'center') {
       const scroll = getZoomScroll(
-        viewportSize, { width: minimumGraphWidth, height: minimumGraphHeight },
-        GRAPH_CANVAS_PADDING, pending, zoom,
+        viewportSize, { width: canvasSize.width, height: canvasSize.height },
+        canvasPadding, pending, zoom,
       )
       viewport.scrollTo({ ...scroll, behavior: 'instant' })
     } else if (pending === 'center' || manualZoom === null) {
       viewport.scrollTo({
         left: (viewport.scrollWidth - viewport.clientWidth) / 2,
-        top: (viewport.scrollHeight - viewport.clientHeight) / 2,
+        top: manualZoom === null ? 0 : (viewport.scrollHeight - viewport.clientHeight) / 2,
         behavior: 'instant',
       })
     }
     pendingViewRef.current = null
-  }, [zoom, manualZoom, viewportSize, minimumGraphWidth, minimumGraphHeight])
+  }, [zoom, manualZoom, viewportSize, canvasSize.width, canvasSize.height, canvasPadding])
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -402,19 +335,6 @@ export function RoadmapCanvas({
   }
 
   useEffect(() => {
-    const graphElement = graphRef.current
-    if (!graphElement) return
-
-    const resizeObserver = new ResizeObserver(([entry]) => {
-      const { width, height } = entry.contentRect
-      if (width > 0 && height > 0) setGraphSize({ width, height })
-    })
-
-    resizeObserver.observe(graphElement)
-    return () => resizeObserver.disconnect()
-  }, [])
-
-  useEffect(() => {
     const viewport = viewportRef.current
     if (!viewport) return
     const observer = new ResizeObserver(([entry]) => {
@@ -425,85 +345,75 @@ export function RoadmapCanvas({
     return () => observer.disconnect()
   }, [])
 
+  function resetLayout() {
+    try { localStorage.removeItem(layoutKey) } catch { /* browser storage may be disabled */ }
+    const initial = { ...layout.positions }
+    positionsRef.current = initial
+    setPositions(initial)
+  }
+
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#DCE8F7] bg-white shadow-sm">
-      <div className="shrink-0 border-b border-[#E4ECF8] bg-white px-4 py-3 sm:px-5 [@media(max-height:760px)]:py-2">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0 flex-1 basis-64">
-            <h2 className="text-sm font-semibold text-slate-800">Your roadmap relationships</h2>
-            <p className="mt-0.5 text-[10px] text-slate-500">
-              Your path to {targetRole}. Labels distinguish prerequisites from suggested links; completed links are solid, while other links are dashed. Skills without prerequisites can be started anytime. Drag steps to arrange them.
-            </p>
-          </div>
-          <div className="flex max-w-full flex-wrap items-center gap-2">
-            <div role="group" className="hidden items-center gap-1 rounded-lg border border-slate-200 px-1 py-0.5 min-[640px]:flex" aria-label="Roadmap zoom controls">
-              <button type="button" onClick={() => changeZoom(Math.round((zoom - GRAPH_ZOOM_STEP) * 100) / 100)}
-                disabled={zoom <= MIN_GRAPH_ZOOM} aria-label="Zoom out" title="Zoom out"
-                className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">
-                <ZoomOut size={14} aria-hidden="true" />
-              </button>
-              <span className="w-9 text-center text-[10px] tabular-nums text-slate-600">{Math.round(zoom * 100)}%</span>
-              <button type="button" onClick={() => changeZoom(Math.round((zoom + GRAPH_ZOOM_STEP) * 100) / 100)}
-                disabled={zoom >= MAX_GRAPH_ZOOM} aria-label="Zoom in" title="Zoom in"
-                className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">
-                <ZoomIn size={14} aria-hidden="true" />
-              </button>
-              <button type="button" onClick={resetZoom}
-                aria-label="Reset zoom" title="Reset zoom"
-                className="rounded p-1 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40">
-                <RotateCcw size={12} aria-hidden="true" />
-              </button>
-              <button type="button" onClick={fitToView} aria-label="Fit roadmap to view" title="Fit to view"
-                className="inline-flex items-center gap-1 rounded p-1 text-slate-600 hover:bg-[#EAF1FB] focus-visible:outline-2 focus-visible:outline-primary">
-                <Maximize size={14} aria-hidden="true" />
-                <span className="text-[10px]">Fit to view</span>
-              </button>
-            </div>
-            <div>
-              <div className="flex rounded-lg border border-slate-200 p-0.5 text-[10px]">
-                <button type="button" onClick={() => setConnectionStyle('curved')}
-                  aria-pressed={connectionStyle === 'curved'}
-                  className={`rounded-md px-2 py-1 ${connectionStyle === 'curved' ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>
-                  Curved
-                </button>
-                <button type="button" onClick={() => setConnectionStyle('orthogonal')}
-                  aria-pressed={connectionStyle === 'orthogonal'}
-                  className={`rounded-md px-2 py-1 ${connectionStyle === 'orthogonal' ? 'bg-blue-600 text-white' : 'text-slate-600'}`}>
-                  Right angle
-                </button>
-              </div>
-            </div>
-            <button type="button" onClick={() => {
-              try { localStorage.removeItem(layoutKey) } catch { /* browser storage may be disabled */ }
-              const initial = Object.fromEntries(nodes.map((node) => [node.id, defaultPosition(node)])) as Record<string, CanvasPoint>
-              positionsRef.current = initial
-              setPositions(initial)
-            }} className="rounded-md border border-slate-200 px-2 py-1 text-[10px] text-slate-600 hover:bg-slate-50">
-              Reset layout
-            </button>
-            {progressSummary && (
-              <div className="hidden shrink-0 xl:block">
-              <RoadmapProgressBadge
-                completion={progressSummary.completion}
-                statusText={progressSummary.statusText}
-              />
-              </div>
-            )}
-          </div>
+    <section aria-label="Roadmap container" className="@container/roadmap flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-white shadow-sm">
+      <header className="grid shrink-0 grid-cols-1 items-center gap-x-3 gap-y-2 border-b border-border px-4 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:px-5">
+        <div className="col-start-1 row-start-1 min-w-0">
+          <h2 className="text-sm font-semibold text-foreground">Your roadmap relationships</h2>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            <span className="min-[640px]:hidden">Tap a step to explore your path.</span>
+            <span className="hidden min-[640px]:inline">Your path to {targetRole}. Select a step to explore; drag to arrange.</span>
+          </p>
         </div>
-      </div>
-      <div className="min-h-0 flex-1 bg-white p-3 sm:p-4">
-        <div className="roadmap-scrollbar h-full overflow-y-auto overscroll-contain min-[640px]:hidden" tabIndex={0} role="region" aria-label="Roadmap stages">
-          <ol className="mx-auto w-[92%] max-w-xs space-y-3 px-1 py-4">
+        {progressSummary && <div className="row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1">
+          <RoadmapProgressBadge completion={progressSummary.completion} statusText={progressSummary.statusText} />
+        </div>}
+        {onToggleFullscreen && <button type="button" onClick={onToggleFullscreen}
+          aria-label={isFullscreen ? 'Exit fullscreen roadmap' : 'Enter fullscreen roadmap'}
+          aria-pressed={isFullscreen}
+          title={isFullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
+          className="col-start-2 row-start-1 hidden size-10 items-center justify-center rounded-lg border border-border bg-white text-slate-600 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:col-start-3 sm:inline-flex">
+          {isFullscreen ? <Shrink size={18} aria-hidden="true" /> : <Expand size={18} aria-hidden="true" />}
+        </button>}
+      </header>
+      <div className="relative min-h-0 flex-1 bg-white p-3 sm:p-4">
+        <aside aria-label="Map legend" className="absolute right-4 top-4 z-20 hidden max-h-[calc(100%-6rem)] w-56 max-w-[calc(100%-2rem)] overflow-y-auto rounded-xl border border-border bg-white/95 p-2.5 shadow-sm backdrop-blur-sm min-[640px]:block">
+          <RoadmapLegend />
+        </aside>
+        <div className="absolute right-3 top-3 z-20 min-[640px]:hidden">
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <button type="button" aria-label="Map legend" title="Map legend"
+                className="inline-flex size-10 items-center justify-center rounded-lg border border-border bg-white text-slate-600 shadow-sm focus-visible:outline-2 focus-visible:outline-primary data-[state=open]:bg-blue-50 data-[state=open]:text-primary">
+                <ListTree size={20} aria-hidden="true" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content side="bottom" align="end" sideOffset={8} collisionPadding={12} aria-label="Map legend"
+                className="z-50 w-56 max-w-[calc(100vw-1.5rem)] overflow-y-auto rounded-xl border border-border bg-white p-2.5 shadow-lg outline-none"
+                style={{ maxHeight: 'var(--radix-popover-content-available-height)' }}>
+                <RoadmapLegend />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        </div>
+        <div role="group" aria-label="Roadmap controls" className="absolute bottom-4 right-4 z-20 hidden max-w-[calc(100%-2rem)] items-center gap-0.5 rounded-xl border border-border bg-white/95 p-1 shadow-md backdrop-blur-sm min-[640px]:flex">
+          <RoadmapControls zoom={zoom} minZoom={MIN_GRAPH_ZOOM} maxZoom={MAX_GRAPH_ZOOM} zoomStep={GRAPH_ZOOM_STEP}
+            onZoomChange={changeZoom} onFit={fitToView} onResetZoom={resetZoom} onResetLayout={resetLayout}
+            connectionStyle={connectionStyle} onConnectionStyleChange={setConnectionStyle} />
+        </div>
+        <div className="roadmap-scrollbar h-full overflow-y-auto overscroll-contain rounded-xl bg-gradient-to-b from-blue-50/60 to-white pb-4 min-[640px]:hidden" tabIndex={0} role="region" aria-label="Roadmap stages">
+          <div className="flex min-h-14 items-center gap-2 px-3 pr-14 text-sm font-semibold text-foreground"><Route size={18} className="text-primary" aria-hidden="true" />Your learning path</div>
+          <ol className="mx-4 mb-3 space-y-6 border-l border-dashed border-blue-200 pb-2 pl-5 pr-1">
             {rows.map((row, rowIndex) => {
               const rowNodes = nodes
                 .filter((node) => node.position.row === row)
                 .sort((first, second) => first.position.column - second.position.column)
+              const complete = rowNodes.length > 0 && rowNodes.every((node) => node.status === 'completed')
+              const current = rowNodes.some((node) => node.status === 'in-progress')
 
               return (
-                <li key={row}>
+                <li key={row} className="relative">
+                  <span aria-hidden="true" className={`absolute -left-8 top-0 flex size-6 items-center justify-center rounded-full border-2 border-white text-[11px] font-bold shadow-sm ${complete ? 'bg-emerald-100 text-emerald-700' : current ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500'}`}>{rowIndex + 1}</span>
                   <div className="mb-2 flex items-center gap-2 px-1">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Stage {rowIndex + 1}
                     </span>
                     <span className="h-px flex-1 bg-blue-100" aria-hidden="true" />
@@ -518,7 +428,7 @@ export function RoadmapCanvas({
                         selected={selectedNodeId === node.id}
                         onSelect={onSelectNode}
                       />
-                      <div className="mt-2 flex flex-wrap justify-center gap-x-3 gap-y-1">
+                      <div className="mt-2 flex flex-wrap gap-2">
                         {connections.filter((edge) => edge.from === node.id).map((edge) => {
                           const target = nodesById.get(edge.to)
                           if (!target) return null
@@ -528,14 +438,14 @@ export function RoadmapCanvas({
                               type="button"
                               onClick={() => onSelectNode(target)}
                               aria-label={`From ${node.title} to ${target.title}${edge.optional ? ', optional prerequisite check' : ', prerequisite'}`}
-                              className="inline-flex min-h-9 items-center gap-1 rounded px-1 text-[10px] focus-visible:outline-2 focus-visible:outline-primary"
+                              className={`inline-flex min-h-9 max-w-full items-center gap-1 rounded-lg border bg-white px-2 text-left text-xs shadow-sm focus-visible:outline-2 focus-visible:outline-primary ${isConnectionDashed(edge, node.status, target.status) ? 'border-dashed' : ''}`}
                               style={{ color: arrowColors[target.status] }}
                             >
-                              <svg width="22" height="28" viewBox="0 0 22 28" fill="none" aria-hidden="true">
+                              <svg width="16" height="20" viewBox="0 0 22 28" fill="none" className="shrink-0" aria-hidden="true">
                               <path d="M11 2 V23" stroke="currentColor" strokeWidth="2" strokeDasharray={isConnectionDashed(edge, node.status, target.status) ? '3 3' : undefined} />
                                 <path d="M6 18 L11 23 L16 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
-                              {target.title}
+                              <span className="min-w-0 break-words">{target.title}</span>
                             </button>
                           )
                         })}
@@ -547,7 +457,7 @@ export function RoadmapCanvas({
               )
             })}
           </ol>
-          {routeHub && <p className="mx-auto mt-3 max-w-xs rounded-lg border border-dashed border-amber-300 bg-amber-50 p-3 text-center text-[10px] leading-relaxed text-amber-900">
+          {routeHub && <p className="mx-3 mt-3 rounded-lg border border-dashed border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
             Independent skills can be learned in any order. The suggested route groups them toward your target; it is not a prerequisite.
           </p>}
         </div>
@@ -577,8 +487,8 @@ export function RoadmapCanvas({
             style={{
               left: frame.left,
               top: frame.top,
-              width: minimumGraphWidth,
-              height: minimumGraphHeight,
+              width: canvasSize.width,
+              height: canvasSize.height,
               transform: `scale(${zoom})`,
               transformOrigin: 'top left',
             }}
@@ -618,7 +528,7 @@ export function RoadmapCanvas({
               const toPoint = canvasPositions[to.id] ?? { x: 0.5, y: 0.5 }
               const labelX = (fromPoint.x + toPoint.x) * graphSize.width / 2
               const labelY = (fromPoint.y + toPoint.y) * graphSize.height / 2 - 8 + ((connectionIndex % 3) - 1) * 10
-              const labelWidth = Math.max(48, (connection.label?.length ?? 0) * 5.7 + 12)
+              const labelWidth = Math.max(48, (connection.label?.length ?? 0) * 6.5 + 16)
 
               const dashed = connection.from === INDEPENDENT_ROUTE_ID
                 ? independentSkills.some((node) => node.status !== 'completed')
@@ -653,9 +563,9 @@ export function RoadmapCanvas({
                   markerEnd={markerEnd}
                 />
                   {connection.label && <g className="pointer-events-none" aria-hidden="true">
-                    <rect x={labelX - labelWidth / 2} y={labelY - 9} width={labelWidth} height="18" rx="9"
+                    <rect x={labelX - labelWidth / 2} y={labelY - 11} width={labelWidth} height="22" rx="11"
                       fill="white" stroke={connection.kind === 'prerequisite' ? '#93c5fd' : '#fcd34d'} />
-                    <text x={labelX} y={labelY + 3} textAnchor="middle" fontSize="9"
+                    <text x={labelX} y={labelY + 4} textAnchor="middle" fontSize="11"
                       fill={connection.kind === 'prerequisite' ? '#1d4ed8' : '#92400e'}>
                       {connection.label}
                     </text>
@@ -696,18 +606,19 @@ export function RoadmapCanvas({
 
           <div className="pointer-events-none absolute inset-0">
             {routeHub && <div
-              className="pointer-events-none absolute z-10 flex h-[60px] items-center justify-center rounded-xl border border-dashed border-amber-400 bg-amber-50 px-3 text-center shadow-sm"
+              className="pointer-events-none absolute z-10 flex items-center justify-center rounded-xl border border-dashed border-amber-400 bg-amber-50 px-3 text-center shadow-sm"
               style={{
                 left: `${routeHubPosition.x * 100}%`,
                 top: `${routeHubPosition.y * 100}%`,
                 width: nodeWidth,
+                height: NODE_HEIGHT,
                 transform: 'translate(-50%, -50%)',
               }}
               aria-label="Suggested route join. This is not a learning step or prerequisite."
             >
               <span>
-                <span className="block text-[10px] font-semibold leading-tight text-amber-900">Independent skills route</span>
-                <span className="mt-1 block text-[8px] leading-tight text-amber-800">Suggested join · not required</span>
+                <span className="block text-[13px] font-semibold leading-4 text-amber-900">Independent skills route</span>
+                <span className="mt-1 block text-[11px] leading-4 text-amber-800">Suggested join · not required</span>
               </span>
             </div>}
             {nodes.map((node) => (
@@ -751,7 +662,7 @@ export function RoadmapCanvas({
               >
                 {node.kind === 'skill' && !connections.some((edge) => edge.to === node.id
                   && edge.kind === 'prerequisite' && !edge.optional) && (
-                  <span className="absolute -top-2 right-1 z-20 -translate-y-full rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-medium text-slate-500 shadow-sm">
+                  <span className="absolute -top-2 right-1 z-20 -translate-y-full rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500 shadow-sm">
                     No prerequisite
                   </span>
                 )}
@@ -768,6 +679,11 @@ export function RoadmapCanvas({
           </div>
         </div>
       </div>
+      {onRegenerate && <footer className="flex shrink-0 justify-center border-t border-border px-4 py-2">
+        <button type="button" onClick={onRegenerate} disabled={regenerating} className={workspaceStyles.outlineAction}>
+          {regenerating ? 'Rebuilding roadmap...' : 'Rebuild roadmap'}
+        </button>
+      </footer>}
     </section>
   )
 }

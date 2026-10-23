@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { workspaceNavigationItems } from '../data/navigationItems'
 
-export function WorkspaceNavigation() {
+export function WorkspaceNavigation({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav aria-label="Workspace navigation" className="mt-6 shrink-0 [@media(max-height:900px)]:mt-3">
       <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted-foreground [@media(max-height:900px)]:mb-1">
@@ -14,6 +14,7 @@ export function WorkspaceNavigation() {
             <NavLink
               to={href}
               end
+              onClick={onNavigate}
               className={({ isActive }) =>
                 `relative flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-base leading-6 transition ${
                   isActive

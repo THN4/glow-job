@@ -1,5 +1,17 @@
 type Size = { width: number; height: number }
 
+// Use the actual canvas dimensions, including sidebar/detail-panel resizing.
+// Short canvases need less gutter so Fit does not unnecessarily shrink nodes.
+export function getResponsivePadding(viewport: Size) {
+  return Math.max(12, Math.min(24, Math.min(viewport.width, viewport.height) * 0.04))
+}
+
+// Fit ordinary roadmaps without enlarging their cards. Very large roadmaps
+// remain scrollable rather than reducing text below a useful reading size.
+export function getDefaultGraphZoom(fitZoom: number) {
+  return Math.max(0.8, Math.min(1, fitZoom))
+}
+
 export function getFitZoom(viewport: Size, graph: Size, padding: number, min: number, max: number) {
   if (viewport.width <= 0 || viewport.height <= 0) return min
   return Math.max(min, Math.min(max,
