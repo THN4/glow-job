@@ -10,6 +10,95 @@ type ApiErrorBody = { error?: { message?: string } }
 
 export type SkillEvidence = RoadmapEvidence & { skillId: number; createdAt: string }
 
+export type RejectionReplanOptions = {
+  applicationId: number
+  role: string
+  company: string
+  rejectionCategory: 'skill-gap'
+  rejectionReason: string
+  reasonSource: 'user_reported'
+  goalCareerProfileId: number
+  matchingMode: 'feedback_mentions' | 'market_gaps' | 'no_mentions'
+  options: {
+    skillId: number
+    name: string
+    gapStatus: 'missing_from_profile' | 'proficiency_gap' | 'covered' | 'not_assessed'
+    priorityRank: number | null
+    requirementType: 'required' | 'preferred' | null
+    source: 'feedback_mention' | 'job_requirement' | 'career_market'
+    alreadyPlanned: boolean
+    completedInRoadmap: boolean
+    inProfile: boolean
+    alreadyCompleted: boolean
+    learningContentAvailable: boolean
+  }[]
+}
+
+export type MarketReplanOptions = {
+  careerProfileId: number
+  careerName: string
+  isDemo: true
+  notice: string
+  marketWindow: { analysisStartDate: string; analysisEndDate: string; analysisDateBasis: string } | null
+  options: {
+    skillId: number
+    name: string
+    gapStatus: 'covered' | 'proficiency_gap' | 'missing_from_profile' | 'not_assessed' | 'market_data_insufficient'
+    priorityRank: number | null
+    importanceTier: string
+    demandCount: number
+    totalJobs: number
+    demandPercentage: number
+    learningContentAvailable: boolean
+    alreadyInAgentContext: boolean
+    alertDetail: string
+  }[]
+}
+
+export type RoadmapHistoryEntry = {
+  roadmapId: number
+  version: number
+  status: 'active' | 'completed' | 'replaced' | 'archived' | 'draft'
+  generationReason: string
+  previousRoadmapId: number | null
+  generatedAt: string
+  replanTrigger: {
+    kind: 'application_rejection'
+    application_id: number
+    job_title: string
+    rejection_category: 'skill-gap'
+    reason_summary: string
+    focus_skill_ids: number[]
+    review_skill_ids: number[]
+    source: 'user_reported_application'
+  } | {
+    kind: 'market_update'
+    focus_skill_ids: number[]
+    review_skill_ids: number[]
+    source: 'demo_market_snapshot'
+    is_demo: true
+    market_window: { analysis_start_date: string; analysis_end_date: string; analysis_date_basis: string }
+  } | null
+}
+
+export async function loadRoadmapHistory(): Promise<RoadmapHistoryEntry[]> {
+  const result = await request<{ roadmaps: RoadmapHistoryEntry[] }>(`/profiles/${profileId()}/roadmaps/history`)
+  return result.roadmaps
+}
+
+export async function loadRoadmapVersion(roadmapId: number): Promise<RoadmapView> {
+  const result = await request<{ roadmap: RoadmapView }>(`/profiles/${profileId()}/roadmaps/${roadmapId}`)
+  return result.roadmap
+}
+
+export async function loadRejectionReplanOptions(applicationId: string): Promise<RejectionReplanOptions> {
+  return request(`/profiles/${profileId()}/applications/${encodeURIComponent(applicationId)}/replan-options`)
+}
+
+export async function loadMarketReplanOptions(): Promise<MarketReplanOptions> {
+  return request(`/profiles/${profileId()}/market-replan-options`)
+}
+
 type SkillEvidenceApi = {
   evidenceId: number
   skillId: number
@@ -148,11 +237,15 @@ export async function loadCurrentRoadmap(signal?: AbortSignal): Promise<RoadmapV
 }
 
 export async function generateRoadmap(onStage: (stage: RoadmapJob['stage']) => void,
-                                      signal?: AbortSignal, force = false): Promise<RoadmapView> {
+                                      signal?: AbortSignal, force = false,
+                                      replan?: { applicationId: number; focusSkillIds: number[] }
+                                        | { marketFocusSkillIds: number[] }): Promise<RoadmapView> {
   const id = profileId()
   const started = await request<RoadmapJob>(`/profiles/${id}/roadmaps`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ force }), signal,
+    body: JSON.stringify(replan && 'applicationId' in replan
+      ? { rejectionApplicationId: replan.applicationId, focusSkillIds: replan.focusSkillIds }
+      : replan ? { marketFocusSkillIds: replan.marketFocusSkillIds } : { force }), signal,
   })
   onStage(started.stage)
   const startedAt = Date.now()

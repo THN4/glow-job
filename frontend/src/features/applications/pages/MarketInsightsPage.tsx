@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getSavedProfileId, getSessionId, loadCareerMatch, loadCareerProfiles } from '../../resume/api'
 import { loadRoadmapGoal } from '../../roadmap/api'
+import { MarketReplanCard } from '../../roadmap/components/MarketReplanCard'
+import { useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
 
 const percent = (value: number | null) => value === null || !Number.isFinite(value) ? 'Unavailable' : `${Math.round(value)}%`
 
@@ -10,6 +12,7 @@ export function MarketInsightsPage() {
   const profileId = getSavedProfileId()
   const sessionId = getSessionId()
   const [selection, setSelection] = useState('')
+  const roadmap = useCurrentRoadmap()
   const goal = useQuery({
     queryKey: ['career-goal', sessionId, profileId],
     queryFn: ({ signal }) => loadRoadmapGoal(signal),
@@ -52,6 +55,7 @@ export function MarketInsightsPage() {
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Market Insights</h1>
         <p className="mt-2 text-sm text-slate-600">Explore skills from collected job postings and compare them with your saved profile.</p>
       </header>
+      {savedGoal && roadmap.data?.roadmapId && <MarketReplanCard />}
       {!profileId ? <p>Save your profile during <Link to="/onboarding" className="text-blue-700 underline">onboarding</Link> to view market insights.</p> : <>
         {data && <>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">

@@ -22,7 +22,7 @@ export function MarketUpdatesCard({
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1">
-            <h2 className="text-xs font-bold text-slate-900">News alerts</h2>
+            <h2 className="text-xs font-bold text-slate-900">{update.title}</h2>
             {isNew && <span className="rounded-full bg-blue-600 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white">New</span>}
           </div>
         </div>

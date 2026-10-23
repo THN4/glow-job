@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { getSavedProfileId } from '../../resume/api'
 import { NodeDetailPanel } from '../components/NodeDetailPanel'
 import { RoadmapCanvas } from '../components/RoadmapCanvas'
 import { RoadmapHeader } from '../components/RoadmapHeader'
-import { generateRoadmap, setRoadmapStep, setRoadmapTask } from '../api'
+import { generateRoadmap, loadRoadmapHistory, loadRoadmapVersion, setRoadmapStep, setRoadmapTask } from '../api'
 import { currentRoadmapKey, useCurrentRoadmap } from '../useCurrentRoadmap'
 import type { RoadmapJob, RoadmapView, StepProgressInput } from '../api-types'
 import { toRoadmapScreen } from '../adapter'
@@ -18,7 +18,16 @@ export function RoadmapPage() {
   const [searchParams] = useSearchParams()
   const requestedNodeKey = searchParams.get('node')
   const queryClient = useQueryClient()
-  const { data: view, isPending: loading, isError: loadFailed, error: loadError } = useCurrentRoadmap()
+  const currentQuery = useCurrentRoadmap()
+  const [viewingRoadmapId, setViewingRoadmapId] = useState<number | null>(null)
+  const historyQuery = useQuery({ queryKey: ['roadmap-history', getSavedProfileId()],
+    queryFn: loadRoadmapHistory, enabled: Boolean(currentQuery.data), retry: false })
+  const historicalQuery = useQuery({ queryKey: ['roadmap-version', getSavedProfileId(), viewingRoadmapId],
+    queryFn: () => loadRoadmapVersion(viewingRoadmapId!), enabled: viewingRoadmapId !== null, retry: false })
+  const view = viewingRoadmapId === null ? currentQuery.data : historicalQuery.data
+  const loading = currentQuery.isPending || (viewingRoadmapId !== null && historicalQuery.isPending)
+  const loadFailed = currentQuery.isError || (viewingRoadmapId !== null && historicalQuery.isError)
+  const loadError = currentQuery.error ?? historicalQuery.error
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(requestedNodeKey)
   const [working, setWorking] = useState(false)
   const [stage, setStage] = useState<RoadmapJob['stage'] | null>(null)
@@ -36,6 +45,7 @@ export function RoadmapPage() {
   function setView(next: RoadmapView) {
     queryClient.setQueryData(currentRoadmapKey(getSavedProfileId()), next)
     void queryClient.invalidateQueries({ queryKey: ['progress-overview'] })
+    void queryClient.invalidateQueries({ queryKey: ['roadmap-history'] })
   }
 
   const screen = useMemo(() => view ? toRoadmapScreen(view) : null, [view])
@@ -56,7 +66,7 @@ export function RoadmapPage() {
   }
 
   async function updateTask(taskId: string, completed: boolean) {
-    if (!view?.roadmapId || working) return
+    if (!view?.roadmapId || viewingRoadmapId !== null || working) return
     setWorking(true)
     setError(null)
     try {
@@ -69,7 +79,7 @@ export function RoadmapPage() {
   }
 
   async function updateStep(stepKey: string, status: StepProgressInput) {
-    if (!view?.roadmapId || working) return
+    if (!view?.roadmapId || viewingRoadmapId !== null || working) return
     setWorking(true)
     setError(null)
     try {
@@ -123,10 +133,28 @@ export function RoadmapPage() {
   return (
     <section aria-label="Career roadmap" className="mx-auto flex min-h-0 min-w-0 w-full max-w-[1500px] flex-1 flex-col">
       {error && <p role="alert" className="mb-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+      {historyQuery.data && historyQuery.data.length > 1 && <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm text-slate-700">
+        <label htmlFor="roadmap-version" className="font-semibold">Roadmap version</label>
+        <select id="roadmap-version" value={viewingRoadmapId ?? ''}
+          onChange={(event) => { setViewingRoadmapId(event.target.value ? Number(event.target.value) : null); setSelectedNodeId(null) }}
+          className="min-h-9 rounded-lg border border-blue-200 bg-white px-2 text-sm">
+          <option value="">Current plan · v{historyQuery.data[0].version}</option>
+          {historyQuery.data.filter((item) => item.roadmapId !== currentQuery.data?.roadmapId)
+            .map((item) => <option key={item.roadmapId} value={item.roadmapId}>Previous plan · v{item.version}</option>)}
+        </select>
+        <span className="text-xs text-slate-500">{viewingRoadmapId !== null
+          ? 'Previous plans are read only; your progress is preserved in their history.'
+          : historyQuery.data[0].replanTrigger?.kind === 'application_rejection'
+            ? `Revised after the saved application for ${historyQuery.data[0].replanTrigger.job_title}.`
+            : historyQuery.data[0].replanTrigger?.kind === 'market_update'
+              ? 'Revised after a demo market update.'
+              : 'The latest plan is active.'}</span>
+      </div>}
       <div className="relative flex min-h-0 min-w-0 flex-1 gap-4 min-[1200px]:flex-row">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <RoadmapHeader summary={screen.summary} showProgress={!selectedNode}
-            onRegenerate={() => createRoadmap(true)} regenerating={working} />
+            onRegenerate={viewingRoadmapId === null ? () => { void createRoadmap(true) } : undefined}
+            regenerating={working} />
           <RoadmapCanvas
             targetRole={screen.summary.targetRole}
             nodes={screen.nodes}
@@ -147,7 +175,9 @@ export function RoadmapPage() {
                 evidenceItems={evidenceByNode[selectedNode.id] ?? []}
                 onAddEvidence={(evidence) => addEvidence(selectedNode, evidence)}
                 onRemoveEvidence={(id) => removeEvidence(selectedNode, id)}
-                connections={screen.dependencies} onTaskChange={updateTask} onStepChange={updateStep} busy={working}
+                connections={screen.dependencies} onTaskChange={updateTask} onStepChange={updateStep}
+                busy={working || viewingRoadmapId !== null}
+                readOnly={viewingRoadmapId !== null}
                 onClose={() => setSelectedNodeId(null)} />
             </div>
           </>

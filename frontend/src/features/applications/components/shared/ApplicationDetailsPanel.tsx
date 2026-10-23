@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { CalendarDays, FileText, Link2, MapPin, Pencil, Save, X } from 'lucide-react'
 import { ApplicationStatusBadge } from './ApplicationStatusBadge'
+import { RejectionReplanCard } from './RejectionReplanCard'
 import type { ApplicationEntry, ApplicationHistoryEntry, ApplicationStatus } from '../../type'
 
 type ApplicationDetailsPanelProps = {
@@ -161,6 +162,9 @@ export function ApplicationDetailsPanel({ application, onUpdate, onEdit }: Appli
               {editingRejection && <button type="button" onClick={saveRejection} disabled={saving} className="mt-2 inline-flex min-h-9 items-center gap-2 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"><Save size={13} aria-hidden="true" />{saving ? 'Saving…' : 'Save rejection details'}</button>}
             </section>
           )}
+
+          {application.status === 'rejected' && application.rejectionCategory === 'skill-gap' &&
+            <RejectionReplanCard key={application.id} applicationId={application.id} />}
 
           <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-[11px] text-slate-500">
             {application.jobUrl && <a href={application.jobUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-blue-700 hover:underline"><Link2 size={12} aria-hidden="true" />Open original job posting</a>}

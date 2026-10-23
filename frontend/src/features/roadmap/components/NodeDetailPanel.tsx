@@ -18,6 +18,7 @@ type NodeDetailPanelProps = {
   onRemoveEvidence: (id: string) => void
   connections: RoadmapConnection[]
   busy: boolean
+  readOnly?: boolean
   onTaskChange: (taskId: string, completed: boolean) => void
   onStepChange: (stepKey: string, status: StepProgressInput) => void
   onClose: () => void
@@ -33,6 +34,7 @@ export function NodeDetailPanel({
   onRemoveEvidence,
   connections,
   busy,
+  readOnly = false,
   onTaskChange,
   onStepChange,
   onClose,
@@ -169,7 +171,7 @@ export function NodeDetailPanel({
           </ul>
         </section>}
 
-        {node.kind !== 'goal' && <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+        {node.kind !== 'goal' && !readOnly && <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
               <Star size={14} className="text-amber-500" aria-hidden="true" /> Evidence

@@ -8,6 +8,8 @@ import { useCurrentRoadmap } from '../../features/roadmap/useCurrentRoadmap'
 import { toRoadmapScreen } from '../../features/roadmap/adapter'
 import { useCareerGoal } from '../../features/roadmap/useCareerGoal'
 import { useSavedProfile } from '../../features/resume/useSavedProfile'
+import { getSavedProfileId, getSessionId } from '../../features/resume/api'
+import { loadMarketReplanOptions } from '../../features/roadmap/api'
 import type {
   CurrentGoalSummary,
   MarketUpdate,
@@ -39,9 +41,19 @@ export function WorkspaceLayout({
     queryFn: applicationsApi.jobPostings,
     staleTime: 5 * 60 * 1000,
   })
+  const profileId = getSavedProfileId()
+  const marketReplanPreview = useQuery({
+    queryKey: ['market-replan-options', getSessionId(), profileId, roadmap.data?.roadmapId],
+    queryFn: loadMarketReplanOptions,
+    enabled: Boolean(profileId && roadmap.data?.roadmapId),
+    staleTime: 5 * 60 * 1000,
+  })
+  const demoSkill = marketReplanPreview.data?.options[0]
   const marketUpdate: MarketUpdate = {
-    title: 'Job Market',
-    summary: jobPostingsQuery.isPending
+    title: 'News alerts',
+    summary: demoSkill && marketReplanPreview.data
+      ? `Demo alert for ${marketReplanPreview.data.careerName}: ${demoSkill.name} appears in ${demoSkill.demandCount} of ${demoSkill.totalJobs} saved job postings. Review it and choose whether to add it to your roadmap.`
+      : jobPostingsQuery.isPending
       ? 'Loading current job openings...'
       : jobPostingsQuery.isError
         ? 'Current job market data is unavailable.'
@@ -69,7 +81,9 @@ export function WorkspaceLayout({
         goal={currentGoal}
         marketUpdate={marketUpdate}
         user={user}
-        onViewInsights={() => navigate('/app/market-insights')}
+        onViewInsights={() => navigate(demoSkill
+          ? `/app/market-insights?skillId=${demoSkill.skillId}`
+          : '/app/market-insights')}
         onHelpClick={onHelpClick}
         onProfileClick={onProfileClick}
       />
