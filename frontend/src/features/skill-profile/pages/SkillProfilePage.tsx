@@ -1,3 +1,5 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
+import { StatusIcon } from '../../../components/StatusIcon'
 import { useMemo, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
@@ -137,32 +139,32 @@ export function SkillProfilePage() {
     }
   }
 
-  if (loading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your skill profile…</p>
+  if (loading) return <p role="status" className={workspaceStyles.loading}>Loading your skill profile…</p>
   if (loadFailed) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
-      <h1 className="text-xl font-bold text-slate-900">Could not load your skill profile</h1>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Could not load your skill profile</h1>
       <p role="alert" className="mt-3 text-sm text-red-700">{error}</p>
-      <button type="button" onClick={() => void roadmapQuery.refetch()} className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+      <button type="button" onClick={() => void roadmapQuery.refetch()} className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button>
     </section>
   )
   if (!profileId) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-blue-100 bg-white p-8 text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Skill Profile</h1>
-      <p className="mt-3 text-sm text-slate-600">Save your profile and create a roadmap to see your learning progress here.</p>
-      <Link to="/onboarding" className="mt-5 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Start onboarding</Link>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Skill Profile</h1>
+      <p className={workspaceStyles.stateDescription}>Save your profile and create a roadmap to see your learning progress here.</p>
+      <Link to="/onboarding" className={`mt-5 ${workspaceStyles.primaryAction}`}>Start onboarding</Link>
     </section>
   )
   if (!screen) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-blue-100 bg-white p-8 text-center">
-      <h1 className="text-2xl font-bold text-slate-900">Skill Profile</h1>
-      <p className="mt-3 text-sm text-slate-600">Create your roadmap to see database-backed skills, projects, and learning progress here.</p>
-      <Link to="/app/roadmap" className="mt-5 inline-block rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Open Roadmap</Link>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Skill Profile</h1>
+      <p className={workspaceStyles.stateDescription}>Create your roadmap to see database-backed skills, projects, and learning progress here.</p>
+      <Link to="/app/roadmap" className={`mt-5 ${workspaceStyles.primaryAction}`}>Open Roadmap</Link>
     </section>
   )
 
   return (
-    <section aria-label="Skill profile" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4 [@media(max-height:960px)]:gap-3">
-      <SkillProfileHeader targetRole={screen.summary.targetRole} duration={screen.summary.duration} />
+    <section aria-label="Skill profile" className="mx-auto flex min-h-full w-full max-w-[1500px] flex-col gap-5 pb-4">
+      <SkillProfileHeader />
       {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
       {evidenceError && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{evidenceError}</p>}
 
@@ -176,9 +178,9 @@ export function SkillProfilePage() {
         onSelect={selectSkillFilter}
       />
 
-      <section aria-live="polite" aria-label={`${visibleLabel} details`} className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+      <section aria-live="polite" aria-label={`${visibleLabel} details`} className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-slate-800">{visibleLabel}</h2>
+          <h2 className={workspaceStyles.sectionTitle}>{visibleLabel}</h2>
           <span className="text-xs text-slate-500">{visibleSkills} {visibleSkills === 1 ? 'skill' : 'skills'} · {visibleProjects} {visibleProjects === 1 ? 'project' : 'projects'}</span>
         </div>
         {visibleNodes.length ? (
@@ -208,10 +210,10 @@ export function SkillProfilePage() {
                       </Link>
                       <Link to={roadmapNodePath(node.id)} className="text-sm font-semibold text-slate-900 hover:text-blue-700 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">{node.title}</Link>
                     </div>
-                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${statusStyle[node.status]}`}>{statusLabel[node.status]}</span>
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${statusStyle[node.status]}`}><StatusIcon status={node.status} size={12} />{statusLabel[node.status]}</span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">{node.description}</p>
-                  {node.kind === 'skill' && profileLabel && <p className="mt-1 text-[11px] font-medium text-blue-700">Profile level: {profileLabel}</p>}
+                  {node.kind === 'skill' && profileLabel && <p className="mt-1 text-xs font-medium text-blue-700">Profile level: {profileLabel}</p>}
 
                   {isExpandableSkill && expanded && (
                     <div id={`checklist-${node.id}`} data-skill-checklist className="mt-3 grid gap-4 md:grid-cols-[1fr_0.8fr]">
@@ -228,16 +230,16 @@ export function SkillProfilePage() {
                         {node.skillId && (
                           <div className="mt-4 border-t border-slate-100 pt-3" data-skill-evidence>
                             <div className="flex items-center justify-between gap-2">
-                              <p className="text-[11px] font-semibold text-slate-600">Evidence</p>
-                              {evidenceLoading && <span className="text-[10px] text-slate-400">Loading…</span>}
+                              <p className="text-xs font-semibold text-slate-600">Evidence</p>
+                              {evidenceLoading && <span className="text-xs text-slate-400">Loading…</span>}
                             </div>
                             <ul className="mt-2 space-y-2">
                               {evidence.filter((item) => item.skillId === node.skillId).map((item) => (
                                 <li key={item.id} className="flex items-start gap-2 rounded-md bg-slate-50 p-2">
                                   <div className="min-w-0 flex-1">
                                     <p className="text-xs font-semibold text-slate-800">{item.url ? <a href={item.url} target="_blank" rel="noreferrer" className="text-blue-700 hover:underline">{item.title}</a> : item.title}</p>
-                                    <p className="text-[10px] text-slate-500">{item.type}</p>
-                                    {item.notes && <p className="mt-1 whitespace-pre-wrap text-[11px] text-slate-600">{item.notes}</p>}
+                                    <p className="text-xs text-slate-500">{item.type}</p>
+                                    {item.notes && <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">{item.notes}</p>}
                                     {item.photo && <img src={item.photo} alt={`${item.title} evidence`} className="mt-2 max-h-28 rounded object-contain" />}
                                   </div>
                                   <button type="button" disabled={deletingEvidenceId === item.id} onClick={() => void removeEvidence(item.id)} aria-label={`Delete ${item.title} evidence`}
@@ -254,7 +256,7 @@ export function SkillProfilePage() {
                         )}
                       </div>
                       <div className="border-t border-slate-100 pt-3 md:border-l md:border-t-0 md:pl-4 md:pt-0">
-                        <p className="text-[11px] font-semibold text-slate-500">Related project</p>
+                        <p className="text-xs font-semibold text-slate-500">Related project</p>
                         {relatedProject ? (
                           <Link to={roadmapNodePath(relatedProject.id)} className="mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-blue-700 hover:underline">
                             <RoadmapNodeIcon node={relatedProject} size={16} />{relatedProject.title}

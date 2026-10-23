@@ -1,8 +1,12 @@
+import { workspaceStyles } from '../../workspace/workspaceStyles'
+import { StatCard, StatGrid } from '../../workspace/components/StatCard'
+import { BriefcaseBusiness, Layers3, Target } from 'lucide-react'
 import { useState } from 'react'
+import { WorkspacePageHeader } from '../../workspace/components/WorkspacePageHeader'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { getSavedProfileId, getSessionId, loadCareerMatch, loadCareerProfiles } from '../../resume/api'
-import { loadRoadmapGoal } from '../../roadmap/api'
+import { useCareerGoal } from '../../roadmap/useCareerGoal'
 
 const percent = (value: number | null) => value === null || !Number.isFinite(value) ? 'Unavailable' : `${Math.round(value)}%`
 
@@ -10,11 +14,7 @@ export function MarketInsightsPage() {
   const profileId = getSavedProfileId()
   const sessionId = getSessionId()
   const [selection, setSelection] = useState('')
-  const goal = useQuery({
-    queryKey: ['career-goal', sessionId, profileId],
-    queryFn: ({ signal }) => loadRoadmapGoal(signal),
-    enabled: Boolean(profileId),
-  })
+  const goal = useCareerGoal()
   const careers = useQuery({ queryKey: ['market-career-profiles'], queryFn: loadCareerProfiles, enabled: Boolean(profileId) })
   const savedGoal = goal.data
   const careerProfileId = selection ? Number(selection) : savedGoal?.careerProfileId
@@ -23,8 +23,6 @@ export function MarketInsightsPage() {
     queryFn: () => loadCareerMatch(profileId!, careerProfileId!),
     enabled: Boolean(profileId && careerProfileId),
   })
-  const selectedCareer = careers.data?.find((career) => career.careerProfileId === careerProfileId)
-  const targetRole = selectedCareer?.profileName ?? (careerProfileId === savedGoal?.careerProfileId ? savedGoal?.targetRoleTitle : null)
   const data = match.data
   const skills = [...(data?.skills ?? [])].sort((a, b) => (b.demandPercentage ?? 0) - (a.demandPercentage ?? 0))
 
@@ -32,7 +30,7 @@ export function MarketInsightsPage() {
         <div className="mt-6 border-b border-slate-100 pb-6">
           <label className="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-700">
             Career profile
-            <select value={careerProfileId ?? ''} onChange={(event) => setSelection(event.target.value)} className="min-h-10 max-w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+            <select value={careerProfileId ?? ''} onChange={(event) => setSelection(event.target.value)} className={workspaceStyles.filter}>
               <option value="" disabled>Select a career profile</option>
               {savedGoal && !careers.data?.some((career) => career.careerProfileId === savedGoal.careerProfileId) && <option value={savedGoal.careerProfileId}>{savedGoal.targetRoleTitle}</option>}
               {careers.data?.map((career) => <option key={career.careerProfileId} value={career.careerProfileId}>{career.profileName}</option>)}
@@ -47,11 +45,10 @@ export function MarketInsightsPage() {
 
   return (
     <section aria-label="Market insights" className="mx-auto flex w-full max-w-[1500px] flex-col gap-5 pb-4">
-      <header>
-        {targetRole && <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{targetRole}</p>}
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Market Insights</h1>
-        <p className="mt-2 text-sm text-slate-600">Explore skills from collected job postings and compare them with your saved profile.</p>
-      </header>
+      <WorkspacePageHeader
+        title="Market Insights"
+        description="Explore skills from collected job postings and compare them with your saved profile."
+      />
       {!profileId ? <p>Save your profile during <Link to="/onboarding" className="text-blue-700 underline">onboarding</Link> to view market insights.</p> : <>
         {data && <>
           <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
@@ -59,20 +56,16 @@ export function MarketInsightsPage() {
             <p className="mt-1">{data.marketSample.lastUpdated ? `Last updated: ${new Date(data.marketSample.lastUpdated).toLocaleString()}` : 'Last update unavailable.'}</p>
             {data.warnings.length > 0 && <ul className="mt-2 list-inside list-disc">{data.warnings.map((warning, index) => <li key={index}>{warning}</li>)}</ul>}
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <StatGrid columns={3} label="Market statistics">
             {[
-              { label: 'Job postings', value: data.marketSample.totalJobs, detail: 'Collected for the selected career profile' },
-              { label: 'Skills analysed', value: skills.length, detail: 'Skills returned by the market comparison' },
-              { label: 'Core skill match', value: percent(data.scores.coreSkillMatchPct), detail: `${data.skillSummary.coreCovered} of ${data.skillSummary.coreConsidered} core skills covered in your profile` },
-            ].map(({ label, value, detail }) => <section key={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold text-slate-600">{label}</p>
-              <p className="mt-2 text-3xl font-bold text-slate-900">{value}</p>
-              <p className="mt-1 text-xs text-slate-500">{detail}</p>
-            </section>)}
-          </div>
+              { icon: BriefcaseBusiness, label: 'Job postings', value: data.marketSample.totalJobs, detail: 'Collected for the selected career profile' },
+              { icon: Layers3, label: 'Skills analysed', value: skills.length, detail: 'Skills returned by the market comparison' },
+              { icon: Target, label: 'Core skill match', value: percent(data.scores.coreSkillMatchPct), detail: `${data.skillSummary.coreCovered} of ${data.skillSummary.coreConsidered} core skills covered in your profile` },
+            ].map(({ label, value, detail, icon }) => <StatCard key={label} label={label} value={value} detail={detail} icon={icon} />)}
+          </StatGrid>
         </>}
-          <section className="my-3 rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8 lg:p-10">
-            <h2 className="text-base font-bold text-slate-900">Skill frequency in job postings</h2>
+          <section className="my-3 rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
+            <h2 className={workspaceStyles.sectionTitle}>Skill frequency in job postings</h2>
             <p className="mt-1 text-xs text-slate-500">Top 10 skills by share of collected postings for the selected career profile.</p>
             {careerProfileSelector}
             {!careerProfileId && <p className="mt-4 text-sm text-slate-600">Choose a career profile to view its market data.</p>}

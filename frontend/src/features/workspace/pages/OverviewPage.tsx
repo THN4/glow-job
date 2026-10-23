@@ -1,3 +1,7 @@
+import { workspaceStyles } from '../workspaceStyles'
+import { learningStatusIcons } from '../../../components/statusIcons'
+import { StatusIcon } from '../../../components/StatusIcon'
+import { StatCard, StatGrid } from '../components/StatCard'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getSavedProfileId, loadSavedCareerMatch } from '../../resume/api'
@@ -7,9 +11,7 @@ import { toRoadmapScreen } from '../../roadmap/adapter'
 import type { RoadmapNode, RoadmapView } from '../../roadmap/api-types'
 import {
   ArrowRight,
-  Check,
   CircleCheck,
-  CircleDot,
   Clock3,
   Layers3,
   Star,
@@ -41,26 +43,10 @@ function CareerMatchMetricCard({ metric, value }: {
   metric: (typeof careerMatchMetrics)[number]
   value: number | null
 }) {
-  const Icon = metric.icon
-  const color = {
-    blue: 'text-blue-600', green: 'text-emerald-600', amber: 'text-amber-500', purple: 'text-violet-500',
-  }[metric.tone]
   const formattedValue = value === null ? '—' : `${Number.isInteger(value) ? value.toFixed(0) : value.toFixed(1)}%`
-
-  return (
-    <article className="flex min-h-[120px] flex-col rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-sm sm:min-h-[132px] sm:py-4">
-      <Icon className={`size-5 ${color}`} aria-hidden="true" />
-      <p className={`mt-2 text-2xl font-bold leading-none tracking-tight ${color}`}>{formattedValue}</p>
-      <p className="mt-1 text-xs font-medium text-slate-700">{metric.label}</p>
-      <p className="mt-0.5 text-[11px] text-slate-500">{metric.detail}</p>
-      <div role="progressbar" aria-label={metric.label} aria-valuemin={0} aria-valuemax={100}
-        aria-valuenow={value ?? undefined} aria-valuetext={`${formattedValue} · ${metric.detail}`}
-        className="mt-auto h-1.5 overflow-hidden rounded-full bg-blue-100">
-        <div className={`h-full rounded-full transition-all ${metric.tone === 'blue' ? 'bg-blue-600' : metric.tone === 'green' ? 'bg-emerald-500' : metric.tone === 'amber' ? 'bg-amber-500' : 'bg-violet-500'}`}
-          style={{ width: `${value ?? 0}%` }} />
-      </div>
-    </article>
-  )
+  const tone = { blue: 'primary', green: 'success', amber: 'warning', purple: 'info' } as const
+  return <StatCard label={metric.label} value={formattedValue} icon={metric.icon} tone={tone[metric.tone]}
+    detail={metric.detail} progress={value} />
 }
 
 function RoadmapMetricCard({ metric }: { metric: {
@@ -70,25 +56,8 @@ function RoadmapMetricCard({ metric }: { metric: {
   tone: 'blue' | 'green' | 'amber' | 'purple'
   progress?: number
 } }) {
-  const Icon = metric.icon
-  const color = {
-    blue: 'text-blue-600', green: 'text-emerald-600', amber: 'text-amber-500', purple: 'text-violet-500',
-  }[metric.tone]
-
-  return (
-    <article className="flex min-h-[104px] flex-col rounded-xl border border-blue-100 bg-white px-4 py-3 shadow-sm sm:min-h-[116px] sm:py-4">
-      <Icon className={`size-5 ${color}`} aria-hidden="true" />
-      <p className={`mt-2 text-2xl font-bold leading-none tracking-tight ${color}`}>{metric.value}</p>
-      <p className="mt-1 text-xs text-slate-500">{metric.label}</p>
-      {metric.progress !== undefined && (
-        <div role="progressbar" aria-label="Roadmap progress" aria-valuemin={0} aria-valuemax={100}
-          aria-valuenow={metric.progress} aria-valuetext={`${metric.progress}% complete`}
-          className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100">
-          <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${metric.progress}%` }} />
-        </div>
-      )}
-    </article>
-  )
+  const tone = { blue: 'primary', green: 'success', amber: 'warning', purple: 'info' } as const
+  return <StatCard label={metric.label} value={metric.value} icon={metric.icon} tone={tone[metric.tone]} progress={metric.progress} />
 }
 
 function CareerMatchSection({ careerMatch, loading, error }: {
@@ -104,17 +73,17 @@ function CareerMatchSection({ careerMatch, loading, error }: {
     <section aria-labelledby="career-match-title" className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 id="career-match-title" className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Career Match</h2>
+          <h2 id="career-match-title" className={workspaceStyles.sectionTitle}>Career Match</h2>
           <p className="mt-1 text-xs text-slate-500 sm:text-sm">Scores use separate market skill sets and describe profile coverage, not job readiness.</p>
         </div>
         {match && <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${match.status === 'ready' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
           {match.status === 'ready' ? 'Market data ready' : 'Estimated · review notes'}
         </span>}
       </div>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+      <StatGrid label="Career match statistics">
         {careerMatchMetrics.map((metric) => <CareerMatchMetricCard key={metric.label} metric={metric}
           value={scores?.[metric.key] ?? null} />)}
-      </div>
+      </StatGrid>
       {loading && <p role="status" className="text-xs text-slate-500">Loading your career match…</p>}
       {!loading && error && <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{error}</p>}
       {!loading && !error && !careerMatch && <p className="rounded-lg border border-blue-100 bg-white/70 px-4 py-3 text-xs text-slate-600">
@@ -142,10 +111,10 @@ function RoadmapMilestones({ view }: { view: RoadmapView }) {
   }, [view.nodes])
 
   return (
-    <article className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+    <article className="rounded-xl border border-border bg-card p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Career Roadmap</h2>
+          <h2 className={workspaceStyles.sectionTitle}>Career Roadmap</h2>
           <p className="mt-1 text-xs text-slate-500">{progressLabel}</p>
         </div>
         <Link to="/app/roadmap" className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 hover:text-blue-800 sm:text-sm">
@@ -163,7 +132,7 @@ function RoadmapMilestones({ view }: { view: RoadmapView }) {
                 <li key={node.key} className="relative flex flex-1 flex-col items-center text-center">
                   {index > 0 && <span aria-hidden="true" className={`absolute right-1/2 top-5 h-px w-full ${complete || current ? 'bg-blue-300' : 'bg-slate-200'}`} />}
                   <span className={`relative z-10 flex size-9 items-center justify-center rounded-full border-2 ${complete ? 'border-blue-500 bg-blue-500 text-white' : current ? 'border-blue-500 bg-blue-600 text-white ring-4 ring-blue-100' : goal ? 'border-amber-500 bg-amber-500 text-white' : 'border-blue-200 bg-slate-50 text-blue-300'}`}>
-                    {complete ? <Check className="size-4" aria-hidden="true" /> : current ? <CircleDot className="size-4" aria-hidden="true" /> : goal ? <Star className="size-4" aria-hidden="true" /> : <span className="size-1.5 rounded-full bg-current" />}
+                    {complete ? <StatusIcon status="completed" size={16} /> : current ? <StatusIcon status="in-progress" size={16} /> : goal ? <Star className="size-4" aria-hidden="true" /> : <StatusIcon status="upcoming" size={16} />}
                   </span>
                   <span className={`mt-2 max-w-28 text-xs ${current ? 'font-semibold text-blue-600' : 'text-slate-500'}`}>{node.title}</span>
                 </li>
@@ -183,16 +152,16 @@ function RoadmapContent({ view }: { view: RoadmapView }) {
   const progress = toRoadmapScreen(view).summary
   const metrics = [
     { label: 'Roadmap Progress', value: `${progress.completion}%`, icon: Target, tone: 'blue' as const, progress: progress.completion },
-    { label: 'Skills Completed', value: `${completedSkills} / ${skills.length}`, icon: CircleCheck, tone: 'green' as const },
+    { label: 'Skills Completed', value: `${completedSkills} / ${skills.length}`, icon: learningStatusIcons.completed, tone: 'green' as const },
     { label: 'Skills to Build', value: String(Math.max(0, skills.length - completedSkills)), icon: Layers3, tone: 'amber' as const },
     { label: 'Weekly Hours', value: formatHours(view.summary.weeklyHours), icon: Clock3, tone: 'purple' as const },
   ]
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
+      <StatGrid label="Roadmap summary statistics">
         {metrics.map((metric) => <RoadmapMetricCard key={metric.label} metric={metric} />)}
-      </div>
+      </StatGrid>
       <article className="relative overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-white via-sky-50 to-blue-100/80 p-4 shadow-sm sm:p-5 lg:p-6">
         <div aria-hidden="true" className="pointer-events-none absolute -bottom-28 -right-20 size-72 rounded-full border-[32px] border-white/45" />
         <div className="relative max-w-4xl">
@@ -259,36 +228,36 @@ export function OverviewPage() {
     : view ? `Target: ${view.summary.timeRemainingLabel} · ${toRoadmapScreen(view).summary.statusText}`
       : 'Career match scores are based on your confirmed profile and target role.'
 
-  if (hasProfile && isLoading) return <p role="status" className="p-6 text-sm text-slate-600">Loading your overview...</p>
+  if (hasProfile && isLoading) return <p role="status" className={workspaceStyles.loading}>Loading your overview...</p>
   if (error) return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-red-100 bg-white p-8 text-center">
-      <h1 className="text-xl font-bold text-slate-900">Could not load your overview</h1>
+    <section className={workspaceStyles.statePanel}>
+      <h1 className={workspaceStyles.pageTitle}>Could not load your overview</h1>
       <p role="alert" className="mt-3 text-sm text-red-700">{error.message}</p>
       <button type="button" onClick={() => void refetch()}
-        className="mt-5 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">Try again</button>
+        className={`mt-5 ${workspaceStyles.primaryAction}`}>Try again</button>
     </section>
   )
 
   return (
-    <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-6 sm:space-y-6">
-      <header className="relative overflow-hidden py-1 sm:py-2">
+    <section aria-labelledby="overview-title" className="mx-auto w-full max-w-[1500px] space-y-5 pb-4">
+      <header className="relative overflow-hidden">
         <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-28 size-64 rounded-full bg-blue-100/45 sm:-right-2 sm:-top-40 sm:size-80" />
-        <p className="relative text-[11px] font-semibold uppercase tracking-wide text-blue-600 sm:text-xs">
+        <p className={`relative ${workspaceStyles.pageContext}`}>
           {new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date())}
         </p>
-        <h1 id="overview-title" className="relative mt-1 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl lg:text-3xl">{targetRole}</h1>
-        <p className="relative mt-1 text-sm text-slate-500 sm:text-base">{goalSubtitle}</p>
+        <h1 id="overview-title" className={`relative ${workspaceStyles.pageTitle}`}>{targetRole}</h1>
+        <p className={`relative ${workspaceStyles.pageDescription}`}>{goalSubtitle}</p>
       </header>
       <CareerMatchSection careerMatch={careerMatch} loading={loadingMatch} error={matchError} />
       {view ? <RoadmapContent view={view} /> : (
         <section className="rounded-2xl border border-blue-100 bg-white p-8 text-center">
-          <h2 className="text-xl font-bold text-slate-900">Your roadmap is not ready yet</h2>
-          <p className="mt-3 text-sm text-slate-600">
+          <h2 className={workspaceStyles.sectionTitle}>Your roadmap is not ready yet</h2>
+          <p className={workspaceStyles.stateDescription}>
             {hasProfile ? 'Create a roadmap to see your learning progress and next action here.'
               : 'Save your profile and career goal to see a personalized overview.'}
           </p>
           <Link to={hasProfile ? '/app/roadmap' : '/onboarding'}
-            className="mt-5 inline-flex rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white">
+            className={`mt-5 ${workspaceStyles.primaryAction}`}>
             {hasProfile ? 'Open roadmap' : 'Start onboarding'}
           </Link>
         </section>

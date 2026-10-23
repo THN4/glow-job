@@ -1,4 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
+import { workspaceStyles } from '../../../workspace/workspaceStyles'
+import { WorkspacePageHeader } from '../../../workspace/components/WorkspacePageHeader'
 import type { ApplicationTabKey } from '../../type'
 
 type ApplicationsHeaderProps = {
@@ -10,11 +12,9 @@ type ApplicationsHeaderProps = {
   titleOverride?: string
   subtitleOverride?: string
   backLabel?: string
-  targetRole: string
-  duration: string
 }
 
-export function ApplicationsHeader({ formOpen = false, detailOpen = false, detailLabel, onBack, activeTab = 'my-applications', titleOverride, subtitleOverride, backLabel, targetRole, duration }: ApplicationsHeaderProps) {
+export function ApplicationsHeader({ formOpen = false, detailOpen = false, detailLabel, onBack, activeTab = 'my-applications', titleOverride, subtitleOverride, backLabel }: ApplicationsHeaderProps) {
   const companiesTab = activeTab === 'companies'
   const currentPageTitle = activeTab === 'my-applications' ? 'Applications' : companiesTab ? 'Companies' : 'Recommendations'
   const currentPageSubtitle = activeTab === 'my-applications'
@@ -24,27 +24,16 @@ export function ApplicationsHeader({ formOpen = false, detailOpen = false, detai
       : 'Find jobs for your skills or explore career paths based on your saved profile.'
   const isRecommendationDetail = activeTab === 'recommendations' && Boolean(titleOverride)
   const backButton = backLabel && !formOpen && (
-    <button type="button" onClick={onBack} className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-semibold text-primary transition hover:bg-accent">
+    <button type="button" onClick={onBack} className={workspaceStyles.outlineAction}>
       <ArrowLeft size={16} aria-hidden="true" /> {backLabel}
     </button>
   )
   return (
-    <header className="flex shrink-0 flex-wrap items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">
-          {targetRole}{duration ? ` · ${duration}` : ''}
-        </p>
-        <h1 className="mt-1 text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl xl:text-[28px]">
-          {isRecommendationDetail ? currentPageTitle : titleOverride ?? currentPageTitle}
-        </h1>
-        {isRecommendationDetail && titleOverride && (
-          <h2 className="mt-3 text-lg font-semibold text-foreground">{titleOverride}</h2>
-        )}
-        <p className="mt-2 text-sm leading-6 text-muted-foreground sm:text-base">
-          {subtitleOverride ?? (detailOpen ? `Your saved record · ${detailLabel}` : currentPageSubtitle)}
-        </p>
-      </div>
-      {backButton}
-    </header>
+    <WorkspacePageHeader
+      title={isRecommendationDetail ? currentPageTitle : titleOverride ?? currentPageTitle}
+      detailTitle={isRecommendationDetail ? titleOverride : undefined}
+      description={subtitleOverride ?? (detailOpen ? `Your saved record · ${detailLabel}` : currentPageSubtitle)}
+      actions={backButton}
+    />
   )
 }

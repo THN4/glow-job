@@ -1,4 +1,6 @@
-import { BookOpen, CheckCircle2, Circle, Clock3 } from 'lucide-react'
+import { learningStatusIcons } from '../../../components/statusIcons'
+import { StatCard, StatGrid } from '../../workspace/components/StatCard'
+import { BookOpen } from 'lucide-react'
 
 type SkillProfileStatsProps = {
   total: number
@@ -14,10 +16,10 @@ type SkillProfileStatsProps = {
 }
 
 const statStyles = [
-  { icon: BookOpen, color: 'text-slate-700' },
-  { icon: CheckCircle2, color: 'text-emerald-600' },
-  { icon: Circle, color: 'text-blue-600' },
-  { icon: Clock3, color: 'text-slate-500' },
+  { icon: BookOpen, tone: 'primary' as const },
+  { icon: learningStatusIcons.completed, tone: 'success' as const },
+  { icon: learningStatusIcons['in-progress'], tone: 'primary' as const },
+  { icon: learningStatusIcons.upcoming, tone: 'muted' as const },
 ]
 
 export function SkillProfileStats({ total, completed, inProgress, upcoming, totalProjects, completedProjects, inProgressProjects, upcomingProjects, selected, onSelect }: SkillProfileStatsProps) {
@@ -29,20 +31,14 @@ export function SkillProfileStats({ total, completed, inProgress, upcoming, tota
   ]
 
   return (
-    <section aria-label="Skill progress summary" className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
-      {stats.map(({ label, value, projects, filter }, index) => {
-        const Icon = statStyles[index].icon
-        return (
-          <button key={label} type="button" aria-pressed={selected === filter} onClick={() => onSelect(filter)} className={`flex min-h-[78px] cursor-pointer items-center gap-3 rounded-xl border bg-white px-3 py-3 text-left shadow-sm transition hover:border-blue-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 sm:px-4 [@media(max-height:960px)]:min-h-[66px] [@media(max-height:960px)]:py-2 ${selected === filter ? 'border-blue-500' : 'border-blue-100'}`}>
-            <Icon size={20} className={statStyles[index].color} aria-hidden="true" />
-            <p className={`min-w-7 text-2xl font-bold leading-none ${statStyles[index].color}`}>{value}</p>
-            <div className="min-w-0">
-              <p className={`mt-1 text-xs ${statStyles[index].color}`}>{label}</p>
-              <p className="mt-0.5 text-[10px] text-slate-500">{projects} {projects === 1 ? 'project' : 'projects'}</p>
-            </div>
-          </button>
-        )
-      })}
-    </section>
+    <StatGrid label="Skill progress summary">
+      {stats.map(({ label, value, projects, filter }, index) => (
+        <StatCard key={label} label={label} value={value}
+          icon={statStyles[index].icon} tone={statStyles[index].tone}
+          detail={`${projects} ${projects === 1 ? 'project' : 'projects'}`}
+          progress={total > 0 ? value / total * 100 : null}
+          selected={selected === filter} onClick={() => onSelect(filter)} />
+      ))}
+    </StatGrid>
   )
 }

@@ -1,3 +1,4 @@
+import { workspaceStyles } from '../../../workspace/workspaceStyles'
 import { BriefcaseBusiness, Info, Layers, MapPin, RefreshCw, SlidersHorizontal, Sparkles, Target } from 'lucide-react'
 import { FilterSelect } from '../shared/FilterSelect'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../../../../components/ui/dialog'
@@ -15,10 +16,10 @@ type Props = {
 export function JobRecommendationsToolbar({ data, filters, isRefreshing, onRefresh, onChange }: Props) {
   const hasFilters = Boolean(filters.location || filters.employmentType || filters.skillId || filters.sort !== 'coverage')
   return <div className="space-y-3">
-    <div className="flex flex-wrap items-center gap-x-5 gap-y-4 rounded-2xl border border-blue-100 bg-gradient-to-br from-sky-50 via-white to-blue-100/60 p-4 shadow-sm">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-4 rounded-xl border border-border bg-gradient-to-br from-sky-50 via-white to-blue-100/60 p-4 shadow-sm">
       <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
         <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-blue-100/70 text-blue-600"><Sparkles className="size-6" aria-hidden="true" /></span>
-        <div><h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Recommended for you</h2>
+        <div><h2 className={workspaceStyles.sectionTitle}>Recommended for you</h2>
           <p className="mt-0.5 text-xs leading-5 text-slate-500">Jobs matched to your confirmed skills and saved career goal.</p></div>
       </div>
       <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700"><Target className="size-4 shrink-0" aria-hidden="true" /><span className="break-words">Career goal: {data.targetRole || 'Not set'}</span></span>
@@ -31,7 +32,7 @@ export function JobRecommendationsToolbar({ data, filters, isRefreshing, onRefre
           <p className="text-sm leading-6 text-slate-600">Location, employment type, and skills narrow your results. The Skills filter looks for that required or preferred skill in the posting. These filters do not add points to the score.</p>
         </DialogContent>
       </Dialog>
-      <button type="button" disabled={isRefreshing} onClick={onRefresh} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-blue-300 bg-white px-4 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:opacity-50"><RefreshCw className={`size-4 ${isRefreshing ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />Refresh matches</button>
+      <button type="button" disabled={isRefreshing} onClick={onRefresh} className={workspaceStyles.outlineAction}><RefreshCw className={`size-4 ${isRefreshing ? 'motion-safe:animate-spin' : ''}`} aria-hidden="true" />Refresh matches</button>
     </div>
     <p role="status" className="text-xs leading-5 text-slate-500">{isRefreshing ? 'Updating matches…' : `Showing ${data.returnedCount} of ${data.filteredCount} matching jobs · ${data.totalMatched} matches from ${data.totalCandidates} catalog postings · ${data.unscoredPostings} postings have no scorable skill data.`}</p>
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">

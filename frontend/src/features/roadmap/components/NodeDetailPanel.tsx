@@ -1,4 +1,5 @@
 import { Check, Lightbulb, Link2, ListChecks, Star, X } from 'lucide-react'
+import { StatusIcon } from '../../../components/StatusIcon'
 import type { StepProgressInput } from '../api-types'
 import { canCompleteNode } from '../progress'
 import type { RoadmapNodeExtra } from '../adapter'
@@ -60,7 +61,7 @@ export function NodeDetailPanel({
           </span>
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-slate-900">{node.title}</h2>
-            <p className="text-xs capitalize text-blue-700">{node.kind.replace('-', ' ')} · {node.subtitle}</p>
+            <p className="flex items-center gap-1 text-xs capitalize text-blue-700"><StatusIcon status={node.status} size={12} className="shrink-0" />{node.kind.replace('-', ' ')} · {node.subtitle}</p>
           </div>
         </div>
         <button type="button" onClick={onClose} aria-label="Close step details"

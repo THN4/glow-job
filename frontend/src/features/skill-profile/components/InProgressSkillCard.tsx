@@ -1,4 +1,5 @@
-import { ArrowRight, CheckCircle2, Compass, Container, Link2 } from 'lucide-react'
+import { StatusIcon } from '../../../components/StatusIcon'
+import { ArrowRight, Container, Link2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { SkillIcon } from '../../../components/SkillIcon'
 import type { SkillChecklistItem, SkillEvidenceSource, SkillProfileSkill } from '../type'
@@ -38,7 +39,7 @@ export function InProgressSkillCard({
           <div>
             <h3 className="text-base font-bold text-slate-900">{skill.title}</h3>
             <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
-              <Compass size={13} aria-hidden="true" /> In progress
+              <StatusIcon status="in-progress" size={13} /> In progress
             </span>
           </div>
         </div>
@@ -81,7 +82,7 @@ export function InProgressSkillCard({
             title={checklistComplete ? 'Mark this skill as completed' : 'Complete the checklist to finish this skill'}
             className="inline-flex min-h-10 items-center justify-center gap-1 rounded-lg border border-blue-100 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-100 disabled:text-slate-400 disabled:hover:bg-white"
           >
-            <CheckCircle2 size={12} aria-hidden="true" />
+            <StatusIcon status="completed" size={12} />
             Mark as completed
           </button>
         </div>
