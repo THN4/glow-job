@@ -33,6 +33,8 @@ _CATALOG: dict[str, tuple[int, bool, str]] = {
     "ROADMAP_CONTEXT_FAILED": (409, False, "The roadmap inputs could not be prepared."),
     "ROADMAP_NOT_FOUND": (404, False, "No roadmap was found."),
     "TASK_NOT_FOUND": (404, False, "The roadmap task was not found."),
+    "ROADMAP_STEP_LOCKED": (409, False, "Complete the connected prerequisite steps first."),
+    "CHECKLIST_INCOMPLETE": (409, False, "Complete every checklist item before confirming this step."),
     "ROADMAP_LIMIT_REACHED": (429, False, "Today's roadmap limit has been reached. Try again tomorrow."),
     "ROADMAP_BUDGET_REACHED": (429, False, "Roadmap generation is paused for the rest of this month."),
     "ROADMAP_UNAVAILABLE": (503, True, "Roadmaps need the shared database."),

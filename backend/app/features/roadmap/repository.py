@@ -342,7 +342,8 @@ class RoadmapRepository:
                 """
                 SELECT s.step_key, p.status::text FROM app.user_roadmap_progress AS p
                 JOIN app.roadmap_steps AS s USING (roadmap_step_id)
-                WHERE p.user_id = %s AND s.roadmap_id = %s AND p.status IN ('skipped', 'in_progress')
+                WHERE p.user_id = %s AND s.roadmap_id = %s
+                  AND p.status IN ('skipped', 'in_progress', 'completed')
                 """,
                 (user_id, row[0]),
             ).fetchall()
@@ -352,6 +353,7 @@ class RoadmapRepository:
             view, completed_tasks={r[0] for r in done},
             skipped_steps={key for key, status in marked if status == "skipped"},
             started_steps={key for key, status in marked if status == "in_progress"},
+            confirmed_steps={key for key, status in marked if status == "completed"},
             today=datetime.now(timezone.utc).date(),
             verified_tasks={r[0] for r in tasks if r[1] and r[2]},
             review_tasks={r[0] for r in tasks if r[3] and not r[1]},
@@ -364,16 +366,20 @@ class RoadmapRepository:
         with self._connect() as connection, connection.transaction():
             row = connection.execute(
                 """
-                SELECT t.task_id, s.roadmap_step_id FROM app.roadmap_tasks AS t
+                SELECT t.task_id, s.roadmap_step_id, p.status::text FROM app.roadmap_tasks AS t
                 JOIN app.roadmap_steps AS s USING (roadmap_step_id)
                 JOIN app.roadmaps AS r USING (roadmap_id)
+                LEFT JOIN app.user_roadmap_progress AS p
+                  ON p.roadmap_step_id = s.roadmap_step_id AND p.user_id = r.user_id
                 WHERE r.roadmap_id = %s AND r.user_id = %s AND s.step_key = %s AND t.task_number = %s
                 """,
                 (roadmap_id, user_id, step_key, int(number)),
             ).fetchone()
             if row is None:
                 return False
-            task_id, step_id = row
+            task_id, step_id, step_status = row
+            if step_status != "in_progress":
+                return False
             # A manual tick or untick replaces any step-check verification of this task.
             connection.execute(
                 """
@@ -435,8 +441,9 @@ class RoadmapRepository:
 
 
     def set_step(self, user_id: int, roadmap_id: int, step_key: str, status: str) -> bool:
-        """Set a whole step: completed ticks every task, not_started clears them, in_progress and
-        skipped only mark the step."""
+        """Start, confirm, or reset a step without silently completing its checklist."""
+        if status not in {"not_started", "in_progress", "completed"}:
+            return False
         with self._connect() as connection, connection.transaction():
             row = connection.execute(
                 """
@@ -449,8 +456,20 @@ class RoadmapRepository:
             if row is None:
                 return False
             step_id = row[0]
-            if status in {"completed", "not_started"}:
-                done = status == "completed"
+            if status == "completed":
+                total, finished = connection.execute(
+                    """
+                    SELECT count(*), count(*) FILTER (WHERE p.status = 'completed')
+                    FROM app.roadmap_tasks AS t
+                    LEFT JOIN app.user_task_progress AS p
+                      ON p.task_id = t.task_id AND p.user_id = %s
+                    WHERE t.roadmap_step_id = %s
+                    """,
+                    (user_id, step_id),
+                ).fetchone()
+                if not total or total != finished:
+                    return False
+            if status == "not_started":
                 connection.execute(
                     """
                     INSERT INTO app.user_task_progress (user_id, task_id, status, completed_at, updated_at)
@@ -459,7 +478,7 @@ class RoadmapRepository:
                     ON CONFLICT (user_id, task_id) DO UPDATE SET
                         status = EXCLUDED.status, completed_at = EXCLUDED.completed_at, updated_at = now()
                     """,
-                    (user_id, status, done, step_id),
+                    (user_id, status, False, step_id),
                 )
             connection.execute(
                 """
@@ -490,22 +509,24 @@ def _recompute_step(connection: Any, user_id: int, step_id: int) -> None:
         """,
         (user_id, step_id),
     ).fetchone()
-    status = "completed" if total and finished == total else "in_progress" if finished else "not_started"
+    status = "in_progress" if finished else "not_started"
     connection.execute(
         """
         INSERT INTO app.user_roadmap_progress (user_id, roadmap_step_id, status, progress_percentage,
                                                started_at, completed_at, updated_at)
         VALUES (%s, %s, %s, %s, CASE WHEN %s::int > 0 THEN now() END,
-                CASE WHEN %s::text = 'completed' THEN now() END, now())
+                NULL, now())
         ON CONFLICT (user_id, roadmap_step_id) DO UPDATE SET
             status = CASE WHEN EXCLUDED.status = 'not_started'
                                AND app.user_roadmap_progress.started_at IS NOT NULL
                           THEN 'in_progress'::app.progress_status ELSE EXCLUDED.status END,
             progress_percentage = EXCLUDED.progress_percentage,
             started_at = coalesce(app.user_roadmap_progress.started_at, EXCLUDED.started_at),
-            completed_at = EXCLUDED.completed_at, updated_at = now()
+            completed_at = CASE WHEN app.user_roadmap_progress.status = 'completed'
+                                 THEN app.user_roadmap_progress.completed_at ELSE NULL END,
+            updated_at = now()
         """,
-        (user_id, step_id, status, round(100 * finished / total, 2) if total else 0, finished, status),
+        (user_id, step_id, status, round(100 * finished / total, 2) if total else 0, finished),
     )
 
 
