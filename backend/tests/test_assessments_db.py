@@ -143,6 +143,10 @@ async def test_kept_level_survives_profile_save_and_reaches_agent_context(db):
         r = await client.post(f"{base}/quick", json={"skillId": 85, "level": "beginner", "answer": "I can run containers"})
         assert r.status_code == 201
 
+        # A later self-rating is retained in history without replacing quiz evidence.
+        r = await client.post(f"{base}/quick", json={"skillId": 103, "level": "beginner", "answer": "Just starting"})
+        assert r.json()["profileLevel"] == {"skillId": 103, "level": "advanced", "basis": "assessed"}
+
     def skill_rows():
         with db.connect() as c:
             return {r[0]: r[1:] for r in c.execute(

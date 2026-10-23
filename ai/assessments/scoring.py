@@ -1,8 +1,9 @@
 """Scoring rules for step checks and level checks. Pure functions; no database, no model calls.
 
-Level check ("staircase-v1"): start at the level the self-check suggests, ask three questions at
+Level check ("staircase-v2"): start at the level the self-check suggests, ask three questions at
 that level, pass with two or more correct, then move up after a pass or down after a failure,
-never testing a level twice. The result is the highest level passed. Step check: a study task
+never testing a level twice. The result is the highest level passed, or no confirmed level when
+all tested levels fail. Confidence is capped at medium. Step check: a study task
 is verified when every question about it is answered correctly.
 """
 
@@ -13,7 +14,7 @@ from dataclasses import dataclass
 from typing import Iterable, Sequence
 
 LEVELS = ("beginner", "intermediate", "advanced")
-SCORING_VERSION = "staircase-v1"
+SCORING_VERSION = "staircase-v2"
 QUESTIONS_PER_LEVEL = 3
 PASS_MARK = 2
 MAX_QUESTIONS = QUESTIONS_PER_LEVEL * len(LEVELS)
@@ -53,7 +54,7 @@ def advance(tested: dict[str, bool], level: int, correct: int) -> tuple[dict[str
 
 @dataclass(frozen=True)
 class LevelOutcome:
-    level: str
+    level: str | None
     confidence: str  # high | medium | low
     method: str  # quiz | self_check
     note: str
@@ -66,15 +67,12 @@ def level_outcome(tested: dict[str, bool], correct_by_level: dict[str, int], sel
                             "Based on your self-check only. There are no reviewed questions for this skill yet.")
     passed = [level for level in LEVELS if tested.get(level) is True]
     if not passed:
-        return LevelOutcome("beginner", "medium", "quiz",
-                            "Basics not confirmed yet. Start with the first steps of your roadmap.")
+        return LevelOutcome(None, "low", "quiz",
+                            "Foundations not yet confirmed. Review the first steps of your roadmap and try again.")
     top = passed[-1]
-    index = LEVELS.index(top)
-    next_failed = index == len(LEVELS) - 1 or tested.get(LEVELS[index + 1]) is False
-    confidence = "high" if correct_by_level.get(top, 0) == QUESTIONS_PER_LEVEL and next_failed else "medium"
-    if abs(index - self_level) > 1:
-        confidence = "medium"
-    return LevelOutcome(top, confidence, "quiz", "")
+    # Three questions per level do not establish high confidence in overall proficiency.
+    confidence = "medium"
+    return LevelOutcome(top, confidence, "quiz", "Short knowledge check; practical ability has not been assessed.")
 
 
 def task_verdicts(answers: Iterable[tuple[str, bool]]) -> dict[str, bool]:
@@ -105,7 +103,7 @@ def pick_step_items(tasks: Sequence[tuple[str, Sequence[int]]], items_by_chunk: 
     used: set[int] = set()
     picked: list[tuple[str, int]] = []
     for task_id, chunk_ids in tasks:
-        pool = [i for c in chunk_ids for i in items_by_chunk.get(c, ()) if i not in used]
+        pool = list(dict.fromkeys(i for c in chunk_ids for i in items_by_chunk.get(c, ()) if i not in used))
         for item_id in pick_level_items(pool, seen, rng, STEP_QUESTIONS_PER_TASK):
             used.add(item_id)
             picked.append((task_id, item_id))

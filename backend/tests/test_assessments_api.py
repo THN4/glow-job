@@ -100,11 +100,19 @@ class FakeRepo:
         self.rows[aid]["decided_at"] = datetime.now(timezone.utc)
         row = self.rows[aid]
         if apply_level and decision == "accepted":
-            self.profile[row["skill_id"]] = {"level": row["result_level"],
-                                             "basis": "assessed" if row["method"] == "quiz" else "self_reported"}
+            kept = [r for r in self.rows.values() if r["skill_id"] == row["skill_id"]
+                    and r["decision"] == "accepted" and r["result_level"] is not None]
+            if kept:
+                best = max(kept, key=lambda r: (r["method"] == "quiz", r["decided_at"], r["assessment_id"]))
+                self.profile[row["skill_id"]] = {"level": best["result_level"],
+                                                "basis": "assessed" if best["method"] == "quiz" else "self_reported"}
 
     def roadmap_step(self, user_id, roadmap_id, step_key):
         return None
+
+    def profile_level(self, user_id, skill_id):
+        value = self.profile.get(skill_id)
+        return {"skillId": skill_id, **value} if value else None
 
     def apply_step(self, *args):
         self.applied_steps.append(args)
@@ -171,6 +179,39 @@ AIRFLOW_TASKS = [{"taskId": "airflow-intro", "label": "Study: Build your first w
                  {"taskId": "airflow-operators", "label": "Study: Understand operators", "chunkIds": [8]}]
 
 
+async def test_failed_level_check_cannot_overwrite_profile():
+    client, repo = make()
+    before = copy.deepcopy(repo.profile)
+    async with client:
+        start = (await client.post(f"{BASE}/level-checks", json={"skillId": 103})).json()
+        aid = start["assessmentId"]
+        body = (await client.post(f"{BASE}/{aid}/self-check", json={
+            "answers": {str(s["id"]): "yes" for s in start["statements"]}})).json()
+        while "question" in body:
+            item_id = body["question"]["itemId"]
+            body = (await client.post(f"{BASE}/{aid}/answers", json={
+                "itemId": item_id, "choice": (repo.items[item_id]["answer_index"] + 1) % 4})).json()
+        assert body["result"]["level"] is None
+        assert body["result"]["confidence"] == "low"
+        assert (await client.post(f"{BASE}/{aid}/decision", json={"decision": "accepted"})).status_code == 409
+        assert repo.profile == before
+        assert (await client.post(f"{BASE}/{aid}/decision", json={"decision": "declined"})).status_code == 200
+
+
+async def test_step_check_reports_tasks_without_questions():
+    client, repo = make()
+    omitted = {"taskId": "missing", "label": "Study: Missing source", "chunkIds": [999]}
+    async with client:
+        start = (await client.post(f"{BASE}/step-checks", json={
+            "stepKey": "airflow", "skillId": 103, "tasks": [*AIRFLOW_TASKS, omitted]})).json()
+        answers = [{"itemId": q["itemId"], "choice": repo.items[q["itemId"]]["answer_index"]}
+                   for q in start["questions"]]
+        result = (await client.post(f"{BASE}/{start['assessmentId']}/finish", json={"answers": answers})).json()
+        assert result["unassessedTasks"] == [{"taskId": "missing", "label": omitted["label"]}]
+        applied = (await client.post(f"{BASE}/{start['assessmentId']}/apply", json={"apply": True})).json()
+        assert "missing" not in applied["verifiedTaskIds"] + applied["reviewTaskIds"]
+
+
 async def test_step_check_hides_key_then_verifies_tasks():
     client, repo = make()
     async with client:
@@ -233,7 +274,7 @@ async def test_level_check_adapts_and_keeps_result():
                 result = body["result"]
                 break
             question = body["question"]
-        assert result["level"] == "intermediate" and result["confidence"] == "high" and result["method"] == "quiz"
+        assert result["level"] == "intermediate" and result["confidence"] == "medium" and result["method"] == "quiz"
         assert [s["status"] for s in result["ladder"]] == ["not_tested", "passed", "not_passed"]
         assert result["review"] and all("quote" in r for r in result["review"])
 
@@ -242,6 +283,9 @@ async def test_level_check_adapts_and_keeps_result():
         page = (await client.get(BASE)).json()
         airflow = next(x for x in page["levelChecks"] if x["skillId"] == 103)
         assert airflow["level"] == "intermediate" and airflow["reason"] == "Level checked by quiz"
+        rating = await client.post(f"{BASE}/quick", json={
+            "skillId": 103, "level": "beginner", "answer": "Just starting"})
+        assert rating.json()["profileLevel"] == {"skillId": 103, "level": "intermediate", "basis": "assessed"}
         again = await client.post(f"{BASE}/{start['assessmentId']}/decision", json={"decision": "declined"})
         assert again.status_code == 409
 
