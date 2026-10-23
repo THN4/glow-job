@@ -115,3 +115,4 @@ backend data.
 - Pulling the `glow-job` repository itself follows the normal team workflow;
   after switching or pulling its branch, run the initialization command above
   if Git reports that the submodule is not initialized.
+*
