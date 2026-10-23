@@ -346,3 +346,26 @@ async def test_level_check_without_quiz_asks_for_background_drafts():
         assert start["hasQuiz"] is False and repo.generator.scheduled == [85]
         await client.post(f"{BASE}/level-checks", json={"skillId": 103})
         assert repo.generator.scheduled == [85]  # Airflow has a full quiz
+
+
+async def test_missing_self_check_statements_do_not_create_an_empty_assessment():
+    client, repo = make(generator=True)
+    repo.statements_data = []
+    async with client:
+        response = await client.post(f"{BASE}/level-checks", json={"skillId": 85})
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "SELF_CHECK_NOT_READY"
+        assert repo.rows == {}
+        assert repo.generator.scheduled == []
+
+
+async def test_legacy_empty_self_check_requires_restarting_after_setup():
+    client, repo = make()
+    async with client:
+        start = (await client.post(f"{BASE}/level-checks", json={"skillId": 85})).json()
+        aid = start["assessmentId"]
+        repo.rows[aid]["state"]["statements"] = {}
+        response = await client.post(f"{BASE}/{aid}/self-check", json={"answers": {"1": "yes"}})
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "SELF_CHECK_NOT_READY"
+        assert repo.rows[aid]["status"] == "in_progress"

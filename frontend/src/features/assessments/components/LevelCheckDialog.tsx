@@ -37,7 +37,15 @@ export function LevelCheckDialog({ onClose, onDecision, skillId, skillName, entr
   useEffect(() => {
     let cancelled = false
     assessmentsApi.startLevelCheck(skillId, entryPoint)
-      .then((start) => { if (!cancelled) setPhase({ kind: 'self', start }) })
+      .then((start) => {
+        if (cancelled) return
+        if (!start.statements.length) {
+          setPhase({ kind: 'error', message: 'Self-check statements are not available yet. Please try again after the assessment question bank has been loaded.' })
+          return
+        }
+        setSelfAnswers({})
+        setPhase({ kind: 'self', start })
+      })
       .catch((error: Error) => { if (!cancelled) setPhase({ kind: 'error', message: error.message }) })
     return () => { cancelled = true }
   }, [skillId, entryPoint])
@@ -88,6 +96,7 @@ export function LevelCheckDialog({ onClose, onDecision, skillId, skillName, entr
         {phase.kind === 'self' && (
           <form className="space-y-2" onSubmit={(event) => {
             event.preventDefault()
+            if (!phase.start.statements.length || !phase.start.statements.every((statement) => selfAnswers[statement.id])) return
             void run(() => assessmentsApi.submitSelfCheck(phase.start.assessmentId, selfAnswers), phase.start)
           }}>
             <p className="text-xs text-slate-600">How much of this can you do today?</p>
@@ -108,7 +117,7 @@ export function LevelCheckDialog({ onClose, onDecision, skillId, skillName, entr
               </fieldset>
             ))}
             <div className="flex justify-end">
-              <button type="submit" disabled={busy || Object.keys(selfAnswers).length < phase.start.statements.length}
+              <button type="submit" disabled={busy || !phase.start.statements.length || !phase.start.statements.every((statement) => selfAnswers[statement.id])}
                 className="min-h-9 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white hover:bg-blue-700 disabled:bg-slate-400">
                 {phase.start.hasQuiz ? 'Continue to questions' : 'See my result'}
               </button>

@@ -153,6 +153,8 @@ class AssessmentService:
         if name is None:
             raise AppError("SKILL_NOT_FOUND")
         statements = await self._run(self.repo.statements, skill_id)
+        if not statements:
+            raise AppError("SELF_CHECK_NOT_READY")
         levels = await self._run(self.repo.level_item_ids, skill_id)
         quiz = has_full_quiz({level: len(ids) for level, ids in levels.items()})
         if not quiz and self.generator is not None:
@@ -174,6 +176,8 @@ class AssessmentService:
         if record["status"] != "in_progress" or state.get("stage") != "self_check":
             raise AppError("ASSESSMENT_STATE_INVALID", "The self-check was already answered.")
         expected = state["statements"]
+        if not expected:
+            raise AppError("SELF_CHECK_NOT_READY")
         if set(answers) != set(expected) or any(a not in SELF_CHECK_ANSWERS for a in answers.values()):
             raise AppError("INVALID_REQUEST", "Answer every statement with yes, unsure or no.")
         self_level = self_check_level((expected[k], v) for k, v in answers.items())
