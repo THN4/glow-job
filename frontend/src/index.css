@@ -3,6 +3,61 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
+.onboarding-sidebar-scroll {
+  scrollbar-color: rgb(37 99 235 / 0.35) transparent;
+  scrollbar-width: thin;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-track,
+.onboarding-sidebar-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgb(37 99 235 / 0.28);
+  background-clip: padding-box;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(37 99 235 / 0.5);
+  background-clip: padding-box;
+}
+
+.deadline-option-group {
+  container-type: inline-size;
+}
+
+@container (max-width: 800px) {
+  .deadline-option-description {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .onboarding-sidebar-copy h2 {
+    margin-top: 1.25rem;
+  }
+
+  .onboarding-sidebar-copy p {
+    margin-top: 0.625rem;
+  }
+
+  .onboarding-sidebar-copy ul {
+    margin-top: 1rem;
+    padding-bottom: 5rem;
+  }
+
+  .onboarding-sidebar-copy li + li {
+    margin-top: 1rem;
+  }
+}
+
 .application-form-layout {
   display: grid;
   gap: 1.25rem;
