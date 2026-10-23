@@ -92,4 +92,19 @@ export type JobRecommendationsResponse = {
   unscoredPostings: number
   recommendations: JobRecommendation[]
   limitations: string[]
+  totalMatched: number
+  filteredCount: number
+  returnedCount: number
+  filterOptions: {
+    locations: string[]
+    employmentTypes: string[]
+    skills: { skillId: number; name: string }[]
+  }
+}
+
+export type JobFilters = {
+  sort: 'coverage' | 'recent'
+  location: string
+  employmentType: string
+  skillId: string
 }
