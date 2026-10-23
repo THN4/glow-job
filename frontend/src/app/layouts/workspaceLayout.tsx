@@ -4,6 +4,8 @@ import { applicationsApi } from '../../features/applications/api'
 import { PanelLeftOpen } from 'lucide-react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { WorkspaceSidebar } from '../../features/workspace/components/WorkspaceSidebar'
+import { WorkspaceMobileSidebar } from '../../features/workspace/components/WorkspaceMobileSidebar'
+import { useExpandedSidebar } from '../../features/workspace/useExpandedSidebar'
 import { useCurrentRoadmap } from '../../features/roadmap/useCurrentRoadmap'
 import { toRoadmapScreen } from '../../features/roadmap/adapter'
 import { useCareerGoal } from '../../features/roadmap/useCareerGoal'
@@ -26,6 +28,7 @@ export function WorkspaceLayout({
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const isSidebarExpanded = useExpandedSidebar()
   const roadmap = useCurrentRoadmap()
   const savedProfile = useSavedProfile()
   const careerGoal = useCareerGoal()
@@ -75,23 +78,27 @@ export function WorkspaceLayout({
       />
 
       <main className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {!isSidebarOpen && <div className="hidden shrink-0 items-center px-4 pt-3 sm:px-6 sidebar-expanded:flex">
-          <button
+        {(!isSidebarExpanded || !isSidebarOpen) && <div className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] left-4 z-30">
+          {!isSidebarExpanded ? <WorkspaceMobileSidebar
+            goal={currentGoal} marketUpdate={marketUpdate} user={user}
+            onViewInsights={() => navigate('/app/market-insights')}
+            onHelpClick={onHelpClick} onProfileClick={onProfileClick}
+          /> : <button
             type="button"
             onClick={() => setIsSidebarOpen(true)}
             aria-label="Open sidebar"
             aria-expanded={isSidebarOpen}
             aria-controls="workspace-sidebar"
             title="Open sidebar"
-            className="inline-flex size-11 items-center justify-center rounded-lg border border-border bg-white text-foreground transition hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            className="inline-flex size-11 items-center justify-center rounded-xl border border-border bg-white text-foreground shadow-md transition hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             <PanelLeftOpen size={20} aria-hidden="true" />
-          </button>
+          </button>}
         </div>}
         <div ref={scrollRef} className={`scrollbar-subtle min-h-0 min-w-0 flex-1 ${isRoadmapPage ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           <div
             className={`mx-auto w-full max-w-[1500px] p-4 sm:p-6 ${
-              isRoadmapPage ? 'flex h-full min-h-0 min-w-0 flex-col' : 'min-h-full'
+              isRoadmapPage ? 'flex h-full min-h-0 min-w-0 flex-col' : `min-h-full ${!isSidebarExpanded || !isSidebarOpen ? 'pb-20' : ''}`
             }`}
           >
             <Outlet />

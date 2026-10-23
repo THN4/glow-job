@@ -10,7 +10,7 @@ import type {
   WorkspaceUser,
 } from '../type'
 
-type WorkspaceSidebarProps = {
+export type WorkspaceSidebarProps = {
   isOpen: boolean
   onClose: () => void
   goal: CurrentGoalSummary
@@ -19,6 +19,9 @@ type WorkspaceSidebarProps = {
   onViewInsights: () => void
   onHelpClick: () => void
   onProfileClick: () => void
+  presentation?: 'desktop' | 'drawer'
+  id?: string
+  onNavigate?: () => void
 }
 
 export function WorkspaceSidebar({
@@ -30,9 +33,14 @@ export function WorkspaceSidebar({
   onViewInsights,
   onHelpClick,
   onProfileClick,
+  presentation = 'desktop',
+  id = 'workspace-sidebar',
+  onNavigate,
 }: WorkspaceSidebarProps) {
   return (
-    <aside id="workspace-sidebar" aria-label="Workspace sidebar" hidden={!isOpen} className={`hidden ${isOpen ? 'sidebar-expanded:flex' : ''} h-dvh shrink-0 flex-col overflow-hidden border-r border-border bg-white px-4 py-5 sidebar-expanded:sticky sidebar-expanded:top-0 sidebar-expanded:w-[24vw] sidebar-expanded:min-w-60 sidebar-expanded:max-w-[401px] xl:px-5`}>
+    <aside id={id} aria-label="Workspace sidebar" hidden={!isOpen} className={presentation === 'drawer'
+      ? 'flex h-full min-h-0 w-full flex-col overflow-hidden bg-white px-4 py-5'
+      : `hidden ${isOpen ? 'sidebar-expanded:flex' : ''} h-dvh shrink-0 flex-col overflow-hidden border-r border-border bg-white px-4 py-5 sidebar-expanded:sticky sidebar-expanded:top-0 sidebar-expanded:w-[24vw] sidebar-expanded:min-w-60 sidebar-expanded:max-w-[401px] xl:px-5`}>
       <div className="shrink-0">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2">
@@ -46,7 +54,7 @@ export function WorkspaceSidebar({
             onClick={onClose}
             aria-label="Close sidebar"
             aria-expanded={isOpen}
-            aria-controls="workspace-sidebar"
+            aria-controls={id}
             title="Close sidebar"
             className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-white text-foreground transition hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
@@ -63,7 +71,7 @@ export function WorkspaceSidebar({
           <CurrentGoalCard goal={goal} />
         </div>
 
-        <WorkspaceNavigation />
+        <WorkspaceNavigation onNavigate={onNavigate} />
 
         <div className="mt-auto shrink-0 pb-3 pt-5 [@media(max-height:900px)]:pt-2">
           <MarketUpdatesCard
