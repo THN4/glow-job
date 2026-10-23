@@ -1,14 +1,20 @@
 import type { CvProfile } from '../resume/api'
+import type { TechnicalSkill } from '../onboarding/types'
 
-export function applyProfileUpdates(profile: CvProfile, fields: FormData): CvProfile {
+export function applyProfileUpdates(profile: CvProfile, fields: FormData, skills: TechnicalSkill[]): CvProfile {
   const value = (key: string) => String(fields.get(key) ?? '').trim()
-  const level = value('skillLevel') || 'unknown'
-  const names = [...new Set(value('skills').split(',').map((name) => name.trim()).filter(Boolean))]
+  const skillUpdates = skills.map((skill) => ({ ...skill, name: skill.name.trim() }))
+  const names = skillUpdates.map((skill) => skill.name)
+  if (new Set(names.map((name) => name.toLowerCase())).size !== names.length) {
+    throw new Error('Each skill should appear only once.')
+  }
+  for (const skill of skillUpdates) {
+    if (!skill.name) throw new Error('Enter a name for each skill.')
+    if (!skill.level) throw new Error(`Choose a proficiency level for ${skill.name}.`)
+  }
   const evidenceText = value('evidence')
   if (evidenceText && !names.length) throw new Error('Enter the skill names this evidence supports.')
   const updated = structuredClone(profile)
-  updated.personal = { ...updated.personal, fullName: value('fullName') || null, headline: value('headline') || null, source: 'user' }
-  updated.summary = value('summary') || null
   let projectId: string | undefined
   if (value('projectName')) {
     const existing = updated.projects.find((project) => project.name?.trim().toLowerCase() === value('projectName').toLowerCase())
@@ -18,7 +24,7 @@ export function applyProfileUpdates(profile: CvProfile, fields: FormData): CvPro
       ...existing, id: projectId, name: value('projectName'),
       description: value('projectDescription') || existing?.description || null,
       url: value('projectUrl') || existing?.url || null,
-      technologies: existing?.technologies ?? names,
+      technologies: [...new Set([...(existing?.technologies ?? []), ...names])],
       confidence: 'high', needsReview: false, source: 'user',
     }
     if (existing) updated.projects = updated.projects.map((item) => item.id === existing.id ? project : item)
@@ -26,7 +32,7 @@ export function applyProfileUpdates(profile: CvProfile, fields: FormData): CvPro
   } else if (value('projectDescription') || value('projectUrl')) {
     throw new Error('Enter a project name to save its details.')
   }
-  for (const name of names) {
+  for (const { name, level } of skillUpdates) {
     const existing = updated.technicalSkills.find((skill) => skill.name?.trim().toLowerCase() === name.toLowerCase())
     const evidence = Array.isArray(existing?.evidence) ? [...existing.evidence] as Array<Record<string, unknown>> : []
     if (evidenceText && !evidence.some((item) => item.text === evidenceText && item.itemId === (projectId ?? null))) {
@@ -35,8 +41,8 @@ export function applyProfileUpdates(profile: CvProfile, fields: FormData): CvPro
     const skill = {
       category: 'other', catalogMatch: null, ...existing,
       id: existing?.id ?? crypto.randomUUID(), name,
-      proficiency: level === 'unknown' ? existing?.proficiency ?? 'unknown' : level,
-      proficiencyBasis: level === 'unknown' ? existing?.proficiencyBasis ?? 'unknown' : 'explicit',
+      proficiency: level,
+      proficiencyBasis: level === 'unknown' ? 'unknown' : 'explicit',
       evidence, confidence: 'high', needsReview: false, source: 'user',
     }
     if (existing) updated.technicalSkills = updated.technicalSkills.map((item) => item.id === existing.id ? skill : item)

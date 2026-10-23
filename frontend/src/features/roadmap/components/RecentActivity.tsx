@@ -14,19 +14,19 @@ const appearance = {
 
 export function RecentActivity({ activities, roadmapId }: { activities: ProgressActivity[]; roadmapId: number | null }) {
   return (
-    <section aria-labelledby="recent-activity-title" className="recent-activity-timeline rounded-2xl bg-blue-50/60 p-5 sm:p-6">
+    <section aria-labelledby="recent-activity-title" className="recent-activity-timeline min-w-0 rounded-xl bg-blue-50/60 p-4 sm:p-6">
       <h2 id="recent-activity-title" className={workspaceStyles.sectionTitle}>Recent activity</h2>
       {!activities.length ? <p className="mt-4 text-sm text-slate-600">No saved activity yet.</p> : <ol className="mt-6">
         {activities.map((activity, index) => {
           const { icon: Icon, color } = appearance[activity.kind]
           const currentStep = activity.nodeKey && activity.roadmapId === roadmapId
-          return <li key={activity.id} className="recent-activity-item flex gap-4">
-            <div className="flex w-11 shrink-0 flex-col items-center">
-              <span className={`recent-activity-circle z-10 flex size-11 shrink-0 items-center justify-center rounded-full border-2 ${color}`}><Icon size={21} aria-hidden="true" /></span>
+          return <li key={activity.id} className="recent-activity-item flex gap-3 sm:gap-4">
+            <div className="flex w-8 shrink-0 flex-col items-center sm:w-11">
+              <span className={`recent-activity-circle z-10 flex size-8 shrink-0 items-center justify-center rounded-full border-2 sm:size-11 ${color}`}><Icon className="size-4 sm:size-5" aria-hidden="true" /></span>
               {index < activities.length - 1 && <span className="recent-activity-line min-h-6 w-0.5 flex-1 bg-blue-100" aria-hidden="true" />}
             </div>
-            <div className={`min-w-0 flex-1 pt-2 ${index < activities.length - 1 ? 'pb-6' : ''}`}>
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <div className={`min-w-0 flex-1 break-words pt-1 [overflow-wrap:anywhere] sm:pt-2 ${index < activities.length - 1 ? 'pb-6' : ''}`}>
+              <div className="flex flex-col items-start gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-3">
                 {currentStep ? <Link to={`/app/roadmap?node=${encodeURIComponent(activity.nodeKey!)}`} className="text-sm font-semibold text-slate-900 hover:text-blue-700 hover:underline">{activity.title}</Link> : <h3 className="text-sm font-semibold text-slate-900">{activity.title}</h3>}
                 <time dateTime={activity.occurredAt} title={new Date(activity.occurredAt).toLocaleString()} className="text-xs text-slate-500">{new Date(activity.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</time>
               </div>
