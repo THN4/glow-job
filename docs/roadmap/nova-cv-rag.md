@@ -52,11 +52,19 @@ retrieval without text review still performs no generation call.
 ## Provider compatibility
 
 CV uses the same system/user instructions and `CvExtraction` JSON schema. The
-schema is included in the Converse system instruction instead of Gemini's
-`response_json_schema` parameter. Pydantic still validates output and allows
+schema is included in the Converse system instruction and its inlined form is
+passed to a forced `submit_cv` tool instead of Gemini's `response_json_schema`
+parameter. The tool only carries the result; it executes no external action.
+Nova accepts only `type`, `properties`, and `required` at the tool schema's top
+level; the complete strict contract is still enforced by Pydantic. Unexpected,
+missing or multiple tool outputs are rejected. Pydantic validates output and allows
 one schema repair. Ordered mixed text/image pages and omitted-page notices
 are retained. boto3 runs off the async event loop. Usage and model/provider
 metadata are retained, and provider/model identity separates CV cache entries.
+The cache identity includes the structured-response format version. Validation
+logs record only schema field names and error types, never CV field values or
+unrecognized model-generated property names. Failed output still receives one
+repair attempt; validation rules are not relaxed.
 
 Nova v1 has a 5000-token output cap, so the adapter uses 5000 instead of the
 Gemini adapter's 8192. Truncated, filtered and empty responses are rejected;
