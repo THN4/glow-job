@@ -51,9 +51,10 @@ Errors reported on a failed job: `KNOWLEDGE_NOT_READY`, `ROADMAP_CONTEXT_FAILED`
 | PUT | `/profiles/{profileId}/roadmaps/{roadmapId}/tasks/{taskId}` | `{"completed": true}` | `{"roadmap": RoadmapView}` |
 | PUT | `/profiles/{profileId}/roadmaps/{roadmapId}/steps/{stepKey}` | `{"status": "in_progress"}` | `{"roadmap": RoadmapView}` |
 
-`taskId` is `ChecklistItem.id` (for example `apache-airflow.2`). Node status and
-`progress` is recomputed from learning tasks. A node with all tasks done is
-`completed`, with some done is `in_progress`. Profile-confirmed skills that already meet the
+`taskId` is `ChecklistItem.id` (for example `apache-airflow.2`). A task can only be changed
+after its step has been started. Node status and `progress` are recomputed from saved tasks and
+explicit step confirmation. A node with all tasks done remains `in_progress` until confirmed.
+Profile-confirmed skills that already meet the
 market target have `baselineComplete: true` and `status: "completed"` at creation; they are
 not counted in learning-task progress and cannot be changed through the step endpoint.
 
@@ -62,31 +63,32 @@ is not a step and returns `TASK_NOT_FOUND`).
 
 | `status` | Effect | Button in the design |
 |---|---|---|
-| `in_progress` | Marks the step started. Tasks are unchanged. | Start learning |
-| `completed` | Ticks every task of the step. | Mark as completed |
+| `in_progress` | Marks the step started when all required incoming dependencies are completed. Tasks are unchanged. | Start learning |
+| `completed` | Confirms completion only when the step is in progress and every checklist task is already complete. | Confirm completion |
 | `not_started` | Clears every task and the started mark. | Reset |
-| `skipped` | Marks a step skipped. An optional step leaves the progress denominator; a required foundation check remains incomplete and in the denominator. | Skip |
 
 A step the learner started stays `in_progress` when they untick its tasks. Reset it with
-`not_started`.
+`not_started`. Independent steps without required incoming dependencies can be started in any
+order. Optional edges are recommendations and do not lock a step.
 
 ## Rendering rules
 
 The fields below were shaped to the Figma Roadmap frames. See
 [frontend-handoff.md](frontend-handoff.md) for the element-by-element mapping.
 
-- Canvas position: `position` has `row` (1 to `layout.rows`, at most 6) and `column` (1 to 4),
-  matching the `grid-cols-4 grid-rows-6` canvas. Steps that follow each other in a straight
-  chain sit in one row from left to right, branches get their own row, and the goal is in the last
+- Canvas position: `position` has `row` (1 to `layout.rows`) and `column` (1 to 3),
+  matching the three-column canvas. Straight chains snake across rows; branch and merge nodes
+  receive their own row, and the goal is in the last
   row. `layer` and `order` are the raw dependency depth if a different layout is wanted.
-- Draw `edges` from `from` to `to`. `optional: true` is a recommended path that does not block
-  the next step; draw it dashed. A confirmed global prerequisite uses `optional: false`.
+- Draw `edges` from `from` to `to`. Skill prerequisite edges represent explicit `depends_on`
+  relationships; market rank does not connect independent skills. A required edge is dashed until
+  both nodes are complete, then solid. Optional recommendations remain dashed and do not block a step.
   The last node is always `kind: "goal"`.
 - `subtitle` is the text under the node title. It changes with progress ("Upcoming", "In
   progress", "Completed", "Upcoming project", "Career activity", "Quick check"). The goal node shows
   "Target: <date>" or "Target: <timeframe>".
 - "You are here" badge: `currentNodeKey`. "Best next step" badge: `nextAction.nodeKey`. The next
-  action moves forward when its step is completed or skipped.
+  action moves forward after explicit step completion.
 - Header and sidebar text: `summary.targetRole`, `summary.durationLabel` ("3 months"),
   `summary.timeRemainingLabel` ("12 weeks remaining" or "3 months remaining"; recalculated on every read),
   `progress.percent` and `progress.label` ("2 of 9 tasks done").
