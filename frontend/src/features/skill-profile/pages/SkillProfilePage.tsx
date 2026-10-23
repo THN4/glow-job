@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { RoadmapNodeIcon } from '../../roadmap/components/RoadmapNodeIcon'
-import { addSkillEvidence, deleteSkillEvidence, loadCurrentRoadmap, loadSkillEvidence, setRoadmapTask, type SkillEvidence } from '../../roadmap/api'
+import { addSkillEvidence, deleteSkillEvidence, loadSkillEvidence, setRoadmapTask, type SkillEvidence } from '../../roadmap/api'
 import { toRoadmapScreen } from '../../roadmap/adapter'
 import type { RoadmapView } from '../../roadmap/api-types'
 import type { RoadmapEvidence } from '../../roadmap/type'
@@ -12,7 +12,6 @@ import { getSavedProfileId, getSessionId } from '../../resume/api'
 import { SkillProfileHeader } from '../components/SkillProfileHeader'
 import { SkillProfileStats } from '../components/SkillProfileStats'
 import { LearningChecklist } from '../components/LearningChecklist'
-import { LevelCheckDialog } from '../../assessments/components/LevelCheckDialog'
 import { EvidenceForm } from '../../roadmap/components/EvidenceForm'
 import { currentRoadmapKey, useCurrentRoadmap } from '../../roadmap/useCurrentRoadmap'
 
@@ -47,7 +46,6 @@ export function SkillProfilePage() {
   const [expandedSkillIds, setExpandedSkillIds] = useState<Set<string>>(() => new Set())
   const [working, setWorking] = useState(false)
   const [mutationError, setError] = useState<string | null>(null)
-  const [levelCheckTarget, setLevelCheckTarget] = useState<{ skillId: number; name: string } | null>(null)
   const evidenceKey = ['skill-evidence', getSessionId(), profileId] as const
   const evidenceQuery = useQuery({
     queryKey: evidenceKey,
@@ -106,14 +104,6 @@ export function SkillProfilePage() {
       setExpandedSkillIds((current) => new Set(current).add(nodeId))
     } finally {
       setWorking(false)
-    }
-  }
-
-  async function refreshRoadmap() {
-    try {
-      setView(await loadCurrentRoadmap())
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not refresh your saved skill level.')
     }
   }
 
@@ -199,7 +189,10 @@ export function SkillProfilePage() {
               const projectEdge = screen.connections.find((connection) => connection.from === node.id
                 && nodes.some((candidate) => candidate.id === connection.to && candidate.kind === 'project'))
               const relatedProject = nodes.find((candidate) => candidate.id === projectEdge?.to)
-              const profileLabel = screen.extras[node.id]?.profileLabel
+              const profileSkill = view?.nodes.find((item) => item.key === node.id)?.skill
+              const profileLabel = profileSkill?.inProfile && (!profileSkill.currentLevel || profileSkill.currentLevel === 'unknown')
+                ? 'No skill level information yet'
+                : screen.extras[node.id]?.profileLabel
 
               return (
                 <article key={node.id} tabIndex={isExpandableSkill ? 0 : undefined}
@@ -232,12 +225,6 @@ export function SkillProfilePage() {
                             if (item) void updateTask(node.id, taskId, !item.completed)
                           }}
                         />
-                        {node.skillId && (
-                          <button type="button" onClick={() => setLevelCheckTarget({ skillId: node.skillId!, name: node.title })}
-                            className="mt-3 min-h-9 rounded-lg border border-blue-200 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-50">
-                            Assess skill level
-                          </button>
-                        )}
                         {node.skillId && (
                           <div className="mt-4 border-t border-slate-100 pt-3" data-skill-evidence>
                             <div className="flex items-center justify-between gap-2">
@@ -284,15 +271,6 @@ export function SkillProfilePage() {
           <p className="rounded-lg border border-dashed border-slate-200 p-4 text-sm text-slate-500">No {visibleLabel.toLowerCase()} are available in this roadmap.</p>
         )}
       </section>
-      {levelCheckTarget && (
-        <LevelCheckDialog
-          onClose={() => setLevelCheckTarget(null)}
-          onDecision={(kept) => { if (kept) void refreshRoadmap() }}
-          skillId={levelCheckTarget.skillId}
-          skillName={levelCheckTarget.name}
-          entryPoint="skill_profile"
-        />
-      )}
     </section>
   )
 }

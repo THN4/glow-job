@@ -2,7 +2,6 @@ import {
   BriefcaseBusiness,
   ChartLine,
   ChartPie,
-  ClipboardCheck,
   GitBranch,
   LayoutDashboard,
   UserRound,
@@ -16,5 +15,4 @@ export const workspaceNavigationItems: WorkspaceNavItem[] = [
   { label: 'Market Insights', href: '/app/market-insights', icon: ChartLine },
   { label: 'Applications', href: '/app/applications', icon: BriefcaseBusiness },
   { label: 'Progress', href: '/app/progress', icon: ChartPie },
-  { label: 'Assessments', href: '/app/assessments', icon: ClipboardCheck },
 ]
