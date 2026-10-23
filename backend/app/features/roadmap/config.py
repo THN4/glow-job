@@ -32,8 +32,8 @@ class RoadmapSettings(BaseSettings):
     ROADMAP_PRICE_OUTPUT_PER_MTOK: float = Field(default=3.75, ge=0)
 
     # Paid-provider guards. 0 disables a limit. Reused roadmaps never count.
-    ROADMAP_DAILY_LIMIT_PER_PROFILE: int = Field(default=3, ge=0)
-    ROADMAP_DAILY_LIMIT: int = Field(default=30, ge=0)
+    ROADMAP_DAILY_LIMIT_PER_PROFILE: int = Field(default=20, ge=0)
+    ROADMAP_DAILY_LIMIT: int = Field(default=100, ge=0)
     ROADMAP_MONTHLY_BUDGET_USD: float = Field(default=50.0, ge=0)
 
     # Agent Context is built from the authorized profile, market and live RAG evidence.
