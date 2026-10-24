@@ -19,7 +19,7 @@ Current functionality:
   synthetic users, without
   changing the existing Backend scoring policy.
 - Prepare explicitly selected main skills' cited document Context through the
-  pipeline retrieval service: skill-filtered embeddings, text-model review,
+  pipeline retrieval service: skill-filtered Gemini embeddings, Nova 2 Lite text review,
   source/quote validation and foundation/related mentions with coverage gaps.
 - Assemble saved User/Goal/Market inputs with cited knowledge into typed Agent
   Context v0.5, with confirmed project summaries, full-market and Core Top-20 match scores, all-market skill

@@ -1,36 +1,52 @@
-# Glow Job Frontend
+# Glow Job frontend
 
-## CV extraction and profile save
+The React, TypeScript, and Vite app provides the learner-facing flows for:
 
-The anonymous CV flow is available at `http://localhost:5173/onboarding/cv`.
-It uploads a PDF or image to the Backend API, polls Gemini extraction, lets the
-user review and edit the extracted profile, then saves the confirmed profile
-through `PUT /api/profiles`. The anonymous `sessionId` and saved `profileId`
-are retained in browser local storage so the profile can be loaded again in
-that browser.
-During extraction, **Cancel waiting and choose another CV** stops this page's
-polling and returns to the upload step. The backend job may finish in the
-background, but no profile is written until confirmation.
+- uploading a CV, reviewing the extracted profile, and confirming profile data;
+- comparing the profile with a selected career's market skill requirements;
+- saving a career goal and preferences, generating a roadmap, and tracking tasks;
+- viewing roadmap relationships, learning evidence, history, and job applications.
 
-Start PostgreSQL and Backend from the repository root with `docker compose up -d`.
-The Backend must have `RESUME_EXTRACTOR=gemini` and a valid `GEMINI_API_KEY` in
-the root `.env` file. Start the frontend from this folder with:
+The frontend talks to the FastAPI backend. CV extraction uses the provider
+configured by the backend; the current local setup uses Bedrock Converse with
+Nova 2 Lite. The browser does not call model APIs directly.
 
-```sh
+## Run locally
+
+Start PostgreSQL and the backend from the repository root first:
+
+```bash
+docker compose up --build -d
+```
+
+Then, from `frontend/`:
+
+```bash
+npm install
 npm run dev
 ```
 
-By default, the frontend calls `http://localhost:8787/api`. To use a different
-API, create `frontend/.env.local` with:
+Open the local URL printed by Vite, usually `http://localhost:5173`. If that
+port is occupied, Vite selects the next available port. The default backend
+URL is `http://localhost:8787/api`.
+
+To use another backend URL, create `frontend/.env.local`:
 
 ```dotenv
 VITE_API_BASE_URL=http://localhost:8787/api
 ```
 
-Supported uploads are PDF, JPEG, PNG, and WEBP, up to 10 MB. The CV file and
-in-progress extraction are temporary; only the profile saved after user
-confirmation is persisted to the database. See
-[`docs/cv-extraction/03-api-reference.md`](../docs/cv-extraction/03-api-reference.md)
-for the API contract and
-[`docs/cv-extraction/05-database-mapping.md`](../docs/cv-extraction/05-database-mapping.md)
-for database mapping.
+Supported CV uploads are PDF, JPEG, PNG, and WEBP up to 10 MB. Uploads are
+temporary; extracted profile information is saved only after the learner
+reviews and confirms it.
+
+## Build
+
+```bash
+npm run build
+```
+
+See the root [project README](../README.md) for system architecture and setup,
+the [CV API reference](../docs/cv-extraction/03-api-reference.md) for upload
+contracts, and the [Roadmap API contract](../docs/roadmap/api-contract.md) for
+goal, generation, progress, and history endpoints.

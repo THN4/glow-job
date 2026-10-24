@@ -1,10 +1,10 @@
 # Resume/CV Documentation
 
 This folder keeps the cross-layer references for CV extraction, confirmed
-profile storage, and resume-to-market skill matching. The current frontend is a
-temporary local demo; the API and profile schema documentation describe the
-backend contracts a replacement frontend can use. The current extraction code
-review and domain specification are in
+profile storage, and resume-to-market skill matching. The frontend and backend
+implement the local learner flow; the API and profile schema documentation
+describe their shared contracts. The current extraction code review and domain
+specification are in
 [`data-pipeline/docs/resume/`](../../data-pipeline/docs/resume/).
 
 ## Documents

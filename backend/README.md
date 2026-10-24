@@ -37,18 +37,20 @@ app.include_router(api_router, prefix="/api")
 ```
 
 `app/main.py` is a standalone development host (FastAPI + CORS + health). The
-resume extractor uses Gemini, sharing the API key and pinned model with market
-extraction. Use `mock` for local checks and backend integration tests. AWS
-deployment is not part of the current backend implementation.
+current local configuration uses Bedrock Converse with Nova 2 Lite for CV
+extraction. Gemini remains an optional CV extraction provider; `mock` avoids
+model calls for UI work and tests. Market, roadmap, and assessment behavior is
+described in the root [project overview](../README.md).
 
 ## Setup
 
-For containerized local development, follow the root repository's
-[Docker Compose instructions](../README.md#run-postgresql-and-the-backend-with-docker-compose).
-Compose reads the root `.env` and passes `DB_HOST` to the container (defaulting
-to `postgres`, the database service name). For direct host execution, this
-backend's `.env` is read from the `backend/` working directory; use
-`DB_HOST=localhost` to reach the same published port.
+For integrated local development, follow the root repository's
+[Docker Compose instructions](../README.md#run-the-web-app-locally). Compose
+reads the root `.env` and passes settings to the backend. For direct host
+execution, install the requirements below and provide the needed environment
+variables in the shell; a `.env` file, if present, is read from the `backend/`
+working directory. Use `DB_HOST=localhost` to reach a locally published
+PostgreSQL port.
 
 ```bash
 cd backend
@@ -56,7 +58,6 @@ py -3.12 -m venv .venv            # Windows: use the py launcher so you get a re
 .\.venv\Scripts\Activate.ps1            # (macOS/Linux: python3.12 -m venv .venv ; source .venv/bin/activate)
 python --version                  # must say 3.12.x (not an MSYS/MinGW Python)
 pip install -r requirements-dev.txt
-copy .env.example .env            # then edit it (macOS/Linux: cp)
 ```
 
 > **Windows pitfall:** if plain `python` on your PATH is the MSYS/MinGW Python (`C:\msys64\...`), a venv made with it can't install PyMuPDF/Pillow wheels, and re-running `python -m venv .venv` over an existing venv wipes its packages. Symptoms: `No module named 'uvicorn'` / `No module named '_pytest'`. Fix: `py -3.12 -m venv --clear .venv`, then `pip install -r requirements-dev.txt` again.
@@ -65,17 +66,21 @@ copy .env.example .env            # then edit it (macOS/Linux: cp)
 
 | Variable | Use |
 |---|---|
-| `RESUME_EXTRACTOR=gemini` | Gemini model-backed extraction. Uses the same model selection as market extraction |
+| `RESUME_EXTRACTOR=bedrock_converse` | Current text extraction provider; defaults to Nova 2 Lite |
 | `RESUME_EXTRACTOR=mock` | Fixture data, no model call. Use for tests and frontend work |
-| `GEMINI_API_KEY` | API key shared with market extraction |
-| `RESUME_GEMINI_TIMEOUT_MS` | Request timeout; defaults to `180000` |
+| `RESUME_EXTRACTOR=gemini` | Optional Gemini CV extraction provider |
+| `BEDROCK_EXTRACTION_MODEL` | Bedrock model ID for CV extraction; defaults to `us.amazon.nova-2-lite-v1:0` |
+| `AWS_BEARER_TOKEN_BEDROCK` or AWS credentials/role | Bedrock authentication; use a role for deployed workloads |
+| `AWS_DEFAULT_REGION` | Bedrock region; defaults to `us-east-1` |
+| `GEMINI_API_KEY` | Needed by Gemini extraction or Gemini Embedding 2 retrieval |
+| `RESUME_GEMINI_TIMEOUT_MS`, `RESUME_BEDROCK_TIMEOUT_MS` | Provider request timeouts |
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Optional database connection. When configured, the backend reads the shared skill catalog, persists anonymous extraction job status/results, and saves confirmed profiles to `app.*`; apply all database migrations first. If omitted, skill matches are not returned, extraction jobs stay in memory, and profiles use the local JSON-file fallback. |
 | `MATCH_MIN_TOTAL_JOBS`, `MATCH_MAX_MARKET_AGE_DAYS`, `MATCH_MIN_LEVEL_OBSERVATIONS`, `MATCH_MIN_TARGET_LEVEL_CONFIDENCE` | Initial quality gates for market sample and target proficiency level. Defaults are 10 jobs, 180 days, 3 level observations, and 0.6 confidence; low-quality inputs are disclosed in the match response. |
 
-If your existing `backend/.env` still has the prototype setting
-`EXTRACTOR=ollama` or `EXTRACTOR=openai-compatible`, replace it with
-`RESUME_EXTRACTOR=gemini` and add the shared `GEMINI_API_KEY`. Keep
-`RESUME_EXTRACTOR=mock` when you want to run without calling Gemini.
+Set `RESUME_EXTRACTOR=bedrock_converse` and provide Bedrock credentials for the
+current Nova setup. Choose `RESUME_EXTRACTOR=mock` when you want to avoid CV
+model calls. The Gemini provider is available by setting
+`RESUME_EXTRACTOR=gemini` and `GEMINI_API_KEY`.
 
 All model options with defaults are in [`data-pipeline/src/resume/config.py`](../data-pipeline/src/resume/config.py). Backend API-specific settings remain in `app/features/resume/config.py`.
 
@@ -87,9 +92,9 @@ All model options with defaults are in [`data-pipeline/src/resume/config.py`](..
 | `uvicorn app.main:app --reload --port 8787` | API on http://localhost:8787/api. Swagger UI at `/docs`, OpenAPI at `/openapi.json` |
 | `pytest` | Backend API and service integration tests. Resume domain/provider tests live in `data-pipeline/tests/resume/`. |
 | `python -m tests.fixtures` | Writes a few small synthetic CVs to `tests/generated/` (used by quick checks) |
-| `python -m tests.make_sample_cvs` | (Re)generates the 10 sample CVs in `test_resume/` (Thai, two-column, scan, photo, not-a-CV...). See [test_resume/README.md](test_resume/README.md) |
+| `python -m tests.make_sample_cvs` | (Re)generates the 10 fictional sample CVs in `test_cvs/` (Thai, two-column, scan, photo, not-a-CV...). See [test_cvs/README.md](test_cvs/README.md) |
 | `python -m scripts.resume.extract ../backend/tests/generated/sample-cv.pdf` (run from `data-pipeline/`) | Runs one file through preprocess → model → post-process and prints the JSON (no server needed) |
-| `python -m scripts.resume.extract ../backend/test_resume/01-fullstack-developer-en.pdf --summary` (run from `data-pipeline/`) | Same, but prints a compact view laid out like the database tables (user_profiles, educations, experiences, skills with level + basis + evidence) |
+| `python -m scripts.resume.extract ../backend/test_cvs/01-fullstack-developer-en.pdf --summary` (run from `data-pipeline/`) | Same, but prints a compact view laid out like the database tables (user_profiles, educations, experiences, skills with level + basis + evidence) |
 | `python -m scripts.resume.try_api ../backend/tests/generated/sample-cv.pdf` (run from `data-pipeline/`) | Walks the full API flow (upload → extract → poll) against the running server |
 
 ## API (summary)
@@ -126,7 +131,7 @@ or configuring a provider.
 | Scanned CV (image) | `vegeta/qwen3.5-4b-mtp:q8`, `LLM_NUM_CTX=16384`, thinking off | **Read correctly** (name, school, skills, projects, no invented jobs), ~2.5 min including the first model load |
 | Same model with the server default context (131k) | `vegeta/qwen3.5-4b-mtp:q8` via `/v1` | Timed out: only 18 % of the model fit on the GPU. The prototype fix was Ollama's 16k context setting. |
 
-Per-file results for the 10 sample CVs (time 13-107 s each, all correct): [test_resume/README.md](test_resume/README.md).
+Sample CVs and their evaluation notes: [test_cvs/README.md](test_cvs/README.md).
 
 ## Notes
 
@@ -145,12 +150,12 @@ cd C:\path\to\glow-job\backend
 pytest
 
 cd ..\data-pipeline
-python -m scripts.resume.extract ..\backend\test_resume\01-fullstack-developer-en.pdf --summary
+python -m scripts.resume.extract ..\backend\test_cvs\01-fullstack-developer-en.pdf --summary
 
 cd ..\backend
 uvicorn app.main:app --port 8787
 
 cd ..\data-pipeline
-python -m scripts.resume.try_api ..\backend\test_resume\01-fullstack-developer-en.pdf
+python -m scripts.resume.try_api ..\backend\test_cvs\01-fullstack-developer-en.pdf
 
 

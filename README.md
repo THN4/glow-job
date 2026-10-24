@@ -1,117 +1,176 @@
-# glow-job
-NTT DATA Digital Innovation Challenge 2026
+# Glow Job
 
-## System specifications
+Glow Job is a career-planning application that turns a learner's confirmed profile and current job-market data into a personalized learning roadmap. It combines a web app, a FastAPI backend, a job-market data pipeline, reviewed learning resources, and PostgreSQL.
 
-- [RAG and Skill Context specification (Thai, Draft v0.3)](docs/rag/skill-context-spec.md) — data preparation, skill selection, dependency review, retrieval, and the Context contract delivered to the AI/Backend team.
-- [Knowledge ingestion and retrieval baseline](data-pipeline/docs/documents/skill-knowledge-rag-spec.md) — pipeline-owned document collection, chunks, embeddings, and knowledge preparation.
-- [RAG implementation progress](docs/rag/implementation-progress.md) and [input preview commands](docs/rag/context-data-guide.md) — staged delivery and read-only experiments for the Context layer.
-- [Demo user seed (Thai)](docs/db/demo-user-seed.md) — standalone SQL for three synthetic, confirmed profiles; develop against user data without uploading CVs or calling an LLM.
-- [Prepared-document dependencies](data-pipeline/docs/documents/skill-dependency-review-guide.md) — read the prepared corpus, review cited proposals with a/r, export accepted guidance for the AI team. Quick review in CMD: `scripts\rag\review_dependencies.cmd`.
-- [Skill Knowledge Context](docs/rag/skill-knowledge-context-guide.md) — skill-filtered retrieval, Gemini text review, cited learning context and foundation mentions without inventing missing lessons.
-- [Agent Context assembly](docs/rag/agent-context-guide.md) — combine saved profile/goal, Market gaps, cited knowledge and grouped foundations locally; includes the AI handoff schema.
-- [Roadmap generation](docs/roadmap/roadmap-generation.md) — Claude (Opus 5.5) turns Agent Context into a saved, cited roadmap; mock provider by default, Bedrock-ready, with spend guards. [API contract](docs/roadmap/api-contract.md) and [frontend handoff (Thai)](docs/roadmap/frontend-handoff.md).
-- [Local RAG data layout](rag/data/README.md) — output folders, file origins, current examples, archived runs, and generated-file handling.
+## What the application does
 
-## `data-pipeline` submodule
+1. A learner uploads a CV, reviews the extracted profile, and confirms the information to save.
+2. The app compares confirmed skills with demand for a selected career and shows profile coverage and proficiency alignment.
+3. The learner chooses a career goal and preferences. The backend uses reviewed learning evidence and market gaps to generate a roadmap with linked prerequisites and progress tracking.
+4. The learner can track tasks, review roadmap history, and record job applications and outcomes.
+5. The Market pipeline collects job postings, extracts and maps skills to the shared catalog, and refreshes career-demand summaries.
 
-`data-pipeline/` is a Git submodule that points to a specific commit in the
-[`glow-job-data-pipeline`](https://github.com/THN4/glow-job-data-pipeline)
-repository. The commit recorded by `glow-job` is the version the team should
-use; the submodule does not automatically follow the latest changes upstream.
+The product uses anonymous browser sessions for local development. A saved profile, goal, and roadmap are linked to the session and persisted in PostgreSQL when the database is configured.
 
-### Clone or initialize the submodule
+## Project map
 
-When cloning `glow-job`, initialize its submodules:
+| Path | Responsibility |
+|---|---|
+| `frontend/` | React, TypeScript, and Vite web application for CV review, career matching, goals, roadmaps, and applications. |
+| `backend/` | FastAPI routes, upload/job orchestration, profile and goal persistence, market matching, roadmap generation, and assessment APIs. |
+| `ai/` | Roadmap contracts, prompt, provider adapters, validation, generation, and graph construction. |
+| `rag/` | Read-only data preparation, skill-filtered document retrieval, evidence review, and Agent Context assembly for roadmap generation. |
+| `data-pipeline/` | Git submodule with the Market and reusable Resume packages, document ingestion and embeddings, shared skill normalization, CLI tools, and pipeline migrations. |
+| `migrations/` | Host-application database migrations, including profile, roadmap, application, and assessment tables. |
+| `shared/contracts/` | API types, JSON schemas, and example roadmap responses shared with the frontend. |
+| `compose.yaml` | Local PostgreSQL and backend services. Compose automatically loads `compose.override.yaml` for the local Nova profile. |
+
+### Main data flow
+
+```mermaid
+flowchart LR
+    CV[CV upload] --> FE[Frontend review]
+    FE --> BE[FastAPI backend]
+    BE --> RP[Resume extraction package]
+    RP --> FE
+    FE -->|confirmed profile and goal| DB[(PostgreSQL)]
+    JP[JSearch postings] --> DP[Market data pipeline]
+    DP --> DB
+    DB --> MATCH[Career match]
+    DB --> RAG[Reviewed knowledge retrieval]
+    RAG --> CTX[Agent Context]
+    MATCH --> CTX
+    CTX --> RM[Roadmap generation]
+    RM --> DB
+    DB --> FE
+```
+
+## AI models and data boundaries
+
+The current local configuration uses Amazon Nova 2 Lite for text-generation tasks through Bedrock Converse:
+
+| Task | Current model |
+|---|---|
+| CV extraction | `us.amazon.nova-2-lite-v1:0` |
+| Market job-skill extraction | `us.amazon.nova-2-lite-v1:0` |
+| Learning-evidence review and on-demand assessment questions | `us.amazon.nova-2-lite-v1:0` |
+| Roadmap generation | `us.amazon.nova-2-lite-v1:0` |
+| Default document and query embeddings | Gemini Embedding 2, `gemini-embedding-2` (768 dimensions) |
+
+Nova Multimodal Embeddings (`amazon.nova-2-multimodal-embeddings-v1:0`, 1,024 dimensions) is an optional separate embedding path. The normal retrieval flow uses Gemini vectors and needs `GEMINI_API_KEY`; changing embedding provider or dimensions requires matching document and query vectors.
+
+Provider and model IDs are configurable through the root `.env`; the main settings are `RESUME_EXTRACTOR`, `ROADMAP_PROVIDER`, `BEDROCK_TEXT_MODEL`, `BEDROCK_EXTRACTION_MODEL`, and `BEDROCK_ROADMAP_MODEL`. Bedrock authentication can use `AWS_BEARER_TOKEN_BEDROCK`, standard AWS credentials, or an attached AWS role. Do not commit `.env` or credentials.
+
+The app sends the selected profile context, career goal, market evidence, and cited public learning excerpts needed for the requested AI task. Raw CV files are temporary during extraction; the learner reviews and confirms extracted details before the saved profile is used for career matching and roadmaps. See the [CV API/data flow](docs/cv-extraction/README.md) and [Roadmap generation guide](docs/roadmap/roadmap-generation.md) for detailed contracts.
+
+## Run the web app locally
+
+### 1. Clone the project and its data-pipeline submodule
 
 ```bash
 git clone --recurse-submodules <glow-job-repository-url>
+cd glow-job
 ```
 
-If you already cloned `glow-job` and `data-pipeline/` is empty or not initialized,
-run this from the `glow-job` repository root:
+For an existing checkout:
 
 ```bash
 git submodule update --init --recursive data-pipeline
 ```
 
-This checks out the exact `data-pipeline` commit selected by the current
-`glow-job` commit. It does not update to the latest upstream commit.
+The root repository pins a specific `data-pipeline` commit. Keep submodule work and commits in that repository; update the pinned commit in the root only through the project's submodule workflow.
 
-If your checkout has an older `data-engineer/` folder instead, run the command
-from the repository root as shown above. Git will create `data-pipeline/` next
-to `data-engineer/`; it will not rename or delete the older folder. Keep any
-work in `data-engineer/` until you have confirmed it is no longer needed.
+### 2. Configure the environment
 
-If a `data-pipeline/` folder already exists and Git cannot initialize the
-submodule because the path is not empty, do not delete or overwrite it. Check
-for local work first and ask the project maintainer how to handle that checkout.
+Copy `.env.example` to `.env` and set the database and provider credentials you intend to use:
 
-### Run PostgreSQL and the backend with Docker Compose
+```powershell
+Copy-Item .env.example .env
+```
 
-Docker Compose is owned by this root repository so the app and shared database
-can be started together. The backend image is built from
-`backend/Dockerfile`; its reusable extraction code is copied from the pinned
-`data-pipeline/src/` submodule. The database volume is external and defaults to
-the volume name used by the existing `data-pipeline/compose.yaml`, so Compose
-fails instead of silently creating an empty database when that volume is not
-present. Use this root Compose stack for integrated backend work; do not start
-the standalone `data-pipeline` PostgreSQL service at the same time: both publish
-the same host port, and two PostgreSQL containers must not use the same data
-volume concurrently.
+On macOS/Linux, use `cp .env.example .env`.
 
-1. Initialize the submodule as described above.
-2. Copy `.env.example` to `.env` and set `DB_PASSWORD` (and `GEMINI_API_KEY` if
-   using Gemini).
-3. Confirm the name of the Docker volume that already holds the
-   `data-pipeline` database:
+The example is configured for an RDS connection through an SSH tunnel on the host at `127.0.0.1:15432`; the backend container reaches the host as `host.docker.internal`. Keep that tunnel open while using the app. To use the Compose PostgreSQL service instead, apply the local database override:
 
-   ```bash
-   docker volume ls
-   ```
+```bash
+docker compose -f compose.yaml -f compose.local-db.yaml up --build -d
+```
 
-   Set `POSTGRES_VOLUME_NAME` in `.env` to that exact existing volume name if it
-   differs from the default. If you cannot find the volume, stop and verify the
-   database location before starting Compose; do not create a replacement
-   volume unless you intentionally want a fresh, empty database.
-4. Start the services from the repository root:
+The local Postgres service uses the external named volume configured by `POSTGRES_VOLUME_NAME`. Set it to the existing volume that contains your database. Create a new volume only when you intentionally want a fresh, empty database. Avoid running the standalone `data-pipeline` PostgreSQL service against the same volume at the same time.
 
-   ```bash
-   docker compose up --build -d
-   ```
+If Compose reports that the configured external volume does not exist and a new empty local database is intended, create the default volume explicitly:
 
-The backend is available at `http://localhost:8787`; PostgreSQL is exposed on
-`localhost:${DB_PORT}`. `DB_PORT` is the port on Windows, while
-`DB_CONTAINER_PORT` is PostgreSQL's port inside Docker (normally `5432`). The
-Backend connects to `postgres:${DB_CONTAINER_PORT}` from inside Compose. If
-this is a fresh database, run the migration command from
-`data-pipeline/` with matching `DB_NAME`, `DB_USER`, and `DB_PASSWORD` values
-and `DB_HOST=localhost`. Re-run the migration command after code changes that
-add a new numbered migration; it skips versions already applied and does not
-reset the database.
+```bash
+docker volume create glow-job-data-pipeline_postgres_data
+```
 
-To connect pgAdmin running as a Windows desktop app to this same database,
-register a server with Host `localhost`, Port `${DB_PORT}` (for example `5435`),
-Maintenance database `${DB_NAME}`, and the `DB_USER`/`DB_PASSWORD` from the root
-`.env`. Do not create a second database in pgAdmin. If pgAdmin itself runs in a
-container on the same Compose network, use Host `postgres` and Port `5432`
-instead; `localhost` inside that container would refer to pgAdmin itself.
+For live Bedrock and embedding calls, configure Bedrock access and `GEMINI_API_KEY`. The local Compose override selects Nova 2 Lite for text generation. To use the mock CV extractor for UI work, set `RESUME_EXTRACTOR=mock`; roadmap generation remains controlled separately by `ROADMAP_PROVIDER`.
 
-Stop services with `docker compose down`. This keeps the database volume. Do
-not use `docker compose down -v` unless you intend to delete local database and
-backend data.
+### 3. Start the backend and database
 
-### Development rules
+From the repository root:
 
-- Continue regular feature development in the `glow-job` repository.
-- Do not edit files, create commits, switch branches, or run `git pull` from
-  inside `data-pipeline/` as part of `glow-job` work.
-- Do not run `git submodule update --remote` or manually change the submodule
-  commit. That moves the version pinned by `glow-job` and can make everyone's
-  checkout inconsistent.
-- If work requires a change to `data-pipeline`, make that change through its
-  own repository workflow and ask the project maintainer to update the pinned
-  submodule commit in `glow-job`.
-- Pulling the `glow-job` repository itself follows the normal team workflow;
-  after switching or pulling its branch, run the initialization command above
-  if Git reports that the submodule is not initialized.
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+This starts PostgreSQL and the FastAPI backend. The backend is available at `http://localhost:8787`; health is at `/api/health` and the interactive API docs are at `/docs`. `docker compose down` stops the services and retains their data volume. Do not use `docker compose down -v` unless deleting local database data is intended.
+
+### 4. Apply database migrations when needed
+
+For a new database or after a migration change, follow the [data-pipeline migration guide](data-pipeline/migrations/README.md) and the [host migration guide](migrations/README.md). The migration runner applies both the submodule's schema migrations and this repository's application migrations. It reads its connection settings from `data-pipeline/.env`; set those values to the same database selected by the backend (`DB_HOST=127.0.0.1` and the host-published port when running the CLI on Windows).
+
+### 5. Start the frontend
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the local URL printed by Vite, usually `http://localhost:5173`. If that port is occupied, Vite chooses the next available port. The frontend calls `http://localhost:8787/api` by default; set `VITE_API_BASE_URL` in `frontend/.env.local` if the backend uses a different address.
+
+## Run individual parts
+
+| Part | Guide |
+|---|---|
+| Backend API, settings, and tests | [backend/README.md](backend/README.md) |
+| Frontend development | [frontend/README.md](frontend/README.md) |
+| Market, Resume, and document pipeline | [data-pipeline/README.md](data-pipeline/README.md) |
+| RAG and Agent Context preparation | [rag/README.md](rag/README.md), [Agent Context guide](docs/rag/agent-context-guide.md) |
+| Roadmap API, generation, and graph | [Roadmap generation](docs/roadmap/roadmap-generation.md), [API contract](docs/roadmap/api-contract.md) |
+| CV extraction API and database mapping | [CV extraction docs](docs/cv-extraction/README.md) |
+| Database schemas | [Host migrations](migrations/README.md), [pipeline migrations](data-pipeline/migrations/README.md) |
+| AWS/S3 market ingestion | [AWS infrastructure guide](infra/aws/README.md), [scheduled pipeline guide](data-pipeline/docs/market/scheduled-pipeline-guide.md) |
+
+## Development checks
+
+Run frontend checks from `frontend/`:
+
+```bash
+npm run build
+```
+
+Run backend tests from `backend/` using the development virtual environment described in [backend/README.md](backend/README.md):
+
+```bash
+python -m pytest
+```
+
+Run data-pipeline tests from `data-pipeline/`:
+
+```bash
+python -m pytest
+```
+
+Database integration tests require a disposable test database and are opt-in. Do not point destructive integration tests at a shared development or production database.
+
+## Repository and data safety
+
+- Never commit `.env`, API keys, AWS credentials, uploaded CVs, generated user profiles, or private market data.
+- Preserve the root repository's pinned `data-pipeline` submodule revision unless a pipeline change is intentionally reviewed and committed in the submodule first.
+- The Docker Postgres volume persists when containers stop. Keep a backup before destructive schema or catalog rebuilds.
+- Local test fixtures are synthetic. Use the fixture and test guides rather than real CVs for development.

@@ -32,7 +32,7 @@ flowchart LR
 | [ai/roadmap/contracts.py](../../ai/roadmap/contracts.py) | `RoadmapDraft` (model output) and `RoadmapView` (API response) |
 | [ai/roadmap/compact.py](../../ai/roadmap/compact.py) | Planning budget from the goal; context reduction; input fingerprint |
 | [ai/roadmap/prompt.py](../../ai/roadmap/prompt.py) | System prompt (`PROMPT_VERSION`) and repair message |
-| [ai/roadmap/providers.py](../../ai/roadmap/providers.py) | `mock`, `gemini`, and alternate `anthropic`/`bedrock` providers |
+| [ai/roadmap/providers.py](../../ai/roadmap/providers.py) | `mock`, `bedrock_converse`, and optional Gemini/Anthropic providers |
 | [ai/roadmap/validate.py](../../ai/roadmap/validate.py) | Rules checked in code; safe fixes vs fatal issues |
 | [ai/roadmap/view.py](../../ai/roadmap/view.py) | View, goal node, layer/order layout, progress |
 | [ai/roadmap/generate.py](../../ai/roadmap/generate.py) | Orchestration with at most one repair call |
@@ -58,6 +58,10 @@ The validator enforces these rules in code, so a prompt change cannot weaken the
 - Every citation must point to a `learning_content` chunk mapped to the step's skill
   and quote it exactly (whitespace-normalized). Invalid citations are removed.
 - Dependencies must reference known steps and must not form a cycle.
+- Reviewed skill relationships are sourced from verified knowledge records and
+  rendered with their scope and evidence. Context-only source nodes explain
+  these links without adding lessons or progress steps; only an unconditional,
+  globally blocking prerequisite locks progress.
 - Minimum planned hours may exceed the budget's upper bound by at most 25%.
 - Levels, gap status, market counts, source titles and URLs are copied from Agent
   Context into the view, never taken from the model.
@@ -80,11 +84,12 @@ backend\.venv\Scripts\python -m ai.roadmap.cli --context ai/roadmap/fixtures/age
 Full API with Docker Compose:
 
 1. Apply the migration from `data-pipeline/`: `python -m scripts.database.migrate`.
-2. Configure `GEMINI_API_KEY` for live document retrieval and evidence review. The
-   backend selects up to eight ranked core gaps with embedded documents for the saved user, prepares cited
-   knowledge and assembles one Agent Context in memory. The mock Roadmap provider
-   still performs this live RAG preparation. For isolated UI development, set
-   `ROADMAP_CONTEXT_FIXTURE=/app/ai/roadmap/fixtures/agent-context-demo-student.json`.
+2. Configure `GEMINI_API_KEY` for Gemini Embedding 2 retrieval and Bedrock access
+   for Nova 2 Lite evidence review and roadmap generation. The backend selects up
+   to eight ranked core gaps with embedded documents for the saved user, prepares
+   cited knowledge and assembles one Agent Context in memory. The mock Roadmap
+   provider still performs this live RAG preparation. For isolated UI development,
+   set `ROADMAP_CONTEXT_FIXTURE=/app/ai/roadmap/fixtures/agent-context-demo-student.json`.
 3. `docker compose up --build -d`, then call the endpoints in [api-contract.md](api-contract.md).
 
 The API uses the same Agent Context assembler as the local RAG command, but selects
@@ -119,16 +124,13 @@ Measured on the demo context: the model receives 17,042 characters instead of th
 | Safe fixes in code; at most one repair call | `validate_draft`, `max_repairs=1` |
 | Prompt caching off by default (a cache write costs 1.25x input and only pays off when repairs are frequent) | `ROADMAP_CACHE_CONTEXT` |
 | Per-profile and global daily limits; monthly budget stop | `ROADMAP_DAILY_LIMIT_PER_PROFILE`, `ROADMAP_DAILY_LIMIT`, `ROADMAP_MONTHLY_BUDGET_USD` |
-| Roadmap model calls recorded with tokens and estimated cost | `system.ai_runs`; RAG retrieval/review calls are not yet included |
+| Roadmap model calls recorded with tokens and estimated cost | `system.ai_runs`; embedding and RAG evidence-review calls are not included |
 | CLI refuses paid providers without `--allow-spend` | `ai/roadmap/cli.py` |
 
-Gemini 3.8 Flash introductory pricing is $0.75 input / $3.75 output per million
-tokens through 2026-12-31; standard pricing is scheduled to become $1.50 / $7.50 on
-2027-01-01. At about 6K input and 5-10K output/thinking tokens, estimate roughly
-$0.02-0.04 per new roadmap at introductory pricing. The settings default to those
-introductory rates; update `ROADMAP_PRICE_INPUT_PER_MTOK` and
-`ROADMAP_PRICE_OUTPUT_PER_MTOK` when pricing changes. If selecting Anthropic or
-Bedrock instead, set the prices for that provider before relying on the budget guard.
+The monthly budget covers estimated Roadmap generation calls recorded in
+`system.ai_runs`; it does not include Gemini embeddings or Bedrock evidence-review
+calls used while preparing RAG context. Keep the configured model prices aligned
+with the provider and region before relying on the budget limit.
 
 Spend this month:
 
@@ -139,43 +141,34 @@ WHERE operation_type = 'roadmap_generation' AND started_at >= date_trunc('month'
 GROUP BY model_provider;
 ```
 
-## Moving to Amazon Bedrock
+## Current provider configuration
 
-An alternate Claude-on-Bedrock provider remains available (`ROADMAP_PROVIDER=bedrock`,
-`AnthropicBedrockMantle` from the `anthropic[bedrock]` SDK). Its setup, IAM policy,
-smoke test, cost controls and rollback are in [aws-setup.md](aws-setup.md) (Thai).
-Gemini remains the configured provider for normal Roadmap generation.
+Roadmap generation and text-based evidence review use Bedrock Converse with Nova
+2 Lite by default. Configure `ROADMAP_PROVIDER=bedrock_converse`, the Bedrock
+region and credentials, and `BEDROCK_ROADMAP_MODEL` (or `ROADMAP_MODEL_ID`). The
+shared text setting `BEDROCK_TEXT_MODEL` selects the model for evidence review.
+The root [`.env.example`](../../.env.example) documents local settings. Use an
+AWS role for deployed workloads; keep local bearer tokens and keys out of Git.
 
-1. Choose a region where Claude Opus 5.5 is offered, and enable model access in the
-   Bedrock console for that account and region.
-2. Confirm with the program whether the AWS credit covers Anthropic models on Bedrock.
-3. Give the backend's runtime role Bedrock invoke permission. Use the instance or
-   task role in AWS; never put AWS keys in `.env` for deployment.
-4. Set `ROADMAP_PROVIDER=bedrock`, `ROADMAP_AWS_REGION=<region>`, and the Bedrock
-   prices. The model ID defaults to `anthropic.claude-opus-5-5`.
-5. Run one roadmap and compare `system.ai_runs` tokens with the Bedrock billing page.
-
-Bedrock does not support the server-side refusal fallback. A refusal fails the job
-with `MODEL_REFUSAL` and is still recorded with its billed tokens.
+Gemini and Anthropic roadmap adapters remain optional providers in the code. They
+are not selected by the current local configuration.
 
 ## Data sent to the model
 
 Background, goal, confirmed skill names/levels, project summaries and linked canonical
 skills, up to three deduplicated CV evidence excerpts (300 characters each), market
-counts for selected skills, and cited public document chunks are sent to Gemini.
-Name, email, phone, links and raw CV text are not sent. The product's consent text
-should disclose that these selected profile details are sent to Gemini to create a
-Roadmap.
+counts for selected skills, and cited public document chunks are sent to the
+configured text model (Nova 2 Lite by default). Text used to form retrieval queries
+is sent to Gemini Embedding 2. Name, email, phone, links and raw CV text are not
+sent to create a Roadmap. The product's consent text should identify the active
+providers and explain which selected profile details are processed.
 
 ## Open items
 
 - The live API selects up to eight ranked core gaps with embedded documents from the
   user's market comparison. The standalone knowledge-file workflow retains its explicit
   selection for local review.
-- Migrations 001-016 and the repository SQL pass on a throwaway PostgreSQL
-  (`tests/test_roadmap_db.py`, plus an HTTP run through the Docker image). Building
-  Building Agent Context from the current database was inspected read-only, but a live
-  user job with Gemini and a roadmap database write has not been run yet.
-  See [test-plan.md](test-plan.md).
+- The opt-in PostgreSQL integration test uses a disposable database; see
+  [`test-plan.md`](test-plan.md). Never point it at a shared or production database.
 - No evaluation set yet. Before switching providers or prompts, compare a few real
   outputs with the checks in `validate.py` plus a human read for tone and accuracy.
