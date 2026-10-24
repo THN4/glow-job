@@ -33,12 +33,14 @@ log = logging.getLogger("roadmap")
 class ModelError(Exception):
     """A provider failure with a stable code the API can map to a response."""
 
-    def __init__(self, code: str, message: str, *, retryable: bool = False, usage: "Usage | None" = None):
+    def __init__(self, code: str, message: str, *, retryable: bool = False, usage: "Usage | None" = None,
+                 issues: list[str] | None = None):
         super().__init__(message)
         self.code = code
         self.message = message
         self.retryable = retryable
         self.usage = usage  # tokens already billed before the failure, if any
+        self.issues = issues or []
 
 
 @dataclass

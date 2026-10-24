@@ -69,9 +69,18 @@ class BedrockConverseRoadmapModel:
         except ModelError as error:
             if error.code != "MODEL_INVALID_OUTPUT":
                 raise
-            # A fresh call can recover when Nova ignores the requested tool or
-            # produces a malformed object. Keep the original prompt and schema.
-            return self._call(messages, usage)
+            # Give Nova actionable schema feedback instead of repeating the same
+            # prompt when its tool input fails Pydantic validation.
+            retry_messages = messages
+            if error.issues and messages and messages[-1].get("role") == "user":
+                retry_messages = [*messages[:-1], {
+                    **messages[-1],
+                    "content": [
+                        *messages[-1].get("content", []),
+                        {"text": build_repair_message(error.issues)},
+                    ],
+                }]
+            return self._call(retry_messages, usage)
 
     def _call(self, messages: list[dict[str, Any]], usage: Usage) -> ModelTurn:
         from botocore.exceptions import BotoCoreError, ClientError, ConnectionError, ReadTimeoutError
@@ -137,7 +146,13 @@ class BedrockConverseRoadmapModel:
         try:
             draft = RoadmapDraft.model_validate_json(text)
         except ValueError as error:
+            issues = []
+            if hasattr(error, "errors"):
+                for item in error.errors(include_input=False):
+                    location = ".".join(str(part) for part in item.get("loc", ())) or "root"
+                    issues.append(f"{location}: {item.get('msg', 'invalid value')} ({item.get('type', 'invalid')})")
             log.warning("roadmap model schema invalid stop=%s blocks=%s error_type=%s", stop,
                         [list(block) for block in content], type(error).__name__)
-            raise ModelError("MODEL_INVALID_OUTPUT", "Nova returned an invalid roadmap JSON object.", usage=usage) from error
+            raise ModelError("MODEL_INVALID_OUTPUT", "Nova returned an invalid roadmap JSON object.",
+                             usage=usage, issues=issues) from error
         return ModelTurn(draft=draft, usage=usage, messages=[*messages, message])

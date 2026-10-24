@@ -107,12 +107,16 @@ def test_invalid_tool_output_never_becomes_a_roadmap(value):
     assert error.value.code == "MODEL_INVALID_OUTPUT" and error.value.usage.calls == 2
 
 
-def test_invalid_first_output_is_retried_with_same_prompt(payload):
+def test_invalid_first_output_is_retried_with_schema_feedback(payload):
     client = ConverseClient(response({"title": "incomplete"}), response(payload))
     turn = BedrockConverseRoadmapModel(client).generate({"goal": "example"})
     assert turn.draft.model_dump() == payload
     assert turn.usage.calls == 2
-    assert client.calls[0]["messages"] == client.calls[1]["messages"]
+    first = client.calls[0]["messages"]
+    retry = client.calls[1]["messages"]
+    assert first[0]["content"][0]["text"] in retry[0]["content"][0]["text"]
+    assert "overview" in retry[0]["content"][-1]["text"]
+    assert "Field required" in retry[0]["content"][-1]["text"]
 
 
 def test_valid_json_text_is_accepted_when_nova_ends_without_tool(payload):
