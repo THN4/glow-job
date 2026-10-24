@@ -49,6 +49,8 @@ export function NodeDetailPanel({
   const prerequisites = connections.filter((edge) => edge.to === node.id && !edge.optional
     && edge.kind !== 'recommended_order')
     .map((edge) => nodeById.get(edge.from)).filter((item): item is RoadmapNodeData => Boolean(item))
+  const reviewedRelations = connections.filter((edge) => (edge.from === node.id || edge.to === node.id)
+    && (edge.relationships?.length ?? 0) > 0)
   const canConfirm = canCompleteNode(node)
   const isGoal = node.kind === 'goal'
   const citations = extra?.citations ?? []
@@ -104,6 +106,28 @@ export function NodeDetailPanel({
           </ul>
         </section>
 
+        {reviewedRelations.length > 0 && <section className="rounded-lg border border-violet-100 bg-violet-50/60 p-3">
+          <h3 className="text-xs font-bold text-slate-900">Reviewed skill relationships</h3>
+          <ul className="mt-2 space-y-3 text-[11px] text-slate-600">
+            {reviewedRelations.flatMap((edge) => (edge.relationships ?? []).map((relationship) => {
+              const source = nodeById.get(edge.from)
+              const target = nodeById.get(edge.to)
+              return <li key={relationship.dependencyId} className="rounded-lg border border-violet-100 bg-white p-2">
+                <p className="font-semibold text-slate-800">
+                  {source?.title ?? edge.from} → {target?.title ?? edge.to}
+                  <span className="ml-1 font-normal text-violet-700">{relationship.relationshipType.replace('_', ' ')}</span>
+                </p>
+                {relationship.scopeNote && <p className="mt-1">{relationship.scopeNote}</p>}
+                <p className="mt-1 text-slate-500">Scope: {relationship.scopeType.replace('_', ' ')}</p>
+                {relationship.sourceUrl
+                  ? <a href={relationship.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-1 block text-blue-700 underline">{relationship.sourceTitle ?? 'Reviewed source'}</a>
+                  : relationship.sourceTitle && <p className="mt-1">Source: {relationship.sourceTitle}</p>}
+                <blockquote className="mt-1 border-l-2 border-violet-200 pl-2 text-slate-500">{relationship.evidenceQuote}</blockquote>
+              </li>
+            }))}
+          </ul>
+        </section>}
+
         {prerequisites.length > 0 && <section className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
           <h3 className="text-xs font-bold text-slate-900">Required first</h3>
           <ul className="mt-1.5 space-y-1 text-[11px] text-slate-600">
@@ -116,7 +140,7 @@ export function NodeDetailPanel({
           </ul>
         </section>}
 
-        <section className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+        {!node.contextOnly && <section className="rounded-lg border border-blue-100 bg-blue-50/70 p-3">
           <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
             <Link2 size={15} className="text-blue-600" aria-hidden="true" /> What this unlocks
           </h3>
@@ -125,7 +149,7 @@ export function NodeDetailPanel({
               {unlockedNodes.map((unlocked) => <li key={unlocked.id}>{unlocked.title}</li>)}
             </ul>
           ) : <p className="mt-1 text-[11px] text-slate-500">No follow-up steps listed.</p>}
-        </section>
+        </section>}
 
         {node.baselineComplete && <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
           <h3 className="text-xs font-bold text-slate-900">Skill details</h3>
@@ -137,7 +161,7 @@ export function NodeDetailPanel({
           </ul> : <p className="mt-1 text-[11px] text-slate-500">No reviewed skill details are available yet.</p>}
         </section>}
 
-        {!isGoal && !node.baselineComplete && <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
+        {!isGoal && !node.baselineComplete && !node.contextOnly && <section className="rounded-xl border border-blue-100 bg-blue-50/70 p-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
               <ListChecks size={15} className="text-blue-600" aria-hidden="true" /> Learning checklist
@@ -172,7 +196,7 @@ export function NodeDetailPanel({
           </ul>
         </section>}
 
-        {node.kind !== 'goal' && !readOnly && <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
+        {node.kind !== 'goal' && !node.contextOnly && !readOnly && <section className="rounded-xl border border-amber-200 bg-amber-50/60 p-3">
           <div className="flex items-center justify-between gap-2">
             <h3 className="flex items-center gap-1.5 text-xs font-bold text-slate-900">
               <Star size={14} className="text-amber-500" aria-hidden="true" /> Evidence
@@ -197,7 +221,7 @@ export function NodeDetailPanel({
         </section>}
       </div>
 
-      {!isGoal && !node.baselineComplete && <footer className="shrink-0 border-t border-slate-100 bg-white p-3">
+      {!isGoal && !node.baselineComplete && !node.contextOnly && <footer className="shrink-0 border-t border-slate-100 bg-white p-3">
         <button type="button" disabled={busy || node.learningContentAvailable === false || (node.status === 'upcoming' && !canStart)
           || (node.status === 'in-progress' && !canConfirm)}
           onClick={() => onStepChange(node.id, node.status === 'completed' ? 'not_started' : node.status === 'in-progress' ? 'completed' : 'in_progress')}

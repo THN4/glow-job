@@ -7,7 +7,7 @@
 
 export type ProgressStatus = 'not_started' | 'in_progress' | 'completed' | 'skipped'
 export type StepProgressInput = Exclude<ProgressStatus, 'skipped'>
-export type NodeKind = 'skill' | 'foundation-check' | 'project' | 'career-activity' | 'goal'
+export type NodeKind = 'skill' | 'foundation-check' | 'foundation-context' | 'project' | 'career-activity' | 'goal'
 export type TaskKind = 'learn' | 'practice' | 'check'
 export type DeferReason =
   | 'OUTSIDE_TIME_BUDGET'
@@ -89,6 +89,7 @@ export type RoadmapNode = {
   position: { row: number; column: number }
   status: ProgressStatus
   learningContentAvailable: boolean
+  contextOnly: boolean
   checklist: ChecklistItem[]
   details: SkillDetail[]
   /** Complete at roadmap creation because the skill is confirmed in the profile. */
@@ -131,7 +132,21 @@ export type RoadmapView = {
   layout: { columns: number; rows: number }
   nodes: RoadmapNode[]
   /** optional: true is a recommended path that does not block the next step (dashed line). */
-  edges: Array<{ from: string; to: string; optional: boolean; kind: 'prerequisite' | 'recommended_order' }>
+  edges: Array<{
+    from: string
+    to: string
+    optional: boolean
+    kind: 'prerequisite' | 'recommended_order' | 'related'
+    relationships: Array<{
+      dependencyId: number
+      relationshipType: 'prerequisite' | 'recommended_before' | 'related'
+      scopeType: 'general' | 'document_specific' | 'conditional'
+      scopeNote: string | null
+      sourceTitle: string | null
+      sourceUrl: string | null
+      evidenceQuote: string
+    }>
+  }>
   deferred: Array<{ skillId: number; skillName: string; reasonCode: DeferReason; note: string }>
   confirmations: Array<{ skillId: number; skillName: string; question: string }>
   contentNotices: Array<{ skillId: number; skillName: string; notice: string }>

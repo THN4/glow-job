@@ -11,9 +11,10 @@ import pytest
 
 from ai.roadmap import layout
 from ai.roadmap.compact import compact_context, planning_budget
-from ai.roadmap.contracts import DraftStep, Edge, RoadmapDraft
+from ai.roadmap.contracts import DraftCitation, DraftStep, DraftTask, Edge, RoadmapDraft
 from ai.roadmap.dependencies import (remove_unsupported_skill_dependencies,
-                                      remove_unsupported_view_dependencies, required_skill_pairs)
+                                     remove_unsupported_view_dependencies, required_skill_pairs,
+                                     reviewed_relationship_ids)
 from ai.roadmap.cost import Pricing, estimate_cost
 from ai.roadmap.generate import GenerationFailed, generate_roadmap, prepare
 from ai.roadmap.providers import ClaudeRoadmapModel, GeminiRoadmapModel, MockRoadmapModel, ModelError, ModelTurn, Usage, output_schema
@@ -163,6 +164,34 @@ def test_saved_roadmap_view_filters_unverified_prerequisites(context):
     assert skill.depends_on == ["check-docker"]  # Stored view remains an audit snapshot.
 
 
+def test_reviewed_context_relationships_render_with_scope_and_evidence(context):
+    model = MockRoadmapModel()
+    view = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY)).view
+    reviewed_ids = {item.dependency_id for edge in view.edges for item in edge.relationships}
+    assert reviewed_ids == {1, 2, 3, 4, 5, 6, 7, 8, 13, 14, 15}
+    context_nodes = [node for node in view.nodes if node.context_only]
+    assert len(context_nodes) == 7
+    assert all(not node.checklist and node.estimated_hours.min == node.estimated_hours.max == 0
+               for node in context_nodes)
+    edge = next(edge for edge in view.edges
+                if any(relationship.dependency_id == 5 for relationship in edge.relationships))
+    relationship = next(item for item in edge.relationships if item.dependency_id == 5)
+
+    assert edge.kind == "recommended_order"
+    assert relationship.relationship_type == "recommended_before"
+    assert relationship.scope_type == "document_specific"
+    assert "Docker Compose" in relationship.scope_note
+    assert relationship.source_title == "Building a Simple Data Pipeline"
+    assert edge.optional is True
+
+    corrected = remove_unsupported_view_dependencies(
+        view, required_skill_pairs(context.foundation_mentions),
+        reviewed_relationship_ids(context.foundation_mentions),
+    )
+    assert any(any(item.dependency_id == 5 for item in saved.relationships)
+               for saved in corrected.edges)
+
+
 def test_bad_citations_and_foundation_lessons_are_fixed_in_code(context):
     bad = draft()
     bad.steps[1].tasks[0].citations[0].quote = "This sentence is not in the source at all."
@@ -298,6 +327,21 @@ def test_invalid_learning_citations_degrade_to_placeholder_after_repair(context)
     assert airflow.checklist == [] and airflow.estimated_hours.min == 0
     assert project.depends_on == []
     assert model.repair_issues
+
+
+def test_invalid_project_learning_task_is_removed_without_failing_roadmap(context):
+    broken = draft()
+    broken.steps[2].tasks = [
+        DraftTask(title="Data source integration", detail="Study integration steps.", task_kind="learn",
+                  citations=[DraftCitation(chunk_id=999999, quote="This quote is not in reviewed content.")]),
+        DraftTask(title="Build a small pipeline", detail="Try the workflow.", task_kind="practice", citations=[]),
+    ]
+    model = ScriptedModel(broken, broken)
+
+    result = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY))
+
+    project = next(node for node in result.view.nodes if node.key == "project")
+    assert [task.task_kind for task in project.checklist] == ["practice"]
 
 
 def test_progress_counts_tasks_and_skips(context):

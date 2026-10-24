@@ -109,8 +109,12 @@ export function RoadmapCanvas({
   const arrowId = useId()
   const nodesById = new Map(nodes.map((node) => [node.id, node]))
   const prerequisiteConnections = connections.filter((connection) => connection.kind === 'prerequisite')
+  const reviewedConnections = connections.filter((connection) => (connection.relationships?.length ?? 0) > 0)
+  const reviewedSkillIds = new Set(reviewedConnections.flatMap((connection) => [connection.from, connection.to]))
   const independentSkills = nodes.filter((node) => node.kind === 'skill'
+    && !node.contextOnly
     && !prerequisiteConnections.some((connection) => connection.from === node.id || connection.to === node.id))
+    .filter((node) => !reviewedSkillIds.has(node.id))
   const sortedIndependent = [...independentSkills].sort((a, b) =>
     a.position.row - b.position.row || a.position.column - b.position.column)
   const goalNode = nodes.find((node) => node.kind === 'goal')
@@ -529,6 +533,12 @@ export function RoadmapCanvas({
               const labelX = (fromPoint.x + toPoint.x) * graphSize.width / 2
               const labelY = (fromPoint.y + toPoint.y) * graphSize.height / 2 - 8 + ((connectionIndex % 3) - 1) * 10
               const labelWidth = Math.max(48, (connection.label?.length ?? 0) * 6.5 + 16)
+              const relationshipDetail = (connection.relationships ?? []).map((relationship) => [
+                `${relationship.relationshipType} · ${relationship.scopeType}`,
+                relationship.scopeNote ? `Condition: ${relationship.scopeNote}` : '',
+                relationship.sourceTitle ? `Source: ${relationship.sourceTitle}` : '',
+                relationship.evidenceQuote ? `Evidence: ${relationship.evidenceQuote}` : '',
+              ].filter(Boolean).join(' · ')).join(' | ')
 
               const dashed = connection.from === INDEPENDENT_ROUTE_ID
                 ? independentSkills.some((node) => node.status !== 'completed')
@@ -539,11 +549,11 @@ export function RoadmapCanvas({
                   key={`${connection.from}-${connection.to}`}
                   tabIndex={0}
                   role="img"
-                  aria-label={`${from.title} to ${to.title}${connection.kind === 'prerequisite' ? connection.optional ? ', optional prerequisite check' : ', prerequisite' : ', suggested route'}`}
+                  aria-label={`${from.title} to ${to.title}: ${connection.label ?? (connection.kind === 'prerequisite' ? 'prerequisite' : 'suggested route')}${relationshipDetail ? `. ${relationshipDetail}` : ''}`}
                   className="roadmap-connection pointer-events-auto outline-none"
                   style={{ color: arrowColors[arrowStatus] }}
                 >
-                  <title>{from.title} → {to.title}{connection.kind === 'prerequisite' ? connection.optional ? ' (optional prerequisite)' : ' (required prerequisite)' : ' (suggested route, not a prerequisite)'}</title>
+                  <title>{from.title} → {to.title} · {connection.label ?? (connection.kind === 'prerequisite' ? 'Prerequisite' : 'Suggested route')}{relationshipDetail ? ` · ${relationshipDetail}` : ''}</title>
                   <path
                     d={path}
                     fill="none"

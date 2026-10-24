@@ -38,6 +38,7 @@ export type RoadmapNodeData = {
   /** False for a visible placeholder node whose reviewed learning content is not ready. */
   learningContentAvailable?: boolean
   baselineComplete?: boolean
+  contextOnly?: boolean
   position: RoadmapNodePosition
   subtitle: string
   description: string
@@ -51,7 +52,16 @@ export type RoadmapConnection = {
   to: string
   /** Dashed lines indicate a recommended/optional path. */
   optional?: boolean
-  kind?: 'prerequisite' | 'recommended_order'
+  kind?: 'prerequisite' | 'recommended_order' | 'related'
+  relationships?: Array<{
+    dependencyId: number
+    relationshipType: 'prerequisite' | 'recommended_before' | 'related'
+    scopeType: 'general' | 'document_specific' | 'conditional'
+    scopeNote: string | null
+    sourceTitle: string | null
+    sourceUrl: string | null
+    evidenceQuote: string
+  }>
   label?: string
 }
 

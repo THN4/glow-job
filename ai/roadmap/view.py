@@ -15,7 +15,7 @@ from ai.roadmap import layout as grid
 from ai.roadmap.compact import Budget
 from ai.roadmap.contracts import (
     ChecklistItem, Citation, Confirmation, ContentNotice, DeferredSkill, Edge, Generation,
-    HoursRange, Layout, NextAction, NodeSkill, Position, Progress, RoadmapDraft, RoadmapNode,
+    HoursRange, Layout, NextAction, NodeSkill, Position, Progress, ReviewedRelationship, RoadmapDraft, RoadmapNode,
     ProfileEvidence, RoadmapView, SkillDetail, Summary,
 )
 from ai.roadmap.ordering import recommended_route_steps, recommended_skill_steps
@@ -158,6 +158,30 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
             recommended_order=recommended_order.get(step.key),
         ))
 
+    represented_skill_ids = {node.skill.skill_id for node in nodes if node.skill is not None}
+    for foundation in context.foundation_mentions:
+        if foundation.skill_id in represented_skill_ids:
+            continue
+        if not any(any(node.skill is not None and node.skill.skill_id == relationship.target_skill_id
+                       for node in nodes) for relationship in foundation.relationships):
+            continue
+        nodes.append(RoadmapNode(
+            key=f"foundation-context-{foundation.skill_id}", kind="foundation-context",
+            title=foundation.skill_name, subtitle="Reviewed relationship context",
+            summary="This skill is shown to explain a reviewed relationship. It is not a learning step.",
+            why_it_matters=["The connected skill relationship is backed by reviewed source material."],
+            skill=NodeSkill(
+                skill_id=foundation.skill_id, name=foundation.skill_name,
+                current_level=foundation.user_level, target_level=None, gap_status=None,
+                in_profile=foundation.confirmed_in_user_profile,
+                profile_label=profile_label(None, foundation.confirmed_in_user_profile, foundation.user_level),
+                profile_evidence=profile_evidence(foundation.skill_id),
+            ),
+            estimated_hours=HoursRange(min=0, max=0), depends_on=[], context_only=True,
+            notice="Context only: this node does not add a lesson or roadmap progress step.",
+        ))
+        represented_skill_ids.add(foundation.skill_id)
+
     goal = context.user_context.career_goal
     target_role = goal.target_role_title if goal else context.career_context.career_name
     duration = TIMEFRAME_LABEL.get(goal.readiness_timeframe, "") if goal and goal.readiness_timeframe else ""
@@ -213,17 +237,48 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
         edges.append(Edge(from_=source, to=target, optional=True, kind="recommended_order"))
         edge_pairs.add(pair)
 
-    completed_steps = [step for step in route_steps if step.kind == "completed_skill"]
-    check_keys = {step.skill_id: step.key for step in draft.steps if step.kind == "foundation_check"}
-    skill_keys = {step.skill_id: step.key for step in ordered_skills}
+    relationship_edges: dict[tuple[str, str], list[ReviewedRelationship]] = {}
+    hard_relationship_pairs: set[tuple[str, str]] = set()
+    skill_node_keys = {node.skill.skill_id: node.key for node in nodes if node.skill is not None}
     for foundation in context.foundation_mentions:
-        check_key = check_keys.get(foundation.skill_id)
-        if not check_key:
+        source_key = skill_node_keys.get(foundation.skill_id)
+        if source_key is None:
             continue
         for relationship in foundation.relationships:
-            target_key = skill_keys.get(relationship.target_skill_id)
-            if target_key:
-                add_recommended_edge(check_key, target_key)
+            target_key = skill_node_keys.get(relationship.target_skill_id)
+            pair = (source_key, target_key) if target_key is not None else None
+            if target_key is None or source_key == target_key or pair in edge_pairs:
+                continue
+            blocks = (relationship.dependency_type == "prerequisite"
+                      and relationship.runtime_role == "global_ordering"
+                      and relationship.blocks_unconditional_progress)
+            evidence = registry.get(relationship.chunk_id)
+            relationship_edges.setdefault(pair, []).append(ReviewedRelationship(
+                dependency_id=relationship.dependency_id,
+                relationship_type=relationship.dependency_type,
+                scope_type=relationship.scope_type, scope_note=relationship.scope_note,
+                source_title=evidence.title if evidence else None,
+                source_url=evidence.source_url if evidence else None,
+                evidence_quote=relationship.evidence_quote,
+            ))
+            if blocks:
+                hard_relationship_pairs.add(pair)
+
+    for (source_key, target_key), details in relationship_edges.items():
+        pair = (source_key, target_key)
+        if pair in edge_pairs:
+            continue
+        blocks = pair in hard_relationship_pairs
+        kind = ("prerequisite" if blocks else "related"
+                if all(item.relationship_type == "related" for item in details)
+                else "recommended_order")
+        if not blocks and already_reaches(target_key, source_key):
+            continue
+        edges.append(Edge(from_=source_key, to=target_key, optional=not blocks,
+                          kind=kind, relationships=details))
+        edge_pairs.add(pair)
+
+    completed_steps = [step for step in route_steps if step.kind == "completed_skill"]
 
     def incoming(target: str) -> bool:
         return any(edge.to == target for edge in edges)
@@ -325,6 +380,10 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
     for node in view.nodes:
         if node.kind == "goal":
             continue
+        if node.context_only:
+            node.status = "not_started"
+            node.subtitle = _subtitle(node)
+            continue
         if not node.learning_content_available:
             node.status = "not_started"
             node.subtitle = _subtitle(node)
@@ -373,7 +432,7 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
             or chosen.status == "completed"
             or (chosen.status == "skipped" and chosen.key not in hard_checks)
             or not unlocked(chosen)):
-        upcoming = next((n for n in ordered if n.kind != "goal"
+        upcoming = next((n for n in ordered if n.kind != "goal" and not n.context_only
                          and n.learning_content_available
                          and (n.status not in {"completed", "skipped"} or n.key in hard_checks)
                          and unlocked(n)),
@@ -389,6 +448,8 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
 
 
 def _subtitle(node: RoadmapNode) -> str:
+    if node.context_only:
+        return "Reviewed relationship context"
     if not node.learning_content_available:
         return "Content not ready"
     if node.status == "completed":

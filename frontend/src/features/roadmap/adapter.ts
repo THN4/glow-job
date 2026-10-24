@@ -30,6 +30,7 @@ const STATUS: Record<ApiNode['status'], RoadmapNodeStatus> = {
 const KIND: Record<ApiNode['kind'], RoadmapNodeKind> = {
   skill: 'skill',
   'foundation-check': 'skill',
+  'foundation-context': 'skill',
   project: 'project',
   'career-activity': 'career-activity',
   goal: 'goal',
@@ -83,8 +84,9 @@ export function timeText(node: ApiNode, weekly: HoursRange | null): string | nul
 
 export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
   const weekly = view.summary.weeklyHours
-  const completedNodes = view.nodes.filter((node) => node.status === 'completed').length
-  const totalNodes = view.nodes.length
+  const progressNodes = view.nodes.filter((node) => node.kind !== 'goal' && !node.contextOnly)
+  const completedNodes = progressNodes.filter((node) => node.status === 'completed').length
+  const totalNodes = progressNodes.length
   const completion = totalNodes ? Math.round((completedNodes / totalNodes) * 100) : 0
   const statusText = `${completedNodes} of ${totalNodes} tasks completed`
   const nodes: RoadmapNodeData[] = view.nodes.map((node) => ({
@@ -94,6 +96,7 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
     kind: KIND[node.kind],
     status: STATUS[node.status],
     learningContentAvailable: node.learningContentAvailable,
+    contextOnly: node.contextOnly,
     baselineComplete: node.baselineComplete,
     position: node.position,
     subtitle: node.subtitle,
@@ -126,6 +129,8 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
   const nodeKindById = new Map(nodes.map((node) => [node.id, node.kind]))
   const connections: RoadmapConnection[] = view.edges
     .filter((edge) => edge.kind === 'prerequisite'
+      || edge.kind === 'related'
+      || edge.relationships.length > 0
       || (edge.kind === 'recommended_order'
         && (['project', 'career-activity'].includes(nodeKindById.get(edge.to) ?? '')
           || (edge.to === 'goal'
@@ -135,7 +140,15 @@ export function toRoadmapScreen(view: RoadmapView): RoadmapScreenData {
       to: edge.to,
       optional: edge.optional,
       kind: edge.kind,
-      label: edge.kind === 'prerequisite'
+      relationships: edge.relationships,
+      label: edge.relationships.length > 1
+        ? `${edge.relationships.length} reviewed links`
+        : edge.relationships[0]?.relationshipType === 'related' ? 'Related'
+        : edge.relationships[0]?.relationshipType === 'prerequisite'
+          ? edge.optional ? 'Conditional prerequisite' : 'Prerequisite'
+        : edge.relationships[0]?.relationshipType === 'recommended_before' ? 'Recommended before'
+        : edge.kind === 'related' ? 'Related'
+        : edge.kind === 'prerequisite'
         ? edge.optional ? 'Optional foundation' : 'Required first'
         : nodeKindById.get(edge.to) === 'project' ? 'Practice in project'
           : nodeKindById.get(edge.to) === 'career-activity' ? 'Career step' : 'Career outcome',

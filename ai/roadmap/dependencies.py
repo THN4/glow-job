@@ -25,6 +25,15 @@ def required_skill_pairs(foundations: Iterable[FoundationMention | Mapping[str, 
     }
 
 
+def reviewed_relationship_ids(foundations: Iterable[FoundationMention | Mapping[str, Any]]) -> set[int]:
+    """Return IDs for every reviewed relationship passed into this roadmap."""
+    return {
+        int(_field(relationship, "dependency_id"))
+        for foundation in foundations
+        for relationship in _field(foundation, "relationships")
+    }
+
+
 def remove_unsupported_skill_dependencies(draft: RoadmapDraft,
                                           allowed: set[tuple[int, int]]) -> list[tuple[str, str]]:
     """Drop model-authored hard links to skill steps unless the context requires them."""
@@ -49,7 +58,8 @@ def remove_unsupported_skill_dependencies(draft: RoadmapDraft,
 
 
 def remove_unsupported_view_dependencies(view: RoadmapView,
-                                         allowed: set[tuple[int, int]]) -> RoadmapView:
+                                         allowed: set[tuple[int, int]],
+                                         allowed_relationship_ids: set[int] | None = None) -> RoadmapView:
     """Correct legacy saved views before layout and progress locking are calculated."""
     view = view.model_copy(deep=True)
     by_key = {node.key: node for node in view.nodes}
@@ -62,14 +72,28 @@ def remove_unsupported_view_dependencies(view: RoadmapView,
                 and source.skill is not None
                 and (source.skill.skill_id, target.skill.skill_id) in allowed)
         ]
-    view.edges = [
-        edge for edge in view.edges
-        if (edge.kind != "prerequisite"
-            or (target := by_key.get(edge.to)) is None
-            or target.kind != "skill"
-            or target.baseline_complete
-            or edge.from_ in target.depends_on)
-    ]
+    kept_edges = []
+    for edge in view.edges:
+        if edge.relationships:
+            relationships = [item for item in edge.relationships
+                             if (allowed_relationship_ids is None
+                                 or item.dependency_id in allowed_relationship_ids)]
+            if not relationships:
+                continue
+            edge.relationships = relationships
+            pair = (edge.from_, edge.to)
+            is_hard = pair in allowed
+            edge.optional = not is_hard
+            edge.kind = ("prerequisite" if is_hard else "related"
+                         if all(item.relationship_type == "related" for item in relationships)
+                         else "recommended_order")
+            kept_edges.append(edge)
+            continue
+        target = by_key.get(edge.to)
+        if (edge.kind != "prerequisite" or target is None or target.kind != "skill"
+                or target.baseline_complete or edge.from_ in target.depends_on):
+            kept_edges.append(edge)
+    view.edges = kept_edges
     outgoing = {edge.from_ for edge in view.edges}
     if "goal" in by_key:
         view.edges.extend(

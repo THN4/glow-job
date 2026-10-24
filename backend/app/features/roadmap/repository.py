@@ -552,7 +552,9 @@ class RoadmapRepository:
             ).fetchone()[0]
             number = 0
             for node in view.nodes:
-                if node.kind == "goal":
+                # Foundation context nodes are visual anchors for reviewed
+                # relationships, not learning steps in the generated draft.
+                if node.kind == "goal" or node.context_only:
                     continue
                 number += 1
                 step = steps[node.key]
@@ -686,12 +688,13 @@ class RoadmapRepository:
                 """,
                 (user_id, row[0]),
             ).fetchall()
-        from ai.roadmap.dependencies import remove_unsupported_view_dependencies, required_skill_pairs
+        from ai.roadmap.dependencies import (remove_unsupported_view_dependencies,
+                                             required_skill_pairs, reviewed_relationship_ids)
 
         view = RoadmapView.model_validate(row[3]).model_copy(
             update={"roadmap_id": row[0], "version": row[1], "status": row[2]})
         view = remove_unsupported_view_dependencies(
-            view, required_skill_pairs(row[4] or []))
+            view, required_skill_pairs(row[4] or []), reviewed_relationship_ids(row[4] or []))
         return apply_progress(
             view, completed_tasks={r[0] for r in done},
             skipped_steps={key for key, status in marked if status == "skipped"},

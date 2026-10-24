@@ -35,6 +35,21 @@
           },
           "title": "Citations",
           "type": "array"
+        },
+        "verified": {
+          "default": false,
+          "title": "Verified",
+          "type": "boolean"
+        },
+        "needsReview": {
+          "default": false,
+          "title": "Needsreview",
+          "type": "boolean"
+        },
+        "questionCount": {
+          "default": 0,
+          "title": "Questioncount",
+          "type": "integer"
         }
       },
       "required": [
@@ -192,10 +207,19 @@
           "default": "prerequisite",
           "enum": [
             "prerequisite",
-            "recommended_order"
+            "recommended_order",
+            "related"
           ],
           "title": "Kind",
           "type": "string"
+        },
+        "relationships": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ReviewedRelationship"
+          },
+          "title": "Relationships",
+          "type": "array"
         }
       },
       "required": [
@@ -345,11 +369,10 @@
           "type": "string"
         },
         "profileEvidence": {
-          "default": [],
           "items": {
             "$ref": "#/$defs/ProfileEvidence"
           },
-          "title": "ProfileEvidence",
+          "title": "Profileevidence",
           "type": "array"
         }
       },
@@ -362,24 +385,6 @@
         "inProfile"
       ],
       "title": "NodeSkill",
-      "type": "object"
-    },
-    "ProfileEvidence": {
-      "properties": {
-        "evidenceType": {
-          "title": "Evidencetype",
-          "type": "string"
-        },
-        "excerpt": {
-          "title": "Excerpt",
-          "type": "string"
-        }
-      },
-      "required": [
-        "evidenceType",
-        "excerpt"
-      ],
-      "title": "ProfileEvidence",
       "type": "object"
     },
     "Position": {
@@ -399,6 +404,24 @@
         "column"
       ],
       "title": "Position",
+      "type": "object"
+    },
+    "ProfileEvidence": {
+      "properties": {
+        "evidenceType": {
+          "title": "Evidencetype",
+          "type": "string"
+        },
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidenceType",
+        "excerpt"
+      ],
+      "title": "ProfileEvidence",
       "type": "object"
     },
     "Progress": {
@@ -439,6 +462,80 @@
       "title": "Progress",
       "type": "object"
     },
+    "ReviewedRelationship": {
+      "properties": {
+        "dependencyId": {
+          "title": "Dependencyid",
+          "type": "integer"
+        },
+        "relationshipType": {
+          "enum": [
+            "prerequisite",
+            "recommended_before",
+            "related"
+          ],
+          "title": "Relationshiptype",
+          "type": "string"
+        },
+        "scopeType": {
+          "enum": [
+            "general",
+            "document_specific",
+            "conditional"
+          ],
+          "title": "Scopetype",
+          "type": "string"
+        },
+        "scopeNote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scopenote"
+        },
+        "sourceTitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcetitle"
+        },
+        "sourceUrl": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourceurl"
+        },
+        "evidenceQuote": {
+          "title": "Evidencequote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dependencyId",
+        "relationshipType",
+        "scopeType",
+        "evidenceQuote"
+      ],
+      "title": "ReviewedRelationship",
+      "type": "object"
+    },
     "RoadmapNode": {
       "properties": {
         "key": {
@@ -449,6 +546,7 @@
           "enum": [
             "skill",
             "foundation-check",
+            "foundation-context",
             "project",
             "career-activity",
             "goal"
@@ -545,6 +643,16 @@
           ],
           "title": "Status",
           "type": "string"
+        },
+        "learningContentAvailable": {
+          "default": true,
+          "title": "Learningcontentavailable",
+          "type": "boolean"
+        },
+        "contextOnly": {
+          "default": false,
+          "title": "Contextonly",
+          "type": "boolean"
         },
         "checklist": {
           "default": [],
@@ -808,7 +916,7 @@
     "layout": {
       "$ref": "#/$defs/Layout",
       "default": {
-          "columns": 3,
+        "columns": 3,
         "rows": 1
       }
     },
