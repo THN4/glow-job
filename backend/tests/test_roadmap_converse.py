@@ -12,11 +12,12 @@ from botocore.exceptions import ClientError, NoCredentialsError, ReadTimeoutErro
 
 from ai.roadmap.bedrock_converse import BedrockConverseRoadmapModel
 from ai.roadmap.compact import compact_context, planning_budget
-from ai.roadmap.contracts import RoadmapDraft
+from ai.roadmap.contracts import DraftSkillDetail, DraftStep, DraftTask, RoadmapDraft
 from ai.roadmap.cost import pricing_for_model
 from ai.roadmap.generate import generate_roadmap, prepare
 from ai.roadmap.prompt import SYSTEM_PROMPT
 from ai.roadmap.providers import MockRoadmapModel, ModelError, create_model
+from ai.roadmap.validate import validate_draft
 from app.features.roadmap.config import RoadmapSettings
 from rag.context.agent_models import AgentContext
 
@@ -105,6 +106,68 @@ def test_invalid_tool_output_never_becomes_a_roadmap(value):
     with pytest.raises(ModelError) as error:
         model.generate({})
     assert error.value.code == "MODEL_INVALID_OUTPUT" and error.value.usage.calls == 2
+
+
+def test_non_skill_steps_may_omit_skill_id():
+    step = DraftStep.model_validate({
+        "key": "portfolio-project",
+        "kind": "project",
+        "title": "Build a small portfolio project",
+        "summary": "Apply the planned skills.",
+        "why": ["Practice the workflow end to end."],
+        "hours_min": 2,
+        "hours_max": 4,
+        "depends_on": [],
+        "tasks": [],
+    })
+
+    assert step.skill_id is None
+    assert "skill_id" not in DraftStep.model_json_schema()["required"]
+
+
+def test_task_and_detail_citations_can_be_omitted():
+    task = DraftTask.model_validate({
+        "title": "Practice the workflow",
+        "detail": "Build a small example.",
+        "task_kind": "practice",
+    })
+    detail = DraftSkillDetail.model_validate({
+        "title": "Core concepts",
+        "detail": "Review the central concepts.",
+    })
+
+    assert task.citations == []
+    assert detail.citations == []
+    assert "citations" not in DraftTask.model_json_schema()["required"]
+    assert "citations" not in DraftSkillDetail.model_json_schema()["required"]
+
+
+def test_learn_task_without_citations_still_fails_validation(context, payload):
+    incomplete = copy.deepcopy(payload)
+    task = next(task for step in incomplete["steps"] for task in step["tasks"]
+                if task["task_kind"] == "learn")
+    task.pop("citations")
+
+    check = validate_draft(RoadmapDraft.model_validate(incomplete), context,
+                           planning_budget(context, TODAY))
+
+    assert any("no valid citation" in issue for issue in check.fatal)
+
+
+def test_roadmap_repair_adds_tasks_omitted_by_nova(context, payload):
+    incomplete = copy.deepcopy(payload)
+    step = next(step for step in incomplete["steps"] if step["kind"] == "skill")
+    step.pop("tasks")
+    client = ConverseClient(response(incomplete), response(payload))
+    model = BedrockConverseRoadmapModel(client)
+
+    prepared = prepare(context, model, today=TODAY)
+    result = generate_roadmap(context, model, prepared=prepared)
+
+    assert result.view is not None
+    assert len(client.calls) == 2
+    repair_text = client.calls[1]["messages"][-1]["content"][0]["text"]
+    assert "has no tasks" in repair_text
 
 
 def test_invalid_first_output_is_retried_with_schema_feedback(payload):

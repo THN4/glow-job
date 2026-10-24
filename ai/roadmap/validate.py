@@ -38,6 +38,19 @@ def _has_learning_content(candidate: RoadmapCandidate) -> bool:
             and candidate.rag_status in {"supported", "partial"})
 
 
+def _valid_citation(step: DraftStep, cite: DraftCitation, sources: dict) -> bool:
+    source = sources.get(cite.chunk_id)
+    allowed = source is not None and (
+        step.kind not in {"skill", "completed_skill", "foundation_check"}
+        or step.skill_id in source.used_by_skill_ids
+    )
+    return bool(allowed and len(_norm(cite.quote)) >= 20 and _norm(cite.quote) in _norm(source.content))
+
+
+def _has_valid_task_citation(step: DraftStep, task, sources: dict) -> bool:
+    return any(_valid_citation(step, cite, sources) for cite in task.citations)
+
+
 def _reviewed_profile_details(candidate: RoadmapCandidate, sources: dict) -> list[DraftSkillDetail]:
     """Return only profile details backed by exact, skill-scoped source quotes."""
     reviewed_details = []
@@ -150,24 +163,33 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget, *
     # learning citation. Keep the skill visible, but turn it into the same
     # unavailable placeholder used when reviewed teaching content is missing.
     if placeholder_invalid_citations:
-        for step in draft.steps:
-            if step.kind != "skill" or step.skill_id not in mains or step.skill_id in unavailable_ids:
+        for step in list(draft.steps):
+            invalid_learning_tasks = [
+                task for task in step.tasks
+                if task.task_kind == "learn" and not _has_valid_task_citation(step, task, sources)
+            ]
+            if not invalid_learning_tasks:
                 continue
-            if any(
-                task.task_kind == "learn"
-                and not any(
-                    (source := sources.get(cite.chunk_id)) is not None
-                    and step.skill_id in source.used_by_skill_ids
-                    and len(_norm(cite.quote)) >= 20
-                    and _norm(cite.quote) in _norm(source.content)
-                    for cite in task.citations
-                )
-                for task in step.tasks
-            ):
+            if step.kind == "skill" and step.skill_id in mains and step.skill_id not in unavailable_ids:
                 unavailable_ids.add(step.skill_id)
                 warnings.append(
                     f"{mains[step.skill_id].skill_name}: learning evidence was incomplete; "
                     "shown as a placeholder until reviewed citations are available."
+                )
+            elif step.kind in {"project", "career_activity"}:
+                invalid_ids = {id(task) for task in invalid_learning_tasks}
+                step.tasks = [task for task in step.tasks if id(task) not in invalid_ids]
+                warnings.append(
+                    f"Step '{step.key}': removed optional learning tasks without a valid reviewed citation."
+                )
+                if not step.tasks:
+                    draft.steps.remove(step)
+                    warnings.append(f"Step '{step.key}': removed the optional step because no supported tasks remained.")
+            elif step.kind == "foundation_check":
+                for task in invalid_learning_tasks:
+                    task.task_kind = "check"
+                warnings.append(
+                    f"Step '{step.key}': changed unsupported learning tasks to readiness checks."
                 )
 
     # A reference-only skill is not a learning gap. If it is confirmed in the
@@ -331,12 +353,7 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget, *
         for task in step.tasks:
             kept = []
             for cite in task.citations:
-                source = sources.get(cite.chunk_id)
-                allowed = source is not None and (
-                    step.kind not in {"skill", "completed_skill", "foundation_check"}
-                    or step.skill_id in source.used_by_skill_ids
-                )
-                if allowed and len(_norm(cite.quote)) >= 20 and _norm(cite.quote) in _norm(source.content):
+                if _valid_citation(step, cite, sources):
                     kept.append(cite)
                 else:
                     warnings.append(f"{label}: removed a citation to chunk {cite.chunk_id} that did not match its source.")

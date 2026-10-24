@@ -81,7 +81,8 @@ def generate_roadmap(context: AgentContext, model: RoadmapModel, *, prepared: Pr
                 check = fallback
     except ModelError as err:
         usage = err.usage or usage
-        raise GenerationFailed(err.code, err.message, usage=usage, cost_usd=cost(), retryable=err.retryable) from err
+        raise GenerationFailed(err.code, err.message, usage=usage, cost_usd=cost(), retryable=err.retryable,
+                               issues=err.issues) from err
     if check.fatal:
         raise GenerationFailed("ROADMAP_VALIDATION_FAILED", "The generated roadmap did not pass validation.",
                                usage=usage, cost_usd=cost(), issues=check.fatal)

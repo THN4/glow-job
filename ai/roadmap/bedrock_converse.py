@@ -151,8 +151,8 @@ class BedrockConverseRoadmapModel:
                 for item in error.errors(include_input=False):
                     location = ".".join(str(part) for part in item.get("loc", ())) or "root"
                     issues.append(f"{location}: {item.get('msg', 'invalid value')} ({item.get('type', 'invalid')})")
-            log.warning("roadmap model schema invalid stop=%s blocks=%s error_type=%s", stop,
-                        [list(block) for block in content], type(error).__name__)
+            log.warning("roadmap model schema invalid stop=%s blocks=%s error_type=%s issues=%s", stop,
+                        [list(block) for block in content], type(error).__name__, issues)
             raise ModelError("MODEL_INVALID_OUTPUT", "Nova returned an invalid roadmap JSON object.",
                              usage=usage, issues=issues) from error
         return ModelTurn(draft=draft, usage=usage, messages=[*messages, message])

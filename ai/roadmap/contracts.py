@@ -35,26 +35,30 @@ class DraftTask(Draft):
     title: str
     detail: str
     task_kind: TaskKind
-    citations: list[DraftCitation]
+    citations: list[DraftCitation] = Field(default_factory=list)
 
 
 class DraftSkillDetail(Draft):
     title: str
     detail: str
-    citations: list[DraftCitation]
+    citations: list[DraftCitation] = Field(default_factory=list)
 
 
 class DraftStep(Draft):
     key: str = Field(description="Short unique slug, e.g. 'airflow-basics'.")
     kind: StepKind
-    skill_id: int | None
+    # Non-skill steps do not have a skill. Keep this optional in the JSON
+    # schema as well, since providers may omit it instead of sending null.
+    skill_id: int | None = None
     title: str
     summary: str
     why: list[str]
     hours_min: int
     hours_max: int
     depends_on: list[str]
-    tasks: list[DraftTask]
+    # Allow omission through structural parsing so semantic validation can ask
+    # the model to repair missing tasks with a targeted message.
+    tasks: list[DraftTask] = Field(default_factory=list)
     details: list[DraftSkillDetail] = []
 
 
@@ -154,7 +158,7 @@ class Position(View):
 
 class RoadmapNode(View):
     key: str
-    kind: Literal["skill", "foundation-check", "project", "career-activity", "goal"]
+    kind: Literal["skill", "foundation-check", "foundation-context", "project", "career-activity", "goal"]
     title: str
     # Text under the title on the node card, e.g. "In progress" or "Upcoming project".
     subtitle: str = ""
@@ -172,6 +176,8 @@ class RoadmapNode(View):
     status: ProgressStatus = "not_started"
     # False for a selected skill-gap node that has no reviewed instructional content yet.
     learning_content_available: bool = True
+    # Context anchors explain reviewed dependencies and never count as learning steps.
+    context_only: bool = False
     checklist: list[ChecklistItem] = []
     details: list[SkillDetail] = []
     # True when the learner's confirmed profile and market assessment show this skill is
@@ -181,12 +187,24 @@ class RoadmapNode(View):
     notice: str | None = None
 
 
+class ReviewedRelationship(View):
+    dependency_id: int
+    relationship_type: Literal["prerequisite", "recommended_before", "related"]
+    scope_type: Literal["general", "document_specific", "conditional"]
+    scope_note: str | None = None
+    source_title: str | None = None
+    source_url: str | None = None
+    evidence_quote: str
+
+
 class Edge(View):
     from_: str = Field(alias="from")
     to: str
     # True for a recommended path that does not block the next step (drawn dashed).
     optional: bool = False
-    kind: Literal["prerequisite", "recommended_order"] = "prerequisite"
+    kind: Literal["prerequisite", "recommended_order", "related"] = "prerequisite"
+    # Multiple reviewed records can connect the same pair, each with its own scope/evidence.
+    relationships: list[ReviewedRelationship] = []
 
 
 class Layout(View):
