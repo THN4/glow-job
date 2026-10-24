@@ -1,33 +1,32 @@
-# Deploy Glow Job บน EC2 Ubuntu 24.04
+# Deploy Glow Job on EC2 with Ubuntu 24.04
 
-Frontend React/Vite + Nginx + FastAPI/systemd อยู่ EC2 เครื่องเดียวกัน ไม่ใช้ Docker
-และไม่บังคับ EC2 IAM role. ตัวอย่าง subdomain คือ `glowjob.modnoi.com` ยังไม่ได้ยืนยัน
-ว่าเจ้าของโดเมนตั้ง DNS แล้ว หากใช้ชื่ออื่นให้เปลี่ยนทุกจุดในคู่มือนี้และ nginx.conf.
+Run the React/Vite frontend, Nginx, and FastAPI/systemd backend on one EC2 instance without Docker. An EC2 IAM role is optional when authorized credentials are supplied another way.
+
+This guide uses `glowjob.modnoi.com` as an example. Its DNS configuration has not been verified. Replace the name throughout this guide and `nginx.conf` if using another subdomain.
 
 ```text
-HTTPS → Nginx → /       frontend build
-             → /api/  127.0.0.1:8787 FastAPI → DB / Bedrock
+HTTPS -> Nginx -> /       frontend build
+              -> /api/  127.0.0.1:8787 FastAPI -> DB / Bedrock
 ```
 
-ไฟล์ชุดนี้ยังไม่ได้ทดสอบบน EC2 จริง และไม่ได้สร้าง AWS resources, DB, DNS หรือ
-GitHub Actions ให้. การ push จะยังไม่ deploy อัตโนมัติจนกว่าจะตั้ง workflow แยก.
+These files have not been tested on a live EC2 instance. They do not create AWS resources, databases, DNS records, or GitHub Actions workflows. Automatic deployment on push requires a separate workflow.
 
-## 1. เตรียมเครื่องและสิทธิ์
+## 1. Prepare the instance
 
-- Ubuntu 24.04, Python 3.12; Node.js 24 LTS ต้องติดตั้งแบบ system-wide
-  ให้ user `glowjob` เรียก `node` และ `npm` ได้ ไม่ใช่ติดตั้งด้วย nvm เฉพาะ ubuntu.
-- เครื่องต้องเชื่อม internet เพื่อดาวน์โหลด dependencies และเรียก AI providers.
-- เปิด inbound 80/443 สำหรับเว็บไซต์, 22 เฉพาะ IP ผู้ดูแล. ไม่เปิด 8787 หรือ DB สู่ internet.
-- ใช้ IP คงที่สำหรับ DNS เช่น Elastic IP (public IPv4 มีค่าใช้จ่าย).
-- DB ต้องมี schema, extensions, migrations และข้อมูลที่แอปต้องใช้ก่อนทดสอบ flow จริง.
+- Use Ubuntu 24.04 and Python 3.12.
+- Install Node.js 24 LTS system-wide so `glowjob` can run `node` and `npm`. Installing nvm only for `ubuntu` is insufficient.
+- Allow outbound internet access for dependencies and AI requests.
+- Allow inbound 80/443 for the website and 22 only from the administrator's IP. Keep 8787 and the database port private.
+- Use a stable public IP for DNS, such as an Elastic IP. Public IPv4 is billable.
+- Prepare the database schema, extensions, migrations, and application data separately.
 
-จาก PowerShell เครื่องเรา:
+From PowerShell on your local machine:
 
 ```powershell
 ssh -i "C:\path\your-key.pem" ubuntu@EC2_IP
 ```
 
-จากนี้รันบน EC2 เว้นแต่ระบุเป็นอย่างอื่น:
+Run subsequent commands on EC2 unless stated otherwise:
 
 ```bash
 sudo apt-get update
@@ -36,19 +35,17 @@ id glowjob || sudo useradd --system --create-home --home-dir /var/lib/glowjob --
 sudo install -d -o glowjob -g glowjob -m 700 /var/lib/glowjob/.ssh
 ```
 
-## 2. Deploy Key และ clone
+## 2. Configure Deploy Keys and clone
 
-คุณทดสอบ `sudo -u glowjob ssh -T git@github.com` สำเร็จแล้ว จึงไม่ต้องสร้าง key หลักซ้ำ.
-หากเริ่มเครื่องใหม่ ให้สร้าง key แล้วเพิ่ม **เฉพาะ .pub** ที่ repo Settings → Deploy keys
-โดยไม่เลือก Allow write access. ตรวจ fingerprint GitHub ก่อนยอมรับ host ครั้งแรก.
+If `sudo -u glowjob ssh -T git@github.com` has already authenticated successfully, reuse that key. On a new instance, generate a key and add **only the public .pub key** to the repository's Settings -> Deploy keys. Leave Allow write access unchecked. Verify GitHub's host fingerprint before accepting the first connection.
 
 ```bash
-# เฉพาะเครื่องใหม่ที่ยังไม่มี key (ห้ามทับ key เดิม)
+# New instances only: never overwrite an existing key.
 sudo -u glowjob ssh-keygen -t ed25519 -C glow-job-ec2 -f /var/lib/glowjob/.ssh/id_ed25519 -N ""
 sudo cat /var/lib/glowjob/.ssh/id_ed25519.pub
 ```
 
-Clone ครั้งแรก; ถ้า /opt/glow-job มี checkout อยู่แล้ว ให้ข้าม clone และตรวจ `git status`:
+Clone once. If `/opt/glow-job` already contains a checkout, skip cloning and inspect its Git status:
 
 ```bash
 sudo install -d -o glowjob -g glowjob /opt/glow-job
@@ -56,29 +53,28 @@ sudo -u glowjob git clone git@github.com:THN4/glow-job.git /opt/glow-job
 cd /opt/glow-job
 ```
 
-### Submodule data-pipeline
+### The data-pipeline submodule
 
-Repo หลักอ้าง `https://github.com/THN4/glow-job-data-pipeline`. ถ้าเป็น public ใช้:
+The main repository references `https://github.com/THN4/glow-job-data-pipeline`. If public:
 
 ```bash
 sudo -u glowjob git submodule update --init --recursive
 ```
 
-ถ้าเป็น private ต้องใช้ key **อีกชุด** เพราะ GitHub Deploy Key อ่านได้ repo เดียว:
+If private, generate a **separate key** because a GitHub Deploy Key grants access to only one repository:
 
 ```bash
 sudo -u glowjob ssh-keygen -t ed25519 -C glow-job-pipeline-ec2 -f /var/lib/glowjob/.ssh/pipeline_ed25519 -N ""
 sudo cat /var/lib/glowjob/.ssh/pipeline_ed25519.pub
 ```
 
-เพิ่ม public key ที่ **THN4/glow-job-data-pipeline → Settings → Deploy keys** แบบ read-only.
-แก้ SSH config โดยเก็บ config เดิมไว้:
+Add this public key to **THN4/glow-job-data-pipeline -> Settings -> Deploy keys** with read-only access. Edit the SSH config, preserving existing entries:
 
 ```bash
 sudo -u glowjob nano /var/lib/glowjob/.ssh/config
 ```
 
-เพิ่ม block:
+Add:
 
 ```sshconfig
 Host github-pipeline
@@ -91,7 +87,7 @@ Host github-pipeline
 ```bash
 sudo chmod 600 /var/lib/glowjob/.ssh/config
 sudo -u glowjob ssh -T git@github-pipeline
-# ข้อความ authenticated สำเร็จของ GitHub ปกติคืน exit code 1 เพราะไม่มี shell
+# Successful GitHub authentication normally exits with code 1: no shell is provided.
 cd /opt/glow-job
 sudo -u glowjob git submodule init
 sudo -u glowjob git config submodule.data-pipeline.url git@github-pipeline:THN4/glow-job-data-pipeline.git
@@ -99,14 +95,13 @@ sudo -u glowjob git submodule update --init --recursive
 test -f data-pipeline/src/resume/config.py && echo "data-pipeline ready"
 ```
 
-อย่ารัน `git submodule sync` หลังตั้ง override นี้ เพราะ .gitmodules ยังใช้ HTTPS.
-หากมี nested private submodules ต้องให้สิทธิ์ repo เหล่านั้นเพิ่มเติม.
+Do not run `git submodule sync` after this override: `.gitmodules` still uses HTTPS. Nested private submodules require access to their repositories as well.
 
-## 3. ใช้ .env ที่วางไว้บน EC2 แล้ว
+## 3. Reuse the existing .env on EC2
 
-ใช้ไฟล์เดิมที่ `/opt/glow-job/backend/.env` ไม่ต้อง copy `.env.example` ทับ
-และไม่ต้องย้าย credentials ไปไฟล์ใหม่. install.sh/update.sh ไม่สร้างหรือแก้เนื้อหา .env.
-systemd โหลดไฟล์นี้เป็น environment ของ backend จึงส่ง AWS credentials ให้ SDK ด้วย.
+Keep `/opt/glow-job/backend/.env`. Do not overwrite it with `.env.example` or move its credentials elsewhere. Neither `install.sh` nor `update.sh` creates or changes its contents. systemd loads this file into the backend process environment, making its AWS credentials available to the SDK.
+
+**Keep the existing AWS_BEARER_TOKEN_BEDROCK value unchanged.** It is already configured in the deployed `.env`; do not copy or replace it.
 
 ```bash
 cd /opt/glow-job
@@ -115,9 +110,7 @@ sudo chown glowjob:glowjob backend/.env
 sudo chmod 600 backend/.env
 ```
 
-หากไฟล์ที่วางไว้เป็น `/opt/glow-job/.env` จะเป็นคนละตำแหน่งกับ backend:
-ให้ตรวจว่าเป็น config สำหรับ backend จริง (root .env อาจเป็น config Docker Compose).
-ถ้าใช่และ backend/.env ยังไม่มี ค่อยคัดลอกโดยไม่ทับไฟล์ปลายทาง:
+If you placed the file at `/opt/glow-job/.env`, first confirm it contains backend settings; the root file may contain Docker Compose settings instead. Only if it is the correct file and `backend/.env` does not exist, copy it without overwriting:
 
 ```bash
 sudo cp --no-clobber /opt/glow-job/.env /opt/glow-job/backend/.env
@@ -125,9 +118,7 @@ sudo chown glowjob:glowjob /opt/glow-job/backend/.env
 sudo chmod 600 /opt/glow-job/backend/.env
 ```
 
-ตรวจเฉพาะค่าที่ต่างจาก local ผ่าน `sudo nano /opt/glow-job/backend/.env`.
-ตัวอย่างต่อไปนี้เป็นชื่อค่าที่ต้องตรวจ ไม่ต้องวาง placeholder ทับค่าจริงที่มีอยู่แล้ว.
-อย่าเพิ่ม key ซ้ำ (`GEMINI_API_KEY` ใน example มีซ้ำ ให้เหลือบรรทัดเดียว):
+Review deployment-specific settings with `sudo nano /opt/glow-job/backend/.env`. The following lists settings to review; **do not paste placeholders over working values**. Avoid duplicate keys. The example contains `GEMINI_API_KEY` twice; keep one entry.
 
 ```dotenv
 PUBLIC_BASE_URL=https://glowjob.modnoi.com
@@ -145,47 +136,19 @@ ROADMAP_AWS_REGION=us-east-1
 GEMINI_API_KEY=YOUR_GEMINI_KEY
 ```
 
-ใช้ model/inference profile ที่บัญชีและ Region มีสิทธิ์เรียกจริง ตรวจค่า
-`BEDROCK_EXTRACTION_MODEL`, `BEDROCK_RAG_MODEL`, `BEDROCK_ROADMAP_MODEL` ใน example
-ให้ตรงกัน. Live RAG ยังใช้ Gemini embeddings แม้ roadmap ใช้ Bedrock.
-ถ้าทดสอบผ่าน IP ก่อน HTTPS ให้ใช้ `http://EC2_IP` ในสอง URL แรก แล้วเปลี่ยนกลับภายหลัง.
+Use models/inference profiles available to your account in the selected Region. Review `BEDROCK_EXTRACTION_MODEL`, `BEDROCK_RAG_MODEL`, and `BEDROCK_ROADMAP_MODEL`. Live RAG still uses Gemini embeddings even when roadmap generation uses Bedrock. For IP-based testing before HTTPS, temporarily use `http://EC2_IP` for the first two URLs.
 
-DB: หากใช้ RDS เดิม ให้ใช้ endpoint โดยตรง ไม่ใช่ Windows SSH tunnel พอร์ต 15432.
-เปิด DB Security Group ให้รับจาก EC2 Security Group เท่านั้น. หากติดตั้ง PostgreSQL
-บน EC2 เองใช้ 127.0.0.1 และ restore/migrate ข้อมูลแยก; คู่มือนี้ไม่ติดตั้งหรือแก้ข้อมูล DB.
+For RDS, use the actual endpoint, not the Windows SSH tunnel on port 15432. Allow the database Security Group to receive connections from the EC2 Security Group. For PostgreSQL on the same instance, use `127.0.0.1` and restore/migrate separately. This guide does not install or modify the database.
 
-เมื่อไม่มี EC2 role ให้เก็บ credentials ที่มีสิทธิ์จริงใน **backend/.env เดิม**.
-ถ้ามีอยู่แล้วไม่ต้องเพิ่มซ้ำ เลือกวิธี authentication ที่ใช้งานจริง:
+Authorized credentials can remain in the existing backend `.env` without an EC2 role. Your Bedrock bearer token is already configured; keep it as is. Deployments using AWS access keys instead must also supply `AWS_SESSION_TOKEN` for temporary credentials. Do not add another authentication method unnecessarily.
 
-```dotenv
-# ทางเลือก A: Bedrock API key (ใช้กับ Bedrock เท่านั้น)
-AWS_BEARER_TOKEN_BEDROCK=YOUR_KEY
-```
+Use one `KEY=value` or `KEY="value"` per line. Do not use `export`, shell commands, or variable references such as `${OTHER_KEY}`; systemd does not expand variables in an EnvironmentFile. Put comments on separate lines starting with `#`; quote values containing spaces or `#`. Renew expired credentials and restart the service. Never expose credentials to the frontend or commit them to Git. Running without a role does not bypass AWS permissions.
 
-หรือ AWS credentials ที่มีสิทธิ์อยู่แล้ว:
+For compatibility, the service also reads `/etc/glow-job-credentials.env` if present. Its values override matching keys in `backend/.env`. To use only the backend file, remove `EnvironmentFile=-/etc/glow-job-credentials.env` from the installed unit and inspect older drop-ins with `sudo systemctl cat glow-job`. New installations do not need a separate credentials file.
 
-```dotenv
-# ทางเลือก B: AWS access keys; temporary credentials ต้องมี session token
-AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
-# AWS_SESSION_TOKEN=YOUR_SESSION_TOKEN
-```
+### Upgrade an existing service unit
 
-ใช้รูปแบบ `KEY=value` หรือ `KEY="value"` ทีละบรรทัด ไม่ใส่ `export`, shell commands,
-หรืออ้างตัวแปรแบบ `${OTHER_KEY}` เพราะ systemd ไม่ขยายตัวแปรใน EnvironmentFile.
-แยก comment เป็นบรรทัดขึ้นต้น `#`; ค่าที่มีช่องว่างหรือ `#` ให้ครอบด้วย quotes.
-Key/session ที่หมดอายุต้องเปลี่ยนและ restart service. ไม่ส่ง credentials ไป frontend
-หรือ commit ลง Git. การไม่มี role ไม่ได้ข้าม IAM permissions ของ Bedrock/S3.
-
-ถ้าเคยสร้าง `/etc/glow-job-credentials.env` จากคู่มือเก่า service ยังรองรับเพื่อให้ของเดิม
-ทำงานต่อได้ แต่ค่าชื่อเดียวกันในไฟล์นั้นจะมีลำดับสูงกว่า backend/.env.
-ถ้าจะใช้เฉพาะ backend/.env ให้เอาบรรทัด `EnvironmentFile=-/etc/glow-job-credentials.env`
-ออกจาก unit ที่ติดตั้ง และตรวจ drop-in เดิมด้วย `sudo systemctl cat glow-job`.
-ไม่จำเป็นต้องสร้างไฟล์ credentials แยกสำหรับการติดตั้งใหม่.
-
-### ถ้าติดตั้ง service รุ่นเก่าไว้แล้ว
-
-หลังนำไฟล์ deploy เวอร์ชันใหม่นี้ขึ้น EC2 ให้ปรับ unit โดยไม่แตะ .env:
+After copying/pulling the new deployment files onto EC2, update the unit without changing `.env`:
 
 ```bash
 sudo install -m 644 /opt/glow-job/deploy/ec2/glow-job.service /etc/systemd/system/glow-job.service
@@ -194,12 +157,11 @@ sudo systemctl restart glow-job
 curl --fail http://127.0.0.1:8787/api/health
 ```
 
-หากแก้เพียงค่าภายใน .env หลังจากนี้ ใช้ `sudo systemctl restart glow-job` ก็พอ.
-ไม่ต้อง daemon-reload เว้นแต่แก้ unit/drop-in.
+For later changes to `.env` values alone, run `sudo systemctl restart glow-job`. Use `daemon-reload` only when changing a unit or drop-in.
 
-## 4. ติดตั้ง backend และ Node.js
+## 4. Install the backend and Node.js
 
-ไฟล์ deploy ชุดนี้ต้องอยู่ใน GitHub commit ที่ clone/pull ลง EC2 แล้วก่อนเรียก:
+The deployment files must be in the GitHub commit cloned/pulled onto EC2 before invoking them:
 
 ```bash
 cd /opt/glow-job
@@ -207,16 +169,13 @@ sudo bash deploy/ec2/install.sh
 curl --fail http://127.0.0.1:8787/api/health
 ```
 
-Health ยืนยันเฉพาะ process ไม่ยืนยัน DB/AI. หากไม่ผ่าน:
+Health checks the process, not database or AI connectivity. If it fails:
 
 ```bash
 sudo journalctl -u glow-job -n 80 --no-pager
 ```
 
-ติดตั้ง Node.js 24 LTS แบบ system-wide ด้วยสคริปต์ที่ดาวน์โหลด official Linux binary
-สำหรับ x64/arm64 และตรวจ SHA256 ก่อนแตกลง /usr/local. ค่าเริ่มต้น pin 24.22.1;
-ตรวจ security updates และส่งเลข Node 24 เวอร์ชันใหม่เป็น argument เมื่อต้องอัปเดต.
-หากมี Node 24 ติดตั้งให้ทุก user ใช้ได้อยู่แล้ว ให้ข้าม install-node.sh:
+Install Node.js 24 LTS system-wide with the script. It downloads the official x64/arm64 Linux binary, verifies SHA256, and extracts it into `/usr/local`. The default is pinned to 24.22.1; review security updates and pass a newer Node 24 version as an argument when updating. Skip installation if Node 24 is already available system-wide:
 
 ```bash
 sudo bash deploy/ec2/install-node.sh
@@ -224,18 +183,15 @@ sudo -u glowjob node --version
 sudo -u glowjob npm --version
 ```
 
-หากเห็น command not found แสดงว่า Node/npm ยังไม่อยู่ใน PATH ของ glowjob;
-การติดตั้ง nvm เฉพาะ ubuntu ไม่เพียงพอ.
+If either command is missing, Node/npm is not on the `glowjob` user's PATH. Installing nvm for `ubuntu` alone is insufficient.
 
-## 5. DNS และ Nginx (ติดตั้งครั้งแรก)
+## 5. Configure DNS and Nginx once
 
-ที่ DNS ของ modnoi.com เพิ่ม A record: name `glowjob`, value = EC2 public/Elastic IP.
-หากชื่อนี้ใช้งานอยู่แล้ว ตรวจเจ้าของก่อนเปลี่ยน. Cloudflare เริ่มด้วย DNS only.
-ไม่ต้องเปลี่ยน DNS ของ root domain หรือซื้อโดเมนใหม่.
+At the DNS provider for `modnoi.com`, add an A record: name `glowjob`, value = EC2 public/Elastic IP. Check before changing a name already serving another application. With Cloudflare, start with DNS only. No root-domain DNS changes or new domain purchase are needed.
 
 ```bash
 cd /opt/glow-job
-# ครั้งแรกเท่านั้น หากมี config อยู่แล้วให้สำรอง/แก้ในไฟล์เดิม
+# First installation only. Back up and edit an existing configuration in place.
 sudo install -m 644 deploy/ec2/nginx.conf /etc/nginx/sites-available/glow-job
 sudo ln -sfn /etc/nginx/sites-available/glow-job /etc/nginx/sites-enabled/glow-job
 sudo nginx -t
@@ -243,7 +199,7 @@ sudo systemctl enable --now nginx
 sudo systemctl reload nginx
 ```
 
-Build และเปิด frontend (ใช้ branch main; ถ้า deploy branch อื่นส่งชื่อเป็น argument):
+Build and publish the frontend. This example deploys `main`; pass the actual deployment branch if different:
 
 ```bash
 cd /opt/glow-job
@@ -251,34 +207,29 @@ sudo bash deploy/ec2/update.sh main
 curl --fail http://glowjob.modnoi.com/api/health
 ```
 
-สคริปต์สร้าง frontend ใน releases แล้วสลับ symlink `current` หลัง build และ backend
-health ผ่าน. เก็บ hashed assets จาก release เดิมไว้ให้แท็บ browser ที่เปิดค้าง.
-ยังไม่รับประกัน zero downtime หรือ backend rollback เพราะ backend ใช้ checkout/venv เดียว.
+The script creates a frontend release and switches the `current` symlink after the build and backend health check pass. Previous hashed assets are retained for browser tabs already open. This does not guarantee zero downtime or backend rollback: the backend uses a single checkout and virtualenv.
 
-## 6. HTTPS
+## 6. Enable HTTPS
 
-ทำเมื่อ DNS resolve ถูกและ HTTP เข้าถึง EC2 ผ่านพอร์ต 80 ได้แล้ว:
+Proceed after DNS resolves correctly and port 80 reaches EC2:
 
 ```bash
-# ใช้ Certbot snap หากเครื่องยังไม่ได้ติดตั้ง Certbot ด้วยวิธีอื่น
+# Use the Certbot snap if Certbot has not been installed another way.
 sudo snap install --classic certbot
 sudo /snap/bin/certbot --nginx -d glowjob.modnoi.com
 sudo /snap/bin/certbot renew --dry-run
 curl --fail https://glowjob.modnoi.com/api/health
 ```
 
-ถ้า Certbot ติดตั้งอยู่แล้วให้ใช้ตัวเดิม ไม่ลงซ้ำต่างวิธี. ตั้ง PUBLIC_BASE_URL และ
-CORS_ORIGINS เป็น HTTPS ตามข้อ 3 แล้ว `sudo systemctl restart glow-job`.
-ไม่คัดลอก nginx.conf template ทับ config ที่ Certbot เพิ่ม TLS แล้ว.
-ทดสอบหน้าเว็บ, refresh route ย่อย, upload CV สังเคราะห์, extraction, profile, DB และ roadmap.
-การเรียก AI จริงมีค่าใช้จ่าย.
+Use an existing Certbot installation rather than installing a second one. Set `PUBLIC_BASE_URL` and `CORS_ORIGINS` to HTTPS as in section 3, then run `sudo systemctl restart glow-job`. Do not overwrite the installed Nginx configuration with the HTTP template after Certbot adds TLS.
 
-## 7. Dev ต่อและอัปเดต EC2
+Test the website, nested-route refreshes, synthetic CV uploads, extraction, profiles, database operations, and roadmaps. Live AI calls incur charges.
 
-เครื่องเรา: ทดสอบแล้ว commit/push branch ที่ใช้ deploy. หากแก้ data-pipeline ให้ push
-repo นั้นก่อน แล้ว commit submodule pointer ใน glow-job. อย่า commit secrets.
+## 7. Continue development and update EC2
 
-EC2:
+Locally, test, commit, and push the deployment branch. If changing `data-pipeline`, push that repository first, then commit its updated submodule pointer in `glow-job`. Never commit secrets.
+
+On EC2:
 
 ```bash
 cd /opt/glow-job
@@ -286,33 +237,24 @@ sudo bash deploy/ec2/update.sh main
 curl --fail https://glowjob.modnoi.com/api/health
 ```
 
-update.sh ใช้ git fetch + fast-forward เท่านั้น ไม่ทับ tracked edits/commits บนเครื่อง,
-อัปเดต submodule, npm ci/build ด้วย VITE_API_BASE_URL=/api, pip install,
-restart backend และตรวจ process health ก่อนสลับ frontend. กัน deploy ซ้อนด้วย flock.
-หากสคริปต์หยุด ให้แก้ error ก่อน ไม่ reset checkout เพื่อทับงาน.
-การเปลี่ยน DB schema ต้อง review/backup/migrate แยก ไม่รัน migrations อัตโนมัติ.
-หากแก้ service unit ให้ install unit ใหม่และ daemon-reload ตาม install.sh;
-update.sh ไม่ทับ Nginx หรือ service unit เอง.
+The script fetches and fast-forwards only, refusing tracked edits or local-only commits. It updates submodules, runs `npm ci` and the build with `VITE_API_BASE_URL=/api`, installs backend dependencies, restarts the backend, and checks process health before switching the frontend. A `flock` lock prevents overlapping deployments.
 
-หากไฟล์ deploy เพิ่งเพิ่ม/แก้บน GitHub ก่อนเริ่มใช้สคริปต์เวอร์ชันใหม่:
+If deployment stops, resolve the error rather than resetting the checkout to overwrite work. Review, back up, and migrate database changes separately; migrations are not automatic. If the service unit changes, install it and run `daemon-reload` as in `install.sh`. The update script does not overwrite Nginx or service units.
+
+If deployment files were just added or changed on GitHub, pull them before invoking the updated script:
 
 ```bash
 cd /opt/glow-job
 sudo -u glowjob git pull --ff-only origin main
 ```
 
-## ข้อจำกัดและการกู้คืน
+## Limitations and recovery
 
-- งาน/cache อยู่ใน memory: ใช้ 1 worker, restart ทำให้สถานะงานหาย.
-- DATA_DIR เก็บ fallback profiles; upload ชั่วคราวใช้ temp directory ของ service.
-- สำรอง DB และ /var/lib/glowjob/data แยก; deploy นี้ไม่เพิ่ม auth/rate limiting.
-- frontend releases อยู่ /var/www/glow-job/releases; ตรวจรายการและพื้นที่ก่อนลบเอง.
-  สลับ current กลับ release ก่อนหน้าได้ด้วย symlink แต่ต้องตรวจว่า API ยัง compatible.
-- หาก backend ใหม่เสีย frontend จะไม่สลับ แต่ backend ไม่ rollback อัตโนมัติ.
-  ใช้ Git revert ผ่าน local/repo และ deploy commit แก้ไข; DB changes ต้องมีแผนกู้คืนแยก.
-- ยังไม่มี auto-deploy เมื่อ push. GitHub Actions ต้องใช้ key สำหรับ SSH เข้า EC2 อีกชุด
-  แยกจาก Deploy Key ที่ EC2 ใช้อ่าน GitHub และจำกัด branch/สิทธิ์ deploy.
+- Jobs/caches are in memory. Use one worker; restarting loses job state.
+- `DATA_DIR` stores fallback profiles. Temporary uploads use the service's temp directory.
+- Back up the database and `/var/lib/glowjob/data` separately. This deployment does not add authentication or rate limiting.
+- Frontend releases are in `/var/www/glow-job/releases`. Review contents and disk usage before removing old releases. You can switch `current` to an earlier release after checking API compatibility.
+- If backend health fails, the frontend does not switch, but the backend is not rolled back automatically. Revert the code locally through Git and deploy a corrective commit. Database changes need a separate recovery plan.
+- Automatic deployment on push is not configured. GitHub Actions needs a separate SSH key for accessing EC2, distinct from the Deploy Key EC2 uses to read GitHub. Restrict deployment branches and permissions.
 
-อ้างอิง: [GitHub Deploy Keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys),
-[Ubuntu TLS/Certbot](https://ubuntu.com/server/docs/how-to/security/obtain-tls-certificates/),
-[Bedrock API keys](https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html).
+References: [GitHub Deploy Keys](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys), [Ubuntu TLS/Certbot](https://ubuntu.com/server/docs/how-to/security/obtain-tls-certificates/), [Bedrock API keys](https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html).
