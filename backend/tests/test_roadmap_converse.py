@@ -203,6 +203,50 @@ def test_missing_task_titles_repair_preserves_the_rejected_draft(payload):
     assert turn.usage.calls == 2 and turn.usage.output_tokens == 1000
 
 
+def test_generation_and_repair_repeat_selected_skills_and_citation_scope(context, payload):
+    compact = compact_context(context, planning_budget(context, TODAY))
+    client = ConverseClient(response(payload), response(payload))
+    model = BedrockConverseRoadmapModel(client)
+    turn = model.generate(compact)
+    model.repair(turn, [
+        "Step 'extra': skill_id 999 is not a main skill.",
+        "Step 'project': learn task 'Review code' has no valid citation.",
+    ])
+
+    constraints = client.calls[0]["messages"][0]["content"][1]["text"]
+    scope = json.loads(constraints.split("\n", 2)[1])
+    assert scope["main_skill_ids"] == [item["skill_id"] for item in compact["main_skills"]]
+    assert scope["foundation_skill_ids"] == [item["skill_id"] for item in compact["foundations"]]
+    assert scope["completed_skill_ids"] == [item["skill_id"] for item in compact["completed_skills"]]
+    assert scope["citation_sources"] == [
+        {"chunk_id": item["chunk_id"], "for_skill_ids": item["for_skill_ids"]}
+        for item in compact["sources"]
+    ]
+    feedback = client.calls[1]["messages"][-1]["content"][0]["text"]
+    assert constraints in feedback
+    assert "including learn tasks inside projects" in feedback
+    assert "Do not invent citations" in feedback
+    assert "not a main skill" in feedback
+    assert "summary, why" in feedback
+    assert len(client.calls) == 2
+
+
+def test_semantic_repair_still_rejects_a_skill_outside_the_context(context, payload):
+    broken = copy.deepcopy(payload)
+    step = next(step for step in broken["steps"] if step["kind"] == "skill")
+    step["skill_id"] = 999999
+    client = ConverseClient(response(broken), response(broken))
+    model = BedrockConverseRoadmapModel(client)
+    from ai.roadmap.generate import GenerationFailed
+
+    with pytest.raises(GenerationFailed) as error:
+        generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY))
+
+    assert error.value.code == "ROADMAP_VALIDATION_FAILED"
+    assert any("not a main skill" in issue for issue in error.value.issues)
+    assert len(client.calls) == 2
+
+
 def test_invalid_text_draft_repair_does_not_send_a_tool_result(payload):
     invalid = {"output": {"message": {"role": "assistant", "content": [
         {"text": json.dumps({"overview": "Only an overview"})},

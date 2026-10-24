@@ -29,12 +29,48 @@ class _InvalidRoadmapOutput(ModelError):
         self.messages = messages
 
 
+def _planning_constraints(compact: dict[str, Any]) -> str:
+    """Repeat the authoritative scope next to generation and repair requests."""
+    scope = {
+        "main_skill_ids": [item["skill_id"] for item in compact.get("main_skills", [])],
+        "completed_skill_ids": [item["skill_id"] for item in compact.get("completed_skills", [])],
+        "foundation_skill_ids": [item["skill_id"] for item in compact.get("foundations", [])],
+        "citation_sources": [
+            {"chunk_id": item["chunk_id"], "for_skill_ids": item["for_skill_ids"]}
+            for item in compact.get("sources", [])
+        ],
+    }
+    return (
+        "<roadmap_constraints>\n" + json.dumps(scope, ensure_ascii=False)
+        + "\nOnly main_skill_ids may have kind=skill. Do not add a skill lesson merely because it"
+        " appears in the profile, foundations, sources, or a project. Use completed_skill cards"
+        " for completed skills and foundation_check only for readiness checks required by context."
+        " Remove an out-of-scope lesson; do not relabel its skill_id as an unrelated allowed skill."
+        " Every learn task, including learn tasks inside projects, requires a citation with a"
+        " listed chunk_id and a verbatim 20-300 character quote from that source's content that"
+        " supports the task. Skill/foundation citations must also allow that skill in for_skill_ids."
+        " Do not invent citations or relabel teaching as practice just to avoid citing it."
+        " If evidence is unavailable, omit the unsupported optional teaching task or defer the"
+        " main skill according to the planning context. Keep valid practice/check tasks."
+        " Every step must include key, kind, title, summary, why, hours_min, hours_max, depends_on."
+        " Every task must include title, detail, task_kind. Return the full roadmap."
+        "\n</roadmap_constraints>"
+    )
+
+
 def _repair_messages(messages: list[dict[str, Any]], issues: list[str]) -> list[dict[str, Any]]:
     feedback = (
         build_repair_message(issues)
         + "\nCall submit_roadmap with the complete corrected object, not a patch or an error report."
         + " Include every required top-level field and a title for every task."
     )
+    # Keep the selected skills and citation rules close to the correction request,
+    # rather than relying on the model to find them in a large context/history.
+    constraints = next((block["text"] for message in messages if message.get("role") == "user"
+                        for block in message.get("content", [])
+                        if block.get("text", "").startswith("<roadmap_constraints>")), None)
+    if constraints:
+        feedback += "\n" + constraints
     content: list[dict[str, Any]] = [{"text": feedback}]
     if messages and messages[-1].get("role") == "assistant":
         for block in messages[-1].get("content", []):
@@ -86,7 +122,10 @@ class BedrockConverseRoadmapModel:
         self._tool_schema = RoadmapDraft.model_json_schema()
 
     def generate(self, compact: dict[str, Any]) -> ModelTurn:
-        return self._call_with_retry([{"role": "user", "content": [{"text": build_user_message(compact)}]}], Usage())
+        return self._call_with_retry([{"role": "user", "content": [
+            {"text": build_user_message(compact)},
+            {"text": _planning_constraints(compact)},
+        ]}], Usage())
 
     def repair(self, turn: ModelTurn, issues: list[str]) -> ModelTurn:
         messages = _repair_messages(turn.messages, issues)
