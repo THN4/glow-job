@@ -26,6 +26,7 @@ class Validation:
     draft: RoadmapDraft
     fatal: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    unavailable_skill_ids: set[int] = field(default_factory=set)
 
 
 def _norm(text: str) -> str:
@@ -37,7 +38,87 @@ def _has_learning_content(candidate: RoadmapCandidate) -> bool:
             and candidate.rag_status in {"supported", "partial"})
 
 
-def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -> Validation:
+def _reviewed_profile_details(candidate: RoadmapCandidate, sources: dict) -> list[DraftSkillDetail]:
+    """Return only profile details backed by exact, skill-scoped source quotes."""
+    reviewed_details = []
+    for claim in candidate.claims:
+        citations = [DraftCitation(chunk_id=cite.chunk_id, quote=cite.quote)
+                     for cite in claim.citations
+                     if (source := sources.get(cite.chunk_id)) is not None
+                     and candidate.skill_id in source.used_by_skill_ids
+                     and len(_norm(cite.quote)) >= 20
+                     and _norm(cite.quote) in _norm(source.content)]
+        if not citations:
+            continue
+        source = sources[citations[0].chunk_id]
+        reviewed_details.append(DraftSkillDetail(
+            title=source.heading_path[-1] if source.heading_path else source.title,
+            detail=claim.text, citations=citations,
+        ))
+        if len(reviewed_details) == 3:
+            break
+    return reviewed_details
+
+
+def _normalize_completed_profile_cards(draft: RoadmapDraft, completed_candidates: dict[int, RoadmapCandidate],
+                                       sources: dict, warnings: list[str]) -> None:
+    """Treat confirmed profile skills as context facts, not model-authored facts.
+
+    The model sometimes emits these cards with placeholder IDs (for example 0), or
+    omits them. Rebuild the cards from Agent Context so a bad card cannot invalidate
+    an otherwise usable roadmap.
+    """
+    normalized: list[DraftStep] = []
+    scheduled: set[int] = set()
+    for step in draft.steps:
+        candidate = completed_candidates.get(step.skill_id)
+        is_profile_skill = step.kind == "completed_skill" or (
+            step.kind == "skill" and candidate is not None
+        )
+        if not is_profile_skill:
+            normalized.append(step)
+            continue
+        if candidate is None:
+            warnings.append(f"Step '{step.key}': removed a completed-skill card that did not match a confirmed profile skill.")
+            continue
+        if candidate.skill_id in scheduled:
+            warnings.append(f"Step '{step.key}': removed a duplicate completed profile-skill card.")
+            continue
+        scheduled.add(candidate.skill_id)
+        step.kind = "completed_skill"
+        step.title = candidate.skill_name
+        step.summary = "This skill is already listed in your confirmed profile."
+        step.why = ["This skill is already listed in your confirmed profile."]
+        step.hours_min = step.hours_max = 0
+        step.tasks = []
+        step.depends_on = []
+        step.details = _reviewed_profile_details(candidate, sources)
+        normalized.append(step)
+
+    used_keys = {step.key for step in normalized}
+    for skill_id, candidate in sorted(completed_candidates.items(), key=lambda item: item[1].skill_name.lower()):
+        if skill_id in scheduled:
+            continue
+        key = f"profile-skill-{skill_id}"
+        suffix = 2
+        while key in used_keys:
+            key = f"profile-skill-{skill_id}-{suffix}"
+            suffix += 1
+        used_keys.add(key)
+        normalized.append(DraftStep(
+            key=key, kind="completed_skill", skill_id=skill_id,
+            title=candidate.skill_name,
+            summary="This skill is already listed in your confirmed profile.",
+            why=["This skill is already listed in your confirmed profile."],
+            hours_min=0, hours_max=0, depends_on=[], tasks=[],
+            details=_reviewed_profile_details(candidate, sources),
+        ))
+        warnings.append(f"{candidate.skill_name}: added its confirmed profile card from saved profile data.")
+    draft.steps = normalized
+
+
+def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget, *,
+                   placeholder_invalid_citations: bool = False) -> Validation:
     draft = draft.model_copy(deep=True)
     result = Validation(draft)
     fatal, warnings = result.fatal, result.warnings
@@ -55,6 +136,8 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
         e.chunk_id: e for e in context.evidence_registry if "learning_content" in e.usage_roles
     }
 
+    _normalize_completed_profile_cards(draft, completed_candidates, sources, warnings)
+
     # Keep selected skills visible even when the live knowledge context has no usable
     # instructional material. Build a factual placeholder from Agent Context rather
     # than letting the model invent tasks or dropping the skill from the graph.
@@ -63,6 +146,55 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
         if candidate.learning_recommendation != "reference_only"
         and not _has_learning_content(candidate)
     }
+    # A roadmap should still be usable when the model invents or miscopies a
+    # learning citation. Keep the skill visible, but turn it into the same
+    # unavailable placeholder used when reviewed teaching content is missing.
+    if placeholder_invalid_citations:
+        for step in draft.steps:
+            if step.kind != "skill" or step.skill_id not in mains or step.skill_id in unavailable_ids:
+                continue
+            if any(
+                task.task_kind == "learn"
+                and not any(
+                    (source := sources.get(cite.chunk_id)) is not None
+                    and step.skill_id in source.used_by_skill_ids
+                    and len(_norm(cite.quote)) >= 20
+                    and _norm(cite.quote) in _norm(source.content)
+                    for cite in task.citations
+                )
+                for task in step.tasks
+            ):
+                unavailable_ids.add(step.skill_id)
+                warnings.append(
+                    f"{mains[step.skill_id].skill_name}: learning evidence was incomplete; "
+                    "shown as a placeholder until reviewed citations are available."
+                )
+
+    # A reference-only skill is not a learning gap. If it is confirmed in the
+    # profile, show the baseline card; otherwise defer it for profile review.
+    # Do not reject an otherwise usable roadmap because the model scheduled it.
+    for step in list(draft.steps):
+        if step.kind != "skill" or step.skill_id not in mains:
+            continue
+        candidate = mains[step.skill_id]
+        if candidate.learning_recommendation != "reference_only":
+            continue
+        if step.skill_id in completed_candidates:
+            step.kind = "completed_skill"
+            step.hours_min = step.hours_max = 0
+            step.tasks = []
+            step.depends_on = []
+            warnings.append(f"Step '{step.key}': changed reference-only skill to a completed profile card.")
+        else:
+            draft.steps.remove(step)
+            draft.deferred = [item for item in draft.deferred if item.skill_id != step.skill_id]
+            draft.deferred.append(DraftDeferred(
+                skill_id=step.skill_id, reason_code="NEEDS_CONFIRMATION",
+                note="This skill is not a selected learning gap. Review your profile before planning it as new learning.",
+            ))
+            warnings.append(f"Step '{step.key}': deferred reference-only skill for profile review.")
+
+    result.unavailable_skill_ids = set(unavailable_ids)
     for candidate in sorted(
         (mains[skill_id] for skill_id in unavailable_ids),
         key=lambda item: (item.priority.rank or 10_000, item.skill_id),
@@ -89,6 +221,15 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
             existing.depends_on = []
             existing.tasks = []
             existing.details = []
+    unavailable_keys = {step.key for step in draft.steps
+                        if step.kind == "skill" and step.skill_id in unavailable_ids}
+    for step in draft.steps:
+        if step.key in unavailable_keys or not step.depends_on:
+            continue
+        removed = [key for key in step.depends_on if key in unavailable_keys]
+        if removed:
+            step.depends_on = [key for key in step.depends_on if key not in unavailable_keys]
+            warnings.append(f"Step '{step.key}': removed unavailable placeholder prerequisites {removed}.")
     if unavailable_ids:
         draft.deferred = [item for item in draft.deferred if item.skill_id not in unavailable_ids]
 
@@ -125,23 +266,7 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                 # Baseline skills are already confirmed. Reuse reviewed claims and
                 # their exact evidence instead of asking a model to quote them again.
                 # New learning tasks still go through the strict citation checks below.
-                reviewed_details = []
-                for claim in candidate.claims:
-                    citations = [DraftCitation(chunk_id=cite.chunk_id, quote=cite.quote)
-                                 for cite in claim.citations
-                                 if (source := sources.get(cite.chunk_id)) is not None
-                                 and step.skill_id in source.used_by_skill_ids
-                                 and len(_norm(cite.quote)) >= 20
-                                 and _norm(cite.quote) in _norm(source.content)]
-                    if not citations:
-                        continue
-                    source = sources[citations[0].chunk_id]
-                    reviewed_details.append(DraftSkillDetail(
-                        title=source.heading_path[-1] if source.heading_path else source.title,
-                        detail=claim.text, citations=citations,
-                    ))
-                    if len(reviewed_details) == 3:
-                        break
+                reviewed_details = _reviewed_profile_details(candidate, sources)
                 if step.details != reviewed_details:
                     warnings.append(f"{label}: used reviewed profile skill details and their exact citations.")
                 step.details = reviewed_details
@@ -151,7 +276,7 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                 warnings.append(f"{label}: trimmed skill details to three evidence-backed topics.")
                 step.details = step.details[:3]
             if candidate is not None and candidate.teaching_content_status == "available" and not step.details:
-                fatal.append(f"{label} needs at least one cited detail because reviewed learning content is available.")
+                warnings.append(f"{label}: reviewed profile details were unavailable; kept the confirmed profile card without details.")
             if candidate is not None and candidate.teaching_content_status != "available" and step.details:
                 warnings.append(f"{label}: removed details because reviewed learning content is unavailable.")
                 step.details = []
@@ -166,7 +291,8 @@ def validate_draft(draft: RoadmapDraft, context: AgentContext, budget: Budget) -
                         warnings.append(f"{label}: removed a detail citation to chunk {cite.chunk_id} that did not match its source.")
                 detail.citations = kept
                 if not detail.citations:
-                    fatal.append(f"{label}: skill detail '{detail.title}' needs a valid source citation.")
+                    warnings.append(f"{label}: removed profile detail '{detail.title}' because it had no valid source citation.")
+            step.details = [detail for detail in step.details if detail.citations]
         elif step.kind == "skill":
             candidate = mains.get(step.skill_id)
             if candidate is None:

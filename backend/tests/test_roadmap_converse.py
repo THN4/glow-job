@@ -65,7 +65,7 @@ def test_converse_uses_existing_context_schema_and_configured_output_tokens(cont
     assert call["inferenceConfig"] == {"maxTokens": 5000, "temperature": 0}
     assert "<planning_context>" in call["messages"][0]["content"][0]["text"]
     assert call["system"][0]["text"] == SYSTEM_PROMPT
-    assert "<planning_context>" not in call["system"][0]["text"]
+    assert context.context_id not in call["system"][0]["text"]
     assert call["toolConfig"]["toolChoice"] == {"tool": {"name": "submit_roadmap"}}
     schema = call["toolConfig"]["tools"][0]["toolSpec"]["inputSchema"]["json"]
     assert schema == RoadmapDraft.model_json_schema()
@@ -254,7 +254,7 @@ def test_semantic_validator_repairs_bad_citations_without_changing_pipeline(cont
     result = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY),
                               pricing=pricing_for_model(model.provider, model.model_id))
     assert result.usage.calls == 2
-    assert result.cost_usd == pytest.approx(0.0048)
+    assert result.cost_usd == pytest.approx(0.00341)
     assert result.view.generation.provider == "bedrock_converse"
 
 
@@ -318,7 +318,7 @@ def test_compaction_preserves_reviewed_quotes_for_main_and_completed_skills(cont
                                                for cite in original.citations]
 
 
-def test_baseline_with_no_verified_claims_does_not_bypass_evidence_requirement(context):
+def test_baseline_without_verified_claims_keeps_no_unreviewed_details(context):
     from ai.roadmap.validate import validate_draft
 
     context = baseline_context(context)
@@ -327,7 +327,9 @@ def test_baseline_with_no_verified_claims_does_not_bypass_evidence_requirement(c
     candidate = context.roadmap_candidates[0].model_copy(update={"claims": ()})
     context = context.model_copy(update={"roadmap_candidates": (candidate, *context.roadmap_candidates[1:])})
     result = validate_draft(draft, context, planning_budget(context, TODAY))
-    assert any("needs at least one cited detail" in issue for issue in result.fatal)
+    assert result.fatal == []
+    assert not next(step for step in result.draft.steps if step.kind == "completed_skill").details
+    assert any("details were unavailable" in warning for warning in result.warnings)
 
 
 async def test_converse_api_job_saves_validated_roadmap_and_cost(payload):
@@ -344,7 +346,7 @@ async def test_converse_api_job_saves_validated_roadmap_and_cost(payload):
     assert view["nodes"] and view["edges"]
     assert repo.runs[0]["status"] == "succeeded"
     assert repo.runs[0]["usage"]["output_tokens"] == 500
-    assert repo.runs[0]["cost_usd"] == pytest.approx(0.0024)
+    assert repo.runs[0]["cost_usd"] == pytest.approx(0.001705)
 
 
 async def test_invalid_nova_output_does_not_save_partial_roadmap():

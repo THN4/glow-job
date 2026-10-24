@@ -49,7 +49,8 @@ def profile_label(gap_status: str | None, in_profile: bool, level: str | None) -
 
 
 def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, generation: Generation,
-               *, generated_at: str) -> RoadmapView:
+               *, generated_at: str, unavailable_skill_ids: set[int] | None = None) -> RoadmapView:
+    unavailable_skill_ids = unavailable_skill_ids or set()
     registry = {e.chunk_id: e for e in context.evidence_registry}
     mains = {c.skill_id: c for c in context.roadmap_candidates}
     foundations = {f.skill_id: f for f in context.foundation_mentions}
@@ -100,7 +101,8 @@ def build_view(draft: RoadmapDraft, context: AgentContext, budget: Budget, gener
             c = mains[step.skill_id]
             learning_content_available = (
                 step.kind != "skill"
-                or (c.teaching_content_status == "available" and c.rag_status in {"supported", "partial"})
+                or (c.teaching_content_status == "available" and c.rag_status in {"supported", "partial"}
+                    and c.skill_id not in unavailable_skill_ids)
             )
             skill = NodeSkill(skill_id=c.skill_id, name=c.skill_name, current_level=c.gap.current_level,
                               target_level=c.gap.target_level, gap_status=c.gap.status,
@@ -368,10 +370,12 @@ def apply_progress(view: RoadmapView, *, completed_tasks: set[str], skipped_step
 
     chosen = by_key.get(view.next_action.node_key)
     if (chosen is None or not chosen.learning_content_available
-            or chosen.status in {"completed", "skipped"} or not unlocked(chosen)):
+            or chosen.status == "completed"
+            or (chosen.status == "skipped" and chosen.key not in hard_checks)
+            or not unlocked(chosen)):
         upcoming = next((n for n in ordered if n.kind != "goal"
                          and n.learning_content_available
-                         and n.status not in {"completed", "skipped"}
+                         and (n.status not in {"completed", "skipped"} or n.key in hard_checks)
                          and unlocked(n)),
                         None)
         if upcoming is not None:

@@ -75,7 +75,7 @@ Skill proficiency is now extracted when explicitly stated, otherwise estimated f
 
 ### Not from the CV
 
-`app.users` is created with an anonymous `sessionId` subject for now; login is not part of the current plan. `user_career_goals`, `roadmaps*`, and `*_progress` come from onboarding steps 3-4 and the agent, and are not saved by this Resume profile endpoint yet. `core.*`, `market.*`, `knowledge.*`: data engineering / RAG. `app.resumes`, `app.resume_extractions`, and `system.ai_runs` are not populated by the current temporary upload/extraction flow (see [05-database-mapping.md](05-database-mapping.md)).
+`app.users` is created with an anonymous `sessionId` subject for now; login is not part of the current plan. `user_career_goals`, `roadmaps*`, and `*_progress` come from onboarding steps 3-4 and the agent, and are not saved by this Resume profile endpoint yet. `core.*`, `market.*`, `knowledge.*`: data engineering / RAG. The Backend now writes upload metadata and extraction state/result to `app.resumes` / `app.resume_extractions` when DB settings are configured; the temporary CV file and extracted raw text are not retained (see [05-database-mapping.md](05-database-mapping.md)).
 
 ## 6.3 Mapping behavior now implemented
 
@@ -97,7 +97,7 @@ If the roadmap agent needs languages or soft skills as first-class data, that is
 ## 6.5 Remaining work
 
 1. Persist career goal and preference answers from onboarding steps 3-4 to `app.user_career_goals`.
-2. Decide whether uploaded CVs and extraction history should become durable `app.resumes` / `app.resume_extractions` records. Current behavior intentionally keeps files temporary and jobs in memory.
+2. Apply migration `022_persist_resume_extraction_jobs.sql` in environments that need durable extraction records. The uploaded CV remains temporary; only metadata, structured extraction JSON, job state, and provenance are retained.
 3. The current product plan is anonymous access; there is no login or account-linking work in scope.
 
 ## 6.6 What was implemented

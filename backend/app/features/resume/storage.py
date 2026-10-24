@@ -1,7 +1,7 @@
-"""Local-mode storage: no AWS needed. Same TTLs as the AWS design.
+"""Resume upload, job, profile, and cache storage adapters.
 
-Uploads live in a temp folder, jobs/cache in memory, profiles in a JSON file.
-AWS implementations (S3 / DynamoDB / Lambda) are added in the deploy phase behind the same method names.
+Uploads remain temporary local files, extraction jobs/results stay in memory,
+and confirmed profiles use PostgreSQL or the development JSON-file fallback.
 """
 
 from __future__ import annotations
@@ -128,6 +128,7 @@ class LocalUploadStore:
 class Job:
     job_id: str
     upload_id: str
+    session_id: str | None = None
     status: str = "queued"  # queued | processing | succeeded | failed
     stage: str = "reading"  # reading | skills | education | experience | building
     result: CvExtractionResult | None = None
@@ -143,8 +144,11 @@ class JobsRepo:
     def create(self, job: Job) -> None:
         self._jobs.set(job.job_id, job)
 
-    def get(self, job_id: str) -> Job | None:
-        return self._jobs.get(job_id)
+    def get(self, job_id: str, session_id: str | None = None) -> Job | None:
+        job = self._jobs.get(job_id)
+        if job is not None and session_id is not None and job.session_id != session_id:
+            return None
+        return job
 
     def update(self, job_id: str, **patch: Any) -> None:
         job = self._jobs.get(job_id)
@@ -153,7 +157,6 @@ class JobsRepo:
         for k, v in patch.items():
             setattr(job, k, v)
         job.updated_at = now_iso()
-
 
 class CacheRepo:
     def __init__(self) -> None:

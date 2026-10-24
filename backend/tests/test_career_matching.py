@@ -143,7 +143,7 @@ def test_small_market_sample_is_disclosed_even_when_scores_can_be_calculated():
 
     assert result["scores"]["marketSkillCoveragePct"] == 0.0
     assert result["status"] == "estimated"
-    assert "small (5 jobs" in result["warnings"][0]
+    assert any("small (5 jobs" in warning for warning in result["warnings"])
 
 
 def test_stale_market_window_is_disclosed():

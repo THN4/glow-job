@@ -10,14 +10,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Any
 
 from app.features.resume.errors import AppError
-from rag.context.match_policy import (
-    CORE_SKILL_LIMIT,
-    LEVEL_INDEX as _LEVEL_INDEX,
-    calculate_gap_score,
-    calculate_priority_score,
-    level_fit as calculate_level_fit,
-    select_core_skills,
-)
 
 if TYPE_CHECKING:
     import psycopg
@@ -25,8 +17,14 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("cv_extraction")
 
-# Levels the learner stated in the CV or confirmed in a skill check need no further confirmation.
-CONFIRMED_BASES = {"explicit", "assessed", "self_reported"}
+_LEVEL_INDEX = {
+    "beginner": 0,
+    "intermediate": 1,
+    "advanced": 2,
+    "expert": 3,
+}
+CORE_SKILL_LIMIT = 20
+
 
 @dataclass(frozen=True)
 class UserSkill:
@@ -92,11 +90,6 @@ def calculate_match(
                 "marketDataInsufficient": 0,
                 "excludedMarketSkills": 0,
             },
-            "coreSkillPolicy": {
-                "version": "weighted-top-20-with-cutoff-ties-v1",
-                "nominalLimit": CORE_SKILL_LIMIT,
-                "includedCount": 0,
-            },
             "skills": [],
             "unmatchedUserSkills": unmatched_user_skills or [],
             "warnings": ["No market skill statistics are available for this career profile."],
@@ -116,13 +109,23 @@ def calculate_match(
         ),
         Decimal(0),
     )
-    core_rows = select_core_skills(usable_rows, limit=CORE_SKILL_LIMIT)
+    ranked_rows = sorted(
+        usable_rows,
+        key=lambda skill: (-skill.weighted_demand_score, skill.skill_name.casefold()),
+    )
+    core_rows = ranked_rows[:CORE_SKILL_LIMIT]
+    # Include all skills tied at the cutoff so alphabetical tie-breaking never
+    # changes the score denominator for skills with equal market demand.
+    if len(ranked_rows) > CORE_SKILL_LIMIT and core_rows:
+        cutoff_weight = core_rows[-1].weighted_demand_score
+        core_rows.extend(
+            skill for skill in ranked_rows[CORE_SKILL_LIMIT:]
+            if skill.weighted_demand_score == cutoff_weight
+        )
     core_ids = {skill.skill_id for skill in core_rows}
     core_rank_by_id = {skill.skill_id: index for index, skill in enumerate(core_rows, 1)}
     weight_by_id = {skill.skill_id: skill.weighted_demand_score for skill in usable_rows}
-    total_core_weight = sum(
-        (skill.weighted_demand_score or Decimal(0) for skill in core_rows), Decimal(0)
-    )
+    total_core_weight = sum((skill.weighted_demand_score or Decimal(0) for skill in core_rows), Decimal(0))
     core_coverage_weight = Decimal(0)
     market_coverage_weight = Decimal(0)
     proficiency_weight = Decimal(0)
@@ -157,9 +160,7 @@ def calculate_match(
                 "gapScore": None,
                 "priorityScore": None,
                 "priorityRank": None,
-                "requiresConfirmation": bool(
-                    user_skill and user_skill.proficiency_basis not in CONFIRMED_BASES
-                ),
+                "requiresConfirmation": True,
             })
             counts["marketDataInsufficient"] += 1
             continue
@@ -201,7 +202,8 @@ def calculate_match(
                 counts["marketDataInsufficient"] += 1
             else:
                 level_gap = _LEVEL_INDEX[market.target_level] - _LEVEL_INDEX[user_level]
-                level_fit = calculate_level_fit(user_level, market.target_level)
+                missing_levels = max(0, level_gap)
+                level_fit = max(Decimal(0), Decimal(1) - Decimal(missing_levels) / Decimal(3))
                 proficiency_weight += weight * level_fit
                 proficiency_total_weight += weight
                 if level_gap > 0:
@@ -223,36 +225,24 @@ def calculate_match(
         })
         skill_results.append(body)
 
-    # This ordinal gap signal supports prioritization; it is not a calibrated
-    # measure of ability. A missing profile entry is only a potential gap.
-    priority_rows: list[tuple[Decimal, Decimal, str, int, dict[str, Any]]] = []
+    # Gap severity is an ordinal signal for downstream RAG prioritization, not
+    # a calibrated measure of ability. Missing skills mean absent from the
+    # confirmed profile, not proof that the user lacks them.
+    priority_rows: list[tuple[Decimal, Decimal, str, dict[str, Any]]] = []
     for body in skill_results:
         gap_status = body["status"]
         gap_score: Decimal | None = None
-        if body.get("isCoreSkill"):
-            gap_score = calculate_gap_score(gap_status, body.get("levelGap"))
+        if body.get("isCoreSkill") and gap_status == "missing_from_profile":
+            gap_score = Decimal(1)
+        elif body.get("isCoreSkill") and gap_status == "proficiency_gap" and body.get("levelGap"):
+            gap_score = Decimal(body["levelGap"]) / Decimal(3)
         if gap_score is None:
-            body.update({
-                "gapScore": None,
-                "priorityScore": None,
-                "priorityRank": None,
-                "requiresConfirmation": gap_status in {"missing_from_profile", "not_assessed"} or (
-                    body.get("userHasSkill") and body.get("proficiencyBasis") != "explicit"
-                ),
-            })
+            body.update({"gapScore": None, "priorityScore": None, "priorityRank": None,
+                         "requiresConfirmation": gap_status in {"missing_from_profile", "not_assessed"}})
             continue
         market_weight = weight_by_id[body["skillId"]]
-        priority = calculate_priority_score(market_weight, total_core_weight, gap_score)
-        if priority is None:
-            body.update({"gapScore": None, "priorityScore": None, "priorityRank": None})
-            continue
-        if priority <= 0:
-            body.update({
-                "gapScore": round(float(gap_score), 4),
-                "priorityScore": 0.0,
-                "priorityRank": None,
-            })
-            continue
+        demand_share = market_weight / total_core_weight if total_core_weight else Decimal(0)
+        priority = demand_share * gap_score * Decimal(100)
         body.update({
             "gapScore": round(float(gap_score), 4),
             "priorityScore": round(float(priority), 4),
@@ -261,9 +251,9 @@ def calculate_match(
                 body.get("proficiencyBasis") != "explicit"
             ),
         })
-        priority_rows.append((priority, market_weight, str(body["skillName"]).casefold(), body["skillId"], body))
-    priority_rows.sort(key=lambda row: (-row[0], -row[1], row[2], row[3]))
-    for rank, (_, _, _, _, body) in enumerate(priority_rows, 1):
+        priority_rows.append((priority, market_weight, str(body["skillName"]).casefold(), body))
+    priority_rows.sort(key=lambda row: (-row[0], -row[1], row[2]))
+    for rank, (_, _, _, body) in enumerate(priority_rows, 1):
         body["priorityRank"] = rank
 
     scores = {
@@ -276,7 +266,9 @@ def calculate_match(
         "assessmentCoveragePct": _percent(proficiency_total_weight / total_weight)
         if total_weight > 0 else None,
     }
-    warnings: list[str] = []
+    warnings: list[str] = [
+        "Core skill match covers the top 20 weighted market skills, including ties; it does not represent every skill used in the career."
+    ]
     total_jobs = max(skill.total_jobs for skill in market_skills)
     if total_jobs < min_total_jobs:
         warnings.append(

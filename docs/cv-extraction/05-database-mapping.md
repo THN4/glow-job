@@ -7,21 +7,21 @@ The FastAPI app lives in `backend/app/`. Its API composition and Resume routes/j
 ## 5.1 The flow in the DB design
 
 ```text
-CV Upload → local temporary storage → LLM extraction (in-memory job)
+CV Upload → local temporary storage → LLM extraction (anonymous DB-backed job when DB is configured)
    → read-only match against core.skills + core.skill_aliases
    → Auto-fill UI (canonical match or unresolved status) → user edits / confirms
    → re-match → canonical user data
         (app.user_profiles, user_educations, user_experiences, user_skills, user_skill_evidence, user_certifications)
 ```
 
-The current local flow runs extraction jobs in memory and deletes the uploaded file after processing. `PUT /profiles` persists the user-confirmed profile and normalized facts; it does not persist the source CV or the pre-review extraction job.
+The backend deletes the uploaded file after processing. When DB settings are configured, it persists anonymous resume metadata, job status, and structured pre-review extraction JSON in `app.resumes` / `app.resume_extractions`; it never stores CV bytes or extracted raw document text. `PUT /profiles` separately persists the user-confirmed profile and normalized facts. Without DB settings, the development fallback keeps jobs in memory and confirmed profiles in a local JSON file.
 
 ## 5.2 What maps where
 
 | Our output | DB table / column | Notes |
 |---|---|---|
-| Upload and extraction job | Not persisted by the current local flow | File is temporary and deleted after processing; job state stays in memory. No `app.resumes` or `app.resume_extractions` row is created. |
-| Extraction metadata and pre-review model output | Not persisted in the current local flow | Job state and extraction result expire from memory; durable extraction history is future work. |
+| Upload metadata and extraction job | `app.resumes` and `app.resume_extractions` when DB is configured | A generic filename, MIME type, size, SHA-256, status, stage, timestamps, and deletion timestamp are retained. `storage_key` is null because the source file is not retained. |
+| Pre-review extraction result | `app.resume_extractions.extracted_json` | Structured profile JSON, provider/model, prompt/schema/processing versions, and error status are retained. Extracted raw text and original CV bytes are not stored. |
 | `personal.fullName`, `summary`, `location`, and full confirmed profile | `app.user_profiles` (`display_name`, `background_summary`, `location`, `profile_data`) | `profile_data` retains fields without dedicated columns, including soft skills, languages, links, headline, phone, and UI metadata |
 | Derived: current job, years of experience, education level, field of study | `user_profiles.current_job_title`, `years_experience`, `education_level`, `field_of_study` | Computed in a small step from the confirmed profile (current job = current experience; years = summed work durations; level = highest degree). `current_status` is selected during onboarding using one of the supported values: student / employed full-time / employed part-time / between opportunities / other |
 | `education[]` | `app.user_educations` | `institution`→`institution_name`, `degree`, `fieldOfStudy`→`field_of_study`, dates plus date precision, `gpa`→`description`, `source='resume'`, `source_resume_id`, `extraction_confidence`, `user_confirmed` after confirmation |
@@ -45,8 +45,10 @@ The current local flow runs extraction jobs in memory and deletes the uploaded f
 
 ## 5.4 Current persistence boundaries
 
-- The uploaded CV and extraction job are temporary. This flow does not create
-  `app.resumes` or `app.resume_extractions` rows.
+- The uploaded CV is temporary and deleted after extraction. With DB configured,
+  upload metadata and extraction results remain in `app.resumes` and
+  `app.resume_extractions`; without DB configuration, job state is in memory
+  and disappears on restart.
 - The confirmed profile is saved to `app.user_profiles` and normalized child
   tables when the backend has database settings. Direct local runs can fall
   back to `.data/profiles.json`.
@@ -67,10 +69,11 @@ The reusable extraction engine stays database-free. The backend owns persistence
 | Adapter | Current behavior |
 |---|---|
 | `LocalUploadStore` | Accepts temporary local uploads and removes them after extraction. |
-| `JobsRepo` | Keeps extraction-job state in memory for polling. |
+| `DatabaseJobsRepo` | Persists anonymous extraction job state and structured results when DB is configured; polling checks the anonymous session ID. |
+| `JobsRepo` | In-memory fallback for local development without DB settings. |
 | `DatabaseProfilesRepo` | Writes the confirmed profile and normalized child rows in one transaction. |
 | `FileProfilesRepo` | Stores profiles in JSON when direct local runs lack DB credentials. |
 | `CacheRepo` / `UsageCounter` | Keeps extraction cache and usage counts in memory. |
 | `JobQueue` | Runs extraction jobs in the backend process. |
 
-The backend maps a confirmed `CvProfile` to those rows in a single database transaction. The complete camelCase profile is retained in `app.user_profiles.profile_data`, so fields without a dedicated relational table are not discarded. Resume binaries are deleted after extraction; `source_resume_id` therefore remains null and this flow does not populate `app.resumes` or `app.resume_extractions`. Skill catalog matching is recomputed before save, and unmatched labels are retained without creating catalog rows.
+The backend maps a confirmed `CvProfile` to those rows in a single database transaction. The complete camelCase profile is retained in `app.user_profiles.profile_data`, so fields without a dedicated relational table are not discarded. Resume binaries are deleted after extraction; `storage_key` remains null. When the client includes the completed `extractionId`, normalized education, experience, project, certification, and skill-evidence rows point back to the associated `resume_id`/`source_resume_id`, and the extraction's review status becomes `confirmed`. Extraction results are stored in `extracted_json`, but extracted document text is intentionally not retained. Skill catalog matching is recomputed before save, and unmatched labels are retained without creating catalog rows. Apply migration `022_persist_resume_extraction_jobs.sql` before using DB-backed job persistence.

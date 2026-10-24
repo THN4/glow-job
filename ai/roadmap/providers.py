@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import copy
 import json
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -25,6 +26,8 @@ from ai.roadmap.prompt import SYSTEM_PROMPT, build_repair_message, build_user_me
 DEFAULT_MODEL = "claude-opus-5-5"
 DEFAULT_BEDROCK_MODEL = "anthropic.claude-opus-5-5"
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
+GEMINI_MAX_OUTPUT_TOKENS = 65_536
+log = logging.getLogger("roadmap")
 
 
 class ModelError(Exception):
@@ -173,17 +176,27 @@ class GeminiRoadmapModel:
         self.provider = "gemini"
         self.model_id = model_id
         self._effort = effort if effort in {"low", "medium", "high"} else "high"
-        self._max_tokens = max_tokens
+        self._max_tokens = min(max_tokens, GEMINI_MAX_OUTPUT_TOKENS)
 
     def generate(self, compact: dict[str, Any]) -> ModelTurn:
         text = build_user_message(compact)
-        return self._call([{"role": "user", "parts": [{"text": text}]}], Usage())
+        return self._call_with_limit_retry([{"role": "user", "parts": [{"text": text}]}], Usage())
 
     def repair(self, turn: ModelTurn, issues: list[str]) -> ModelTurn:
         contents = [*turn.messages, {"role": "user", "parts": [{"text": build_repair_message(issues)}]}]
-        return self._call(contents, turn.usage)
+        return self._call_with_limit_retry(contents, turn.usage)
 
-    def _call(self, contents: list[dict[str, Any]], usage: Usage) -> ModelTurn:
+    def _call_with_limit_retry(self, contents: list[dict[str, Any]], usage: Usage) -> ModelTurn:
+        try:
+            return self._call(contents, usage, max_output_tokens=self._max_tokens)
+        except ModelError as err:
+            if err.code != "MODEL_OUTPUT_TRUNCATED" or self._max_tokens >= GEMINI_MAX_OUTPUT_TOKENS:
+                raise
+            log.warning("roadmap Gemini output reached token limit; retrying with max_output_tokens=%d",
+                        GEMINI_MAX_OUTPUT_TOKENS)
+            return self._call(contents, usage, max_output_tokens=GEMINI_MAX_OUTPUT_TOKENS)
+
+    def _call(self, contents: list[dict[str, Any]], usage: Usage, *, max_output_tokens: int) -> ModelTurn:
         from google.genai import errors, types
 
         try:
@@ -198,7 +211,7 @@ class GeminiRoadmapModel:
                     # standard JSON Schema through the dedicated JSON Schema field;
                     # local Pydantic validation still enforces the full contract.
                     response_json_schema=RoadmapDraft.model_json_schema(),
-                    max_output_tokens=self._max_tokens,
+                    max_output_tokens=max_output_tokens,
                     thinking_config=types.ThinkingConfig(thinking_level=self._effort),
                 ),
             )

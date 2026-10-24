@@ -36,8 +36,8 @@ class DatabaseProfilesRepo:
     async def get(self, profile_id: str) -> StoredProfile | None:
         return await asyncio.to_thread(self._get, profile_id)
 
-    async def put(self, profile: StoredProfile) -> None:
-        await asyncio.to_thread(self._put, profile)
+    async def put(self, profile: StoredProfile, extraction_id: str | None = None) -> None:
+        await asyncio.to_thread(self._put, profile, extraction_id)
 
     async def save_career_goal(
         self, profile_id: str, session_id: str, goal: dict[str, Any]
@@ -97,7 +97,7 @@ class DatabaseProfilesRepo:
             log.warning("profile database read failed: %s", type(exc).__name__)
             raise AppError("PROFILE_STORE_UNAVAILABLE") from exc
 
-    def _put(self, saved: StoredProfile) -> None:
+    def _put(self, saved: StoredProfile, extraction_id: str | None = None) -> None:
         try:
             with self._connect() as connection:
                 with connection.transaction():
@@ -112,6 +112,21 @@ class DatabaseProfilesRepo:
                         (saved.session_id,),
                     ).fetchone()
                     user_id = user_row[0]
+
+                    source_resume_id = None
+                    if extraction_id:
+                        extraction = connection.execute(
+                            """SELECT r.resume_id
+                               FROM app.resume_extractions e
+                               JOIN app.resumes r USING (resume_id)
+                               WHERE e.job_id = %s AND r.user_id = %s
+                                 AND e.status = 'completed'
+                               FOR UPDATE OF e""",
+                            (extraction_id, user_id),
+                        ).fetchone()
+                        if extraction is None:
+                            raise AppError("PROFILE_NOT_FOUND", "The extraction does not belong to this session.")
+                        source_resume_id = extraction[0]
 
                     existing_owner = connection.execute(
                         "SELECT user_id FROM app.user_profiles WHERE profile_id = %s",
@@ -181,7 +196,14 @@ class DatabaseProfilesRepo:
                             saved.created_at,
                         ),
                     )
-                    self._replace_profile_items(connection, user_id, profile)
+                    self._replace_profile_items(connection, user_id, profile, source_resume_id)
+                    if extraction_id:
+                        connection.execute(
+                            """UPDATE app.resume_extractions
+                               SET review_status = 'confirmed', updated_at = now()
+                               WHERE job_id = %s""",
+                            (extraction_id,),
+                        )
                     # Kept skill-check levels live in app.skill_assessments; write them back
                     # because the rows above were just recreated from the profile JSON.
                     apply_accepted_assessments(connection, user_id)
@@ -328,7 +350,8 @@ class DatabaseProfilesRepo:
             raise AppError("PROFILE_STORE_UNAVAILABLE") from exc
 
     def _replace_profile_items(
-        self, connection: psycopg.Connection[Any], user_id: int, profile: dict[str, Any]
+        self, connection: psycopg.Connection[Any], user_id: int, profile: dict[str, Any],
+        source_resume_id: int | None = None,
     ) -> None:
         # The profile row is the source of truth for the complete UI payload.
         # Replace normalized child rows atomically so edits remove deleted items.
@@ -349,13 +372,13 @@ class DatabaseProfilesRepo:
                 INSERT INTO app.user_educations (
                     user_id, institution_name, degree, field_of_study,
                     start_date, start_date_precision, end_date, end_date_precision,
-                    description, source, extraction_confidence, user_confirmed
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'resume', %s, true)
+                    description, source, source_resume_id, extraction_confidence, user_confirmed
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'resume', %s, %s, true)
                 """,
                 (
                     user_id, item.get("institution"), item.get("degree"),
                     item.get("fieldOfStudy"), start, start_precision, end,
-                    end_precision, description, _confidence(item.get("confidence")),
+                    end_precision, description, source_resume_id, _confidence(item.get("confidence")),
                 ),
             )
 
@@ -365,7 +388,7 @@ class DatabaseProfilesRepo:
                 # the normalized table's NOT NULL title constraint.
                 continue
             item_id = item.get("id")
-            db_id = self._insert_experience(connection, user_id, item, "work")
+            db_id = self._insert_experience(connection, user_id, item, "work", source_resume_id)
             if item_id:
                 experience_ids[str(item_id)] = db_id
 
@@ -373,7 +396,7 @@ class DatabaseProfilesRepo:
             if not item.get("name"):
                 continue
             item_id = item.get("id")
-            db_id = self._insert_experience(connection, user_id, item, "project")
+            db_id = self._insert_experience(connection, user_id, item, "project", source_resume_id)
             if item_id:
                 experience_ids[str(item_id)] = db_id
 
@@ -385,14 +408,14 @@ class DatabaseProfilesRepo:
                 """
                 INSERT INTO app.user_certifications (
                     user_id, kind, name, issuer, awarded_on, awarded_on_precision,
-                    details, source, extraction_confidence, user_confirmed
+                    details, source, source_resume_id, extraction_confidence, user_confirmed
                 ) VALUES (%s, %s::app.certification_kind, %s, %s, %s, %s, %s,
-                          'resume', %s, true)
+                          'resume', %s, %s, true)
                 """,
                 (
                     user_id, item.get("kind") or "other", item["name"],
                     item.get("issuer"), awarded_on, precision, item.get("detail"),
-                    _confidence(item.get("confidence")),
+                    source_resume_id, _confidence(item.get("confidence")),
                 ),
             )
 
@@ -456,12 +479,12 @@ class DatabaseProfilesRepo:
                     connection.execute(
                         """
                         INSERT INTO app.user_skill_evidence (
-                            user_skill_id, experience_id, evidence_type,
+                            user_skill_id, resume_id, experience_id, evidence_type,
                             evidence_text, confidence
-                        ) VALUES (%s, %s, %s, %s, %s)
+                        ) VALUES (%s, %s, %s, %s, %s, %s)
                         """,
                         (
-                            user_skill_id, experience_id, evidence_type,
+                            user_skill_id, source_resume_id, experience_id, evidence_type,
                             evidence_text, _confidence(item.get("confidence")),
                         ),
                     )
@@ -501,7 +524,7 @@ class DatabaseProfilesRepo:
     @staticmethod
     def _insert_experience(
         connection: psycopg.Connection[Any], user_id: int,
-        item: dict[str, Any], default_type: str,
+        item: dict[str, Any], default_type: str, source_resume_id: int | None = None,
     ) -> int:
         is_project = default_type == "project"
         employment_type = item.get("employmentType")
@@ -518,11 +541,11 @@ class DatabaseProfilesRepo:
             INSERT INTO app.user_experiences (
                 user_id, experience_type, title, organization, role, location,
                 url, description, highlights, start_date, start_date_precision,
-                end_date, end_date_precision, is_current, source,
+                end_date, end_date_precision, is_current, source, source_resume_id,
                 extraction_confidence, user_confirmed
             ) VALUES (
                 %s, %s::app.experience_type, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, 'resume', %s, true
+                %s, %s, %s, %s, %s, 'resume', %s, %s, true
             ) RETURNING experience_id
             """,
             (
@@ -531,7 +554,7 @@ class DatabaseProfilesRepo:
                 item.get("organization"), item.get("role") or employment_type,
                 item.get("location"), item.get("url"), item.get("description"),
                 Jsonb(item.get("highlights") or []), start, start_precision,
-                end, end_precision, bool(item.get("isCurrent", False)),
+                end, end_precision, bool(item.get("isCurrent", False)), source_resume_id,
                 _confidence(item.get("confidence")),
             ),
         ).fetchone()

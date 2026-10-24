@@ -36,13 +36,16 @@ The current demo frontend uploads the raw file as the request body using the ret
 
 Starts the analysis of an uploaded file.
 
-**Request**: `{ "uploadId": "upl_7b1e…" }`
+**Request**: `{ "uploadId": "upl_7b1e…", "sessionId": "<anonymous UUID>" }`
 
 **Response `202`**: `{ "jobId": "job_93c2…", "status": "queued" }`
 
 ## 3.4 `GET /api/cv/extractions/{jobId}`
 
-Poll every ~1.5 s, and stop after `succeeded`/`failed` or after the configured job timeout. While `status` is `queued`, another CV is being processed first (the local worker runs one at a time).
+Send `X-Session-Id: <anonymous UUID>` on every poll. The backend only returns
+jobs belonging to that anonymous session. Poll every ~1.5 s, and stop after
+`succeeded`/`failed` or after the configured job timeout. While `status` is
+`queued`, another CV is being processed first (the local worker runs one at a time).
 
 **Response `200`** (processing)
 ```json
@@ -86,7 +89,11 @@ the canonical `skillId`, `canonicalName`, and `matchMethod`; no match is
 { "jobId": "job_93c2…", "status": "failed", "error": { "code": "NOT_A_CV", "message": "This document does not look like a CV.", "retryable": false } }
 ```
 
-Job records (including the extracted result) are deleted automatically **1 hour** after creation. The frontend must save with `PUT /api/profiles` to keep the data.
+With DB configured, job state and structured extraction results are retained in
+`app.resume_extractions`; original CV bytes are deleted after the extraction
+attempt. Without DB configuration, the fallback job record is in memory and is
+lost when the process restarts. The frontend must save with `PUT /api/profiles`
+to retain the user-confirmed profile in `app.*`.
 
 ## 3.5 `GET /api/profiles/empty`
 
@@ -98,7 +105,7 @@ Saves the profile after the user has reviewed and edited it ("Confirm and save p
 
 **Request**
 ```json
-{ "sessionId": "f93efc05-e67b-47a7-a81a-c9834d6d8b85", "profileId": null, "profile": { "schemaVersion": 1, "…": "…" } }
+{ "sessionId": "f93efc05-e67b-47a7-a81a-c9834d6d8b85", "profileId": null, "extractionId": "job_93c2…", "profile": { "schemaVersion": 1, "…": "…" } }
 ```
 
 - `profileId: null` creates a new profile. Passing the current profile id updates it.
@@ -109,6 +116,9 @@ Saves the profile after the user has reviewed and edited it ("Confirm and save p
 - The backend ignores any client-supplied `catalogMatch` and recomputes it from
   the current catalog before saving. It never trusts a client-provided `skillId`.
 - Every item gets `needsReview: false` on save, because the user has now confirmed it.
+- `extractionId` is optional. When provided, it must belong to the same anonymous
+  session and identify a completed extraction; the backend marks that extraction
+  as confirmed and links normalized profile facts to its `resume_id`.
 - `sessionId` identifies the anonymous user in the current product flow. The backend uses it as `auth_subject` with `auth_provider='anonymous'`; clients should generate and retain a hard-to-guess UUID. Losing it means the anonymous profile cannot be recovered.
 - When database settings and the required app schema are present, the confirmed profile is saved to `app.user_profiles` and normalized child tables. Without database settings, direct local runs store profiles in `.data/profiles.json`.
 
@@ -186,10 +196,11 @@ types aligned with them.
 3. **Review step:** render one card per section of `result.profile`. For each technical skill/tool, show the matched canonical catalog name when `catalogMatch.status === "matched"`; retain the extracted label as the user's wording. Show an unmatched state when status is `unmatched`, and a neutral “catalog not checked” state when `catalogMatch` is `null`. Unmatched catalog entries are flagged `needsReview` for the user's attention. Use `meta.reviewCount` and `meta.warnings` for a summary banner.
 4. **Edit:** keep the profile in local state (e.g. React Hook Form). Set `source: "user"` on any item the user edits or adds.
 5. **Continue:** `PUT /api/profiles`, store the `profileId`, then continue onboarding.
-6. **Continue without CV:** `GET /api/profiles/empty` → the same Review/Edit form.
-7. **Errors:** map `error.code` to the messages above, and show "Try again" when `retryable`.
-8. **Types:** the demo's TypeScript API types live in `frontend/src/features/resume/api.ts`. A replacement client should derive or maintain its own types against `/openapi.json`, the API source of truth.
-9. **CORS:** local Compose allows `http://localhost:5173`; configure any additional frontend origin through `CORS_ORIGINS`.
+6. **Career match:** call `GET /api/profiles/{profileId}/career-match?careerProfileId=...` with `X-Session-Id`.
+7. **Continue without CV:** `GET /api/profiles/empty` → the same Review/Edit form.
+8. **Errors:** map `error.code` to the messages above, and show "Try again" when `retryable`.
+9. **Types:** the demo's TypeScript API types live in `frontend/src/features/resume/api.ts`. A replacement client should derive or maintain its own types against `/openapi.json`, the API source of truth.
+10. **CORS:** local Compose allows `http://localhost:5173`; configure any additional frontend origin through `CORS_ORIGINS`.
 
 ## 3.12 `GET /api/career-profiles`
 

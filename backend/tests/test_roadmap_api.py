@@ -90,6 +90,9 @@ class FakeRepo:
                              "priorityRank": 1, "requirementType": "required", "source": "job_requirement",
                              "alreadyPlanned": True, "learningContentAvailable": True}]}
 
+    def current_agent_context(self, user_id):
+        return None
+
     def build_context(self, profile_id, career_profile_id, date_basis, replan_trigger=None):
         self.contexts_built += 1
         if self.missing_knowledge:
@@ -122,6 +125,7 @@ class FakeRepo:
         roadmap_id = len(self.roadmaps) + 1
         self.roadmaps[roadmap_id] = {"view": result.view, "sha": result.input_sha256, "status": "active",
                                      "done": set(), "version": roadmap_id, "started": set(), "skipped": set(),
+                                     "confirmed": set(),
                                      "reason": reason, "context": context}
         return roadmap_id
 
@@ -144,7 +148,8 @@ class FakeRepo:
         view = RoadmapView.model_validate(r["view"].model_dump(by_alias=True))
         view = view.model_copy(update={"roadmap_id": rid, "version": r["version"], "status": r["status"]})
         return apply_progress(view, completed_tasks=r["done"], skipped_steps=r["skipped"],
-                              started_steps=r["started"], today=date(2026, 10, 19))
+                              started_steps=r["started"], confirmed_steps=r["confirmed"],
+                              today=date(2026, 10, 19))
 
     def set_task(self, user_id, roadmap_id, item_id, completed):
         r = self.roadmaps.get(roadmap_id)
@@ -163,10 +168,12 @@ class FakeRepo:
             r["done"] |= ids
         elif status == "not_started":
             r["done"] -= ids
-        for marks in (r["started"], r["skipped"]):
+        for marks in (r["started"], r["skipped"], r["confirmed"]):
             marks.discard(step_key)
         if status == "in_progress":
             r["started"].add(step_key)
+        elif status == "completed":
+            r["confirmed"].add(step_key)
         elif status == "skipped":
             r["skipped"].add(step_key)
         return True
@@ -218,11 +225,15 @@ async def test_full_flow(tmp_path):
 
         roadmap = (await client.get(f"/api/profiles/{PROFILE}/roadmaps/current")).json()["roadmap"]
         assert roadmap["roadmapId"] == 1 and roadmap["nodes"][-1]["kind"] == "goal"
-        assert roadmap["progress"]["percent"] == 0 and roadmap["edges"][0].keys() == {"from", "to", "optional"}
+        assert roadmap["progress"]["percent"] == 0 and roadmap["edges"][0].keys() == {"from", "to", "optional", "kind"}
 
         item = roadmap["nodes"][0]["checklist"][0]["id"]
+        started = await client.put(f"/api/profiles/{PROFILE}/roadmaps/1/steps/{roadmap['nodes'][0]['key']}",
+                                   json={"status": "in_progress"})
+        assert started.status_code == 200
         r = await client.put(f"/api/profiles/{PROFILE}/roadmaps/1/tasks/{item}", json={"completed": True})
-        assert r.status_code == 200 and r.json()["roadmap"]["progress"]["completedTasks"] == 1
+        assert r.status_code == 200, r.text
+        assert r.json()["roadmap"]["progress"]["completedTasks"] == 1
         r = await client.put(f"/api/profiles/{PROFILE}/roadmaps/1/tasks/nope.9", json={"completed": True})
         assert r.json()["error"]["code"] == "TASK_NOT_FOUND"
     assert repo.runs == []  # the mock provider never records a paid run
@@ -333,8 +344,9 @@ async def test_ui_fields_and_step_actions(tmp_path):
         roadmap = (await client.get(f"{base}/roadmaps/current")).json()["roadmap"]
         first = roadmap["nodes"][0]
 
-        assert roadmap["layout"] == {"columns": 4, "rows": 2}
-        assert all(1 <= n["position"]["row"] <= 6 and 1 <= n["position"]["column"] <= 4 for n in roadmap["nodes"])
+        assert roadmap["layout"]["columns"] == 3
+        assert 1 <= roadmap["layout"]["rows"] <= 24
+        assert all(1 <= n["position"]["row"] <= 24 and 1 <= n["position"]["column"] <= 3 for n in roadmap["nodes"])
         assert roadmap["nodes"][-1]["subtitle"] == "Target: Jan 18, 2027" and first["subtitle"] == "Quick check"
         assert roadmap["summary"]["durationLabel"] == "3 months"
         assert roadmap["summary"]["weeklyHours"] == {"min": 2.0, "max": 5.0}
@@ -350,7 +362,12 @@ async def test_ui_fields_and_step_actions(tmp_path):
         assert view["nodes"][0]["status"] == "in_progress" and view["nodes"][0]["subtitle"] == "In progress"
         assert view["currentNodeKey"] == first["key"]
 
+        for task in first["checklist"]:
+            task_response = await client.put(f"{base}/roadmaps/1/tasks/{task['id']}",
+                                             json={"completed": True})
+            assert task_response.status_code == 200, task_response.text
         r = await client.put(f"{steps}/{first['key']}", json={"status": "completed"})
+        assert r.status_code == 200, r.text
         view = r.json()["roadmap"]
         assert view["nodes"][0]["status"] == "completed" and view["progress"]["completedTasks"] == 1
         # the first suggestion is done, so the best next step moves to the next unlocked step

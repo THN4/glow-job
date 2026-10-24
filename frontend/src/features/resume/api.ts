@@ -193,13 +193,16 @@ export async function extractCv(file: File, onStage: (stage: string) => void, si
   const started = await request<{ jobId: string }>('/cv/extractions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ uploadId: upload.uploadId }),
+    body: JSON.stringify({ uploadId: upload.uploadId, sessionId: getSessionId() }),
     signal,
   })
   const startedAt = Date.now()
   while (Date.now() - startedAt < 300_000) {
     await wait(1500, signal)
-    const job = await request<{ status: string; stage?: string; result?: ExtractionResult; error?: { message?: string } }>(`/cv/extractions/${encodeURIComponent(started.jobId)}`, { signal })
+    const job = await request<{ status: string; stage?: string; result?: ExtractionResult; error?: { message?: string } }>(`/cv/extractions/${encodeURIComponent(started.jobId)}`, {
+      headers: { 'X-Session-Id': getSessionId() },
+      signal,
+    })
     if (job.stage) onStage(job.stage)
     if (job.status === 'succeeded' && job.result) return job.result
     if (job.status === 'failed') throw new Error(job.error?.message ?? 'สกัดข้อมูลจาก CV ไม่สำเร็จ')

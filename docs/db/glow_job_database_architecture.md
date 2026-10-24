@@ -76,7 +76,7 @@ market.career_skill_stats
 
 # 3. CORE — Shared Canonical Data
 
-The current local Resume onboarding flow uses anonymous `app.users` rows keyed by the client-generated `sessionId`. After the user confirms the extracted profile, the backend stores its full JSON in `app.user_profiles.profile_data` and writes normalized facts to related `app.*` tables. The CV file and extraction job are still temporary; this does not yet create `app.resumes` or `app.resume_extractions` rows. See [Resume database mapping](../cv-extraction/05-database-mapping.md) for field-level details.
+The anonymous Resume onboarding flow uses `app.users` rows keyed by the client-generated `sessionId`. With database settings enabled, the backend stores upload metadata and durable extraction status/structured output in `app.resumes` and `app.resume_extractions`; CV bytes and extracted raw document text are deleted/not retained. After confirmation, the backend stores the reviewed profile in `app.user_profiles.profile_data` and normalized facts in related `app.*` tables. See [Resume database mapping](../cv-extraction/05-database-mapping.md) for field-level details.
 
 ## `core.companies`
 
@@ -304,6 +304,8 @@ Document chunks for semantic retrieval.
 | `metadata` | Additional metadata |
 | `embedding_model` | Model used for embedding |
 | `embedding` | Vector stored with pgvector |
+| `embedding_nova_model` | Nova embedding model used for retrieval |
+| `embedding_nova` | 1,024-dimensional Nova vector stored with pgvector |
 | `created_at` | Creation time |
 
 ## `knowledge.skill_dependencies`
@@ -386,18 +388,20 @@ Summary of user background used by the agent.
 
 ## `app.resumes`
 
-Resume metadata; the file itself is stored in S3.
+Resume upload metadata. The original CV is temporary and deleted after extraction; it is not archived in S3.
 
 | Column | Meaning |
 |---|---|
 | `resume_id` | Resume ID |
 | `user_id` | Owner |
-| `file_name` | File name |
-| `storage_key` | S3 key |
+| `file_name` | Generic filename; original filename is not retained |
+| `storage_key` | Null after extraction because the original CV is not retained |
+| `file_sha256` | Hash for duplicate/cache traceability; cannot recover the file |
 | `mime_type` | File type |
 | `file_size_bytes` | File size in bytes |
 | `is_current` | Whether this is the current resume |
 | `uploaded_at` | Upload time |
+| `temporary_file_deleted_at` | When the temporary upload file was deleted after processing |
 | `created_at` | Creation time |
 
 ## `app.resume_extractions`
@@ -408,29 +412,31 @@ LLM or resume parser output before user confirmation.
 |---|---|
 | `extraction_id` | Extraction ID |
 | `resume_id` | Resume |
+| `job_id` | Opaque API job ID used for status polling |
 | `status` | pending / processing / completed / failed |
+| `stage` | Current extraction stage |
 | `model_provider` | Model provider |
 | `model_name` | Model |
-| `extracted_text` | Parsed text |
-| `extracted_json` | Structured output |
+| `extracted_text` | Not populated; raw CV text is not retained |
+| `extracted_json` | Structured pre-review extraction result |
+| `prompt_version`, `extraction_schema_version`, `processing_version` | Reproducibility metadata |
 | `review_status` | pending / confirmed / edited / rejected |
 | `started_at` | Start time |
 | `completed_at` | Completion time |
 | `error_message` | Error |
 | `created_at` | Creation time |
+| `updated_at` | Last status/result update |
 
-Planned durable CV flow (not the current local implementation):
+Durable CV extraction flow when DB is configured:
 
 ```text
-CV Upload
+Temporary CV Upload
 ↓
-S3
-↓
-app.resumes
+app.resumes (metadata, no file key)
 ↓
 LLM Extraction
 ↓
-app.resume_extractions.extracted_json
+app.resume_extractions (status + structured JSON, no raw text)
 ↓
 Auto-fill UI
 ↓
@@ -439,7 +445,12 @@ User Edit / Confirm
 Canonical User Data
 ```
 
-The current local Resume flow instead uses temporary file storage and in-memory extraction jobs. It writes the confirmed profile to `app.user_profiles` and related profile tables; it does not create `app.resumes` or `app.resume_extractions` rows yet. See [Resume database mapping](../cv-extraction/05-database-mapping.md).
+The temporary CV is deleted after the extraction attempt. Anonymous session IDs are sent with polling requests so the backend only returns a job to its owner. Without DB settings, the developer fallback still uses in-memory job state. See [Resume database mapping](../cv-extraction/05-database-mapping.md).
+
+Roadmap generation already snapshots the assembled Agent Context in
+`app.roadmap_generations.agent_context` in RDS. Keep those per-user, per-run
+snapshots in the relational database; shared source documents and chunks remain
+in the `knowledge.*` tables and this document workflow does not archive them to S3.
 
 ---
 

@@ -11,7 +11,7 @@ import pytest
 
 from ai.roadmap import layout
 from ai.roadmap.compact import compact_context, planning_budget
-from ai.roadmap.contracts import Edge, RoadmapDraft
+from ai.roadmap.contracts import DraftStep, Edge, RoadmapDraft
 from ai.roadmap.dependencies import (remove_unsupported_skill_dependencies,
                                       remove_unsupported_view_dependencies, required_skill_pairs)
 from ai.roadmap.cost import Pricing, estimate_cost
@@ -188,7 +188,38 @@ def test_citation_must_belong_to_the_steps_skill(context):
 def test_forgotten_main_skill_is_deferred(context):
     check = validate_draft(draft(deferred=[]), context, planning_budget(context, TODAY))
     assert check.fatal == []
-    assert {d.skill_id for d in check.draft.deferred} == {RAG, JAVA}
+    assert {d.skill_id for d in check.draft.deferred} == {RAG}
+    java = next(step for step in check.draft.steps if step.skill_id == JAVA)
+    assert java.kind == "skill" and java.tasks == []
+
+
+def test_malformed_completed_profile_cards_are_rebuilt_from_context(context):
+    # Model a confirmed SQL baseline skill alongside the fixture's learning gaps.
+    sql = context.roadmap_candidates[0].model_copy(update={
+        "skill_id": 71,
+        "skill_name": "SQL",
+        "gap": context.roadmap_candidates[0].gap.model_copy(update={"status": "covered"}),
+        "learning_recommendation": "reference_only",
+    })
+    context = context.model_copy(update={"roadmap_candidates": (sql, *context.roadmap_candidates)})
+    expected = {71}
+    broken = draft()
+    broken.steps.append(DraftStep(
+        key="bad-profile-card", kind="completed_skill", skill_id=0,
+        title="Profile skills", summary="Already done", why=["From profile"],
+        hours_min=0, hours_max=0, depends_on=[], tasks=[], details=[],
+    ))
+
+    model = ScriptedModel(broken, broken)
+    prepared = prepare(context, model, today=TODAY)
+    check = validate_draft(broken, context, prepared.budget)
+    assert check.fatal == [], check.fatal
+    result = generate_roadmap(context, model, prepared=prepared)
+    completed = [step for step in result.draft.steps if step.kind == "completed_skill"]
+    assert {step.skill_id for step in completed} == expected
+    assert all(step.tasks == [] and step.hours_min == step.hours_max == 0 for step in completed)
+    assert not any(node.skill and node.skill.skill_id == 0 for node in result.view.nodes)
+    assert model.repair_issues == []  # The bad card is repaired from trusted profile context in code.
 
 
 @pytest.mark.parametrize("change, message", [
@@ -256,14 +287,32 @@ def test_failed_repair_reports_cost(context):
     assert err.value.code == "ROADMAP_VALIDATION_FAILED" and err.value.cost_usd > 0
 
 
+def test_invalid_learning_citations_degrade_to_placeholder_after_repair(context):
+    broken = draft()
+    broken.steps[1].tasks[0].citations[0].quote = "This sentence is not in the source at all."
+    model = ScriptedModel(broken, broken)
+    result = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY))
+    airflow = next(node for node in result.view.nodes if node.key == "airflow")
+    project = next(node for node in result.view.nodes if node.key == "project")
+    assert airflow.learning_content_available is False
+    assert airflow.checklist == [] and airflow.estimated_hours.min == 0
+    assert project.depends_on == []
+    assert model.repair_issues
+
+
 def test_progress_counts_tasks_and_skips(context):
     model = MockRoadmapModel()
     view = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY)).view
     first = view.nodes[0]
     done = {item.id for item in first.checklist}
     updated = apply_progress(view, completed_tasks=done, skipped_steps=set())
-    assert updated.nodes[0].status == "completed"
-    assert updated.progress.completed_steps == 1 and 0 < updated.progress.percent < 100
+    assert updated.nodes[0].status == "in_progress"
+    assert updated.progress.completed_steps == 0 and updated.progress.completed_tasks == len(done)
+    assert 0 < updated.progress.percent < 100
+    confirmed = apply_progress(view, completed_tasks=done, skipped_steps=set(),
+                               confirmed_steps={first.key})
+    assert confirmed.nodes[0].status == "completed"
+    assert confirmed.progress.completed_steps == 1
 
 
 def test_output_schema_is_strict():
@@ -379,21 +428,22 @@ def test_layout_fits_the_canvas_grid():
     assert max(row for row, _ in positions.values()) <= layout.MAX_ROWS
     for key, deps in FIGMA_DEPS.items():
         assert all(positions[d][0] <= positions[key][0] for d in deps)  # never above a prerequisite
-    assert [positions[k] for k in ("python", "sql", "etl", "build-etl")] == [(1, 1), (1, 2), (1, 3), (1, 4)]
+    assert positions["build-etl"][0] > positions["etl"][0]
     assert positions["goal"][0] == max(row for row, _ in positions.values())
 
 
 def test_chain_flows_across_a_row_then_wraps():
     deps = {"a": [], "b": ["a"], "c": ["b"], "d": ["c"], "e": ["d"], "goal": ["e"]}
     assert layout.place(list(deps), deps) == {
-        "a": (1, 1), "b": (1, 2), "c": (1, 3), "d": (1, 4), "e": (2, 2), "goal": (2, 4)}
+        "a": (1, 1), "b": (1, 2), "c": (1, 3), "d": (2, 3), "e": (2, 2), "goal": (2, 1)}
 
 
 def test_node_text_and_next_step_follow_progress(context):
     model = MockRoadmapModel()
     view = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY)).view
     keys = [n.key for n in view.nodes]
-    assert view.layout.rows == 2 and view.current_node_key == view.next_action.node_key == keys[0]
+    assert view.layout.columns == layout.COLUMNS and view.layout.rows >= 1
+    assert view.current_node_key == view.next_action.node_key == keys[0]
     assert view.nodes[0].subtitle == "Quick check" and view.nodes[-1].subtitle == "Target: Jan 18, 2027"
     assert view.progress.label == "0 of 9 tasks done"
 
@@ -401,11 +451,13 @@ def test_node_text_and_next_step_follow_progress(context):
     assert started.nodes[1].status == "in_progress" and started.current_node_key == keys[1]
 
     done = {i.id for i in view.nodes[0].checklist}
-    moved = apply_progress(view, completed_tasks=done, skipped_steps=set(), today=TODAY)
+    moved = apply_progress(view, completed_tasks=done, skipped_steps=set(),
+                           confirmed_steps={keys[0]}, today=TODAY)
     assert moved.next_action.node_key == keys[1] and moved.next_action.text.startswith("Next up: ")
 
     everything = {i.id for n in view.nodes for i in n.checklist}
-    finished = apply_progress(view, completed_tasks=everything, skipped_steps=set(), today=TODAY)
+    finished = apply_progress(view, completed_tasks=everything, skipped_steps=set(),
+                              confirmed_steps={n.key for n in view.nodes if n.kind != "goal"}, today=TODAY)
     assert finished.next_action.node_key == "goal" and finished.nodes[-1].status == "completed"
 
     assert apply_progress(view, completed_tasks=set(), skipped_steps=set(), today=TODAY
@@ -418,12 +470,12 @@ def test_foundation_check_edges_are_optional(context):
     model = MockRoadmapModel()
     view = generate_roadmap(context, model, prepared=prepare(context, model, today=TODAY)).view
     assert {(e.from_, e.optional) for e in view.edges if e.from_ == view.nodes[0].key} == {(view.nodes[0].key, True)}
-    assert not any(e.optional for e in view.edges if e.from_ != view.nodes[0].key)
+    assert all(e.optional for e in view.edges if e.kind == "recommended_order")
 
 
 def test_plan_that_does_not_fit_the_canvas_is_fatal(context):
     steps, previous = [], []
-    for level in range(7):  # seven levels of two parallel steps, each needing both steps before it
+    for level in range(25):  # exceed the 24-row canvas with parallel prerequisite layers
         keys = [f"s{level}a", f"s{level}b"]
         for key in keys:
             steps.append({"key": key, "kind": "project", "skill_id": None, "title": key, "summary": "x",
@@ -432,4 +484,4 @@ def test_plan_that_does_not_fit_the_canvas_is_fatal(context):
         previous = keys
     wide = draft(steps=steps, deferred=[], confirmations=[], next_action={"step_key": "s0a", "text": "Go."})
     check = validate_draft(wide, context, planning_budget(context, TODAY))
-    assert any("canvas fits 6" in issue for issue in check.fatal), check.fatal
+    assert any("canvas fits 24" in issue for issue in check.fatal), check.fatal

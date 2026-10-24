@@ -424,7 +424,7 @@ class RoadmapService:
         if current is None or current.roadmap_id != roadmap_id:
             raise AppError("ROADMAP_NOT_FOUND")
         node = next((item for item in current.nodes if item.key == step_key), None)
-        if node is None:
+        if node is None or node.kind == "goal":
             raise AppError("TASK_NOT_FOUND", "The roadmap step was not found.")
         if node.baseline_complete:
             raise AppError("TASK_NOT_FOUND", "This skill is already complete in your confirmed profile.")

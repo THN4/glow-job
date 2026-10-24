@@ -10,7 +10,7 @@ inspecting extraction and market matching; it is not the planned production UI.
 | Component | Responsibility |
 |---|---|
 | `frontend/src/features/resume/` | Temporary demo UI at `/onboarding/cv` for CV upload, extraction review, saving, and inspecting career-match results. |
-| `backend/app/features/resume/` | FastAPI routes, temporary uploads, in-process extraction jobs, profile persistence, and the read-only market-match API. |
+| `backend/app/features/resume/` | FastAPI routes, temporary uploads, in-process extraction jobs, profile persistence, and read-only market-match/skill-gap API. |
 | `data-pipeline/src/resume/` | Reusable CV parsing, extraction contracts/providers, validation, normalization, and profile schemas. |
 | PostgreSQL `core` and `market` schemas | Canonical skill catalog, career profiles, and market skill statistics. |
 | PostgreSQL `app` schema | Confirmed user profiles, normalized skills, skill evidence, and related profile data. |

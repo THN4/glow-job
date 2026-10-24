@@ -13,7 +13,7 @@ review and domain specification are in
 |---|---|
 | [01-architecture.md](01-architecture.md) | Demo frontend, backend, data-pipeline, and database responsibilities and flow. |
 | [02-profile-schema.md](02-profile-schema.md) | `CvProfile` contract used by extraction, API, and profile review. |
-| [03-api-reference.md](03-api-reference.md) | Implemented CV, profile, and career-match API endpoints. |
+| [03-api-reference.md](03-api-reference.md) | Implemented CV, profile, and Career Match API endpoints. |
 | [04-extraction-flow.md](04-extraction-flow.md) | Parsing, extraction, validation, normalization, and privacy details. |
 | [05-database-mapping.md](05-database-mapping.md) | Mapping from confirmed profile fields to PostgreSQL `app.*` tables. |
 | [06-profile-data-requirements.md](06-profile-data-requirements.md) | CV fields needed by profile, skill-gap, and roadmap consumers. |

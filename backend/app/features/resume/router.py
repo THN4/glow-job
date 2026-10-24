@@ -20,9 +20,9 @@ from fastapi.routing import APIRoute
 from pydantic import ConfigDict, Field, ValidationError, model_validator
 
 from app.features.resume.errors import AppError
+from app.features.resume.profiles import DatabaseProfilesRepo
 from app.features.resume.services import Services, get_services
 from app.features.resume.storage import Job, StoredProfile, now_iso
-from app.features.resume.profiles import DatabaseProfilesRepo
 from src.resume.normalization.postprocess import confirm_profile, count_review
 from src.resume.normalization.catalog import resolve_profile_catalog_matches
 from src.resume.parsing.preprocess import ALLOWED_MIME, detect_mime
@@ -73,6 +73,7 @@ class CreateUploadBody(Camel):
 
 class StartExtractionBody(Camel):
     upload_id: str = Field(min_length=1, max_length=100)
+    session_id: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class SaveProfileBody(Camel):
@@ -149,20 +150,25 @@ async def put_upload_file(upload_id: str, request: Request, svc: Services = Depe
 
 @router.post("/cv/extractions", status_code=202)
 async def start_extraction(body: StartExtractionBody, svc: Services = Depends(get_services)) -> dict[str, Any]:
-    if svc.uploads.get_meta(body.upload_id) is None or not svc.uploads.has_file(body.upload_id):
+    meta = svc.uploads.get_meta(body.upload_id)
+    if meta is None or not svc.uploads.has_file(body.upload_id):
         raise AppError("UPLOAD_NOT_FOUND")
     limit = svc.settings.DAILY_EXTRACTION_LIMIT
     if limit > 0 and svc.usage.get_today() >= limit:
         raise AppError("DAILY_LIMIT_REACHED")
-    job = Job(job_id=f"job_{uuid.uuid4()}", upload_id=body.upload_id)
+    job = Job(job_id=f"job_{uuid.uuid4()}", upload_id=body.upload_id, session_id=body.session_id)
     svc.jobs.create(job)
     await svc.queue.enqueue(job.job_id)
     return {"jobId": job.job_id, "status": "queued"}
 
 
 @router.get("/cv/extractions/{job_id}")
-async def get_extraction(job_id: str, svc: Services = Depends(get_services)) -> dict[str, Any]:
-    job = svc.jobs.get(job_id)
+async def get_extraction(
+    job_id: str,
+    session_id: str | None = Header(default=None, alias="X-Session-Id", min_length=1, max_length=100),
+    svc: Services = Depends(get_services),
+) -> dict[str, Any]:
+    job = svc.jobs.get(job_id, session_id)
     if job is None:
         raise AppError("JOB_NOT_FOUND")
     out: dict[str, Any] = {"jobId": job.job_id, "status": job.status, "stage": job.stage}
@@ -217,7 +223,8 @@ async def save_profile(request: Request, svc: Services = Depends(get_services)) 
     if catalog is not None:
         profile = resolve_profile_catalog_matches(profile, catalog)
     confirmed = confirm_profile(profile).model_dump(mode="json", by_alias=True)
-    await svc.profiles.put(StoredProfile(profile_id, body.session_id, confirmed, created_at, now))
+    saved = StoredProfile(profile_id, body.session_id, confirmed, created_at, now)
+    await svc.profiles.put(saved)
     return {"profileId": profile_id, "updatedAt": now}
 
 

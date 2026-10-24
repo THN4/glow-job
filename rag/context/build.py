@@ -11,7 +11,7 @@ MAX_COMPLETED_SKILLS = 4
 
 
 class KnowledgeNotReady(ValueError):
-    """The selected gaps have no reviewed learning content to plan from."""
+    """No eligible skills are available to include in a roadmap context."""
 
 
 def build_agent_context(connection, *, profile_id, career_profile_id, date_basis,
@@ -57,16 +57,17 @@ def build_agent_context(connection, *, profile_id, career_profile_id, date_basis
     )
     available = coverage(connection, [item.market.skill_id for item in [*ranked_gaps, *profile_core]])
     focused = [eligible_by_id[skill_id] for skill_id in focus_ids]
+    # Keep eligible skills even when their knowledge is not embedded yet.
+    # The roadmap renderer marks those nodes as unavailable/blurred; filtering
+    # them here would silently remove them before that fallback can run.
     remaining = [item for item in ranked_gaps if item.market.skill_id not in focus_ids
-                 and item.market.skill_id in available
-                 and available[item.market.skill_id]["embedded_chunks"] > 0]
+                 and item.market.skill_id in available]
     gaps = (focused + remaining)[:MAX_MAIN_SKILLS]
     completed = [item for item in profile_core if item.market.skill_id not in focus_ids
-                 if (item.market.skill_id in available
-                     and available[item.market.skill_id]["embedded_chunks"] > 0)][:MAX_COMPLETED_SKILLS]
+                 if item.market.skill_id in available][:MAX_COMPLETED_SKILLS]
     selected = [*completed, *gaps]
     if not selected:
-        raise KnowledgeNotReady("No confirmed core skills or ranked skill gaps have embedded learning documents")
+        raise KnowledgeNotReady("No eligible confirmed skills or ranked skill gaps are available for this roadmap")
 
     retrieval_policy = RetrievalPolicy(total_chars=32000, per_skill_chars=8000)
     knowledge_parts = []
@@ -84,8 +85,6 @@ def build_agent_context(connection, *, profile_id, career_profile_id, date_basis
         "content_chars_sent_for_review": sum(part.content_chars_sent_for_review for part in knowledge_parts),
         "selected_content_chars": sum(part.selected_content_chars for part in knowledge_parts),
     })
-    if not any(skill.teaching_content_status == "available" for skill in knowledge.skills):
-        raise KnowledgeNotReady("The selected roadmap skills have no reviewed instructional evidence")
     knowledge = knowledge.model_copy(update={
         "warnings": [
             "Roadmap learning skills are ranked core gaps; up to four confirmed core profile skills are included as completed baselines. A completed baseline means the skill is present in the profile; it does not claim the user meets a market target when their level is unknown.",

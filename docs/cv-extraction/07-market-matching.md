@@ -1,6 +1,6 @@
 # Resume–Market Skill Match
 
-สถานะเอกสาร: **Core 20 และการจัดลำดับ Skill Gap implement สำหรับ local demo แล้ว; เกณฑ์ยังต้องประเมินกับข้อมูลจริงก่อนใช้เป็น production score**
+สถานะเอกสาร: **Career Match และการคำนวณ Skill Gap implement สำหรับ demo แล้ว; สูตรยังต้องประเมินกับข้อมูลจริง**
 ขอบเขต: เปรียบเทียบ skill ในโปรไฟล์ผู้ใช้ที่ยืนยันแล้วกับความต้องการของอาชีพจากข้อมูลตลาด เพื่อสรุปทักษะที่ตรงและช่องว่างที่ควรพัฒนา
 
 สูตร เกณฑ์คุณภาพ และชื่อ API ในเอกสารนี้เป็นค่าเริ่มต้นสำหรับ implementation/demo ซึ่งยังปรับได้จากการ review ผลลัพธ์
@@ -8,11 +8,11 @@
 ## สถานะ implementation
 
 - มี deterministic calculation service และ endpoint `GET /api/profiles/{profileId}/career-match?careerProfileId=...` ใน backend; ส่ง anonymous session ผ่าน `X-Session-Id`
+- Career Match คืน `coreSkillMatchPct` จาก Top 20 weighted market skills (รวม ties), เก็บคะแนน coverage เดิมแบบ all-market แยกไว้ และคำนวณ gap/priority signal ราย skill
 - หน้า `/onboarding/cv` เป็น temporary demo สำหรับลอง upload, review extraction และดูผล match จาก API; จะมี frontend ตัวอื่นมาแทน จึงไม่ถือ UX หรือหน้าจอนี้เป็น production requirement
 - backend API และ calculation service เป็นส่วนที่ frontend ใหม่สามารถเรียกใช้ต่อได้ โดยอิง contract ใน [03-api-reference.md](03-api-reference.md) และ `/openapi.json`
 - อ่าน user skills ที่ canonical matched และยืนยันแล้ว เทียบกับ market window ล่าสุดหนึ่งช่วง โดยไม่ผสมช่วงข้อมูล
 - คำนวณ coverage, proficiency alignment และ assessment coverage แยกกัน พร้อมผลราย skill และ reason codes
-- เพิ่ม `coreSkillMatchPct` สำหรับ Top 20 weighted market skills (รวม ties ที่เส้นตัด) และ `gapScore`/`priorityScore` ราย skill เพื่อช่วยตรวจลำดับ potential gaps
 - คืน evidence excerpt สูงสุด 3 รายการต่อ skill (ไม่เกิน 320 ตัวอักษรต่อรายการ) และแสดง unmatched labels แยกจากคะแนน
 - ค่าเริ่มต้น quality gates เป็น `MATCH_MIN_TOTAL_JOBS=10`, `MATCH_MAX_MARKET_AGE_DAYS=180`, `MATCH_MIN_LEVEL_OBSERVATIONS=3`, `MATCH_MIN_TARGET_LEVEL_CONFIDENCE=0.6`; ปรับผ่าน env ได้และระบุเป็น provisional
 - ไม่เพิ่ม migration: ใช้ `app.user_skills.proficiency_basis` และ `market.career_skill_stats` ที่มีอยู่
@@ -129,24 +129,6 @@ Assessment Coverage (%) = 100 × Σ(wᵢ ของ skill ที่ประเ�
 
 ถ้าผู้ใช้มีระดับ `unknown` ให้จัดเป็น `not_assessed` ไม่ใช่ `beginner` และไม่เอาเข้าตัวหาร proficiency alignment ส่วน skill ที่ยังไม่มีในโปรไฟล์เป็น gap ด้าน coverage และยังไม่มี proficiency ให้ประเมิน
 
-## 4.3 Core skill match และ gap priority
-
-คะแนนหลักใหม่ใช้ skill ที่มี `weighted_demand_score` มากที่สุด 20 รายการจาก market window เดียวกัน หากมี skill น้ำหนักเสมอกับอันดับที่ 20 ให้นับรวมทั้งหมดด้วย ตัวหารจึงอาจมีมากกว่า 20 รายการ คะแนนคือสัดส่วนน้ำหนักของ Core skills ที่พบในโปรไฟล์ที่ผู้ใช้ยืนยันแล้ว ไม่ใช่ความพร้อมทำงาน:
-
-```text
-Core Skill Match (%) = 100 × Σ(weight ของ Core skill ที่พบในโปรไฟล์) / Σ(weight ของ Core skills)
-```
-
-สำหรับจัดลำดับ gap ภายใน Core skills ใช้กฎเริ่มต้นนี้:
-
-```text
-gap_score = 1.0                           เมื่อไม่พบ skill ในโปรไฟล์ (potential gap)
-gap_score = level_gap / 3                 เมื่อระดับผู้ใช้ต่ำกว่าตลาดและประเมินได้
-priority_score = 100 × gap_score × (skill_weight / total_core_weight)
-```
-
-คะแนน gap เป็นสัญญาณเชิงลำดับ ไม่ใช่การวัดความสามารถที่ผ่านการปรับเทียบแล้ว `missing_from_profile` หมายถึงไม่พบข้อมูลในโปรไฟล์ ไม่ได้ยืนยันว่าผู้ใช้ไม่มีทักษะ ระบบจึงส่ง `requiresConfirmation` ให้ UI แสดงเป็นรายการรอตรวจ ส่วนทักษะนอก Core 20 จะไม่มี gap/priority score ในรุ่นนี้
-
 ## 5. การใช้ confidence และหลักฐาน
 
 ต้องแยกแนวคิด 3 อย่างออกจากกัน:
@@ -235,16 +217,30 @@ UI แสดงทักษะที่ตรงและ gap; ขั้น RAG 
 - **Frontend**: แสดงคะแนน สถานะ หลักฐาน และคำเตือนตาม response; ไม่คำนวณสูตรซ้ำเอง
 - **RAG / knowledge**: ทำงานหลังได้ gap แล้ว เพื่อค้นเอกสาร/หัวข้อที่ช่วยพัฒนาทักษะ ไม่ใช่ตัวคำนวณ match และไม่ใช่แหล่งพิสูจน์ว่าผู้ใช้มี skill
 
-## 9. การจัดลำดับ gap สำหรับ roadmap
+## 9. การคำนวณและส่งต่อ Skill Gap ให้ RAG
 
-รุ่นแรกให้จัดอันดับ gap ด้วย `weighted_demand_score` จากมากไปน้อย โดยแยกอย่างน้อย:
+คะแนนหลักใช้ชุด Core 20: เลือก skill ที่มี `weighted_demand_score` มากที่สุด 20 รายการจาก market snapshot เดียว และรวมรายการที่มีน้ำหนักเท่ากับอันดับ 20 ด้วย คะแนน `coreSkillMatchPct` คือผลรวม weight ของ skill ที่ผู้ใช้ยืนยันว่ามี หารด้วยผลรวม weight ของ Core 20 ส่วน `marketSkillCoveragePct` เดิมยังคืนเป็นคะแนนภาพกว้างโดยใช้ skill ที่มี weight ทั้งหมด
+
+คะแนน gap คำนวณเฉพาะ Core 20 เพื่อช่วยอธิบายและจัดลำดับข้อมูลที่จะส่งต่อให้ RAG:
+
+```text
+gap_score = 1.0                         เมื่อยังไม่พบ skill ในโปรไฟล์ (potential gap)
+gap_score = min(level_gap, 3) / 3       เมื่อมี proficiency gap ที่ประเมินได้
+gap_score = null                        เมื่อประเมินไม่ได้หรือไม่มี gap
+
+priority_score = 100 × gap_score × (skill_weight / sum_of_core_20_weights)
+```
+
+`gap_score` เป็นสัญญาณเชิงลำดับ ไม่ใช่คะแนนความสามารถที่ผ่านการ calibration; แต่ละระดับไม่ได้แปลว่าต้องใช้เวลาเรียนเท่ากัน `missing_from_profile` หมายถึง “ไม่พบหลักฐานในโปรไฟล์ที่ยืนยันแล้ว” เท่านั้น ไม่ใช่การยืนยันว่าผู้ใช้ไม่มีทักษะนั้น และ RAG ควรนำเสนอเป็น gap ที่ผู้ใช้ตรวจสอบได้ ส่วน proficiency ที่อนุมานจาก CV ควรถูกระบุว่าอนุมาน ไม่ใช่ข้อมูลที่ผู้ใช้ยืนยันโดยตรง
+
+แยกสถานะอย่างน้อย:
 
 1. `missing_from_profile`: ยังไม่พบ skill ในโปรไฟล์ที่ยืนยัน
 2. `proficiency_gap`: มี skill แต่ระดับต่ำกว่า target ที่เชื่อถือได้
 3. `not_assessed`: มี skill แต่ระดับผู้ใช้หรือระดับตลาดไม่ชัด
 4. `market_data_insufficient`: ข้อมูลตลาดไม่พอสำหรับให้คำแนะนำระดับ
 
-ห้ามสรุป dependency หรือ prerequisite จากการที่ skill อยู่ในลำดับคะแนน หรือจากการพบ skill ร่วมกันในประกาศงาน การจัดลำดับก่อน-หลังเพื่อการเรียนต้องใช้ dependency ที่มีเอกสารหลักฐานและผ่านการ review แยกต่างหาก เมื่อ RAG พร้อมจึงค้นเนื้อหาประกอบ gap แต่ละรายการ
+ลำดับ priority นี้ไม่ได้บอก dependency หรือ prerequisite ห้ามอนุมานความสัมพันธ์ดังกล่าวจากคะแนนหรือการพบ skill ร่วมกันในประกาศงาน RAG ใช้ gap และ priority เพื่อค้นเอกสารที่เกี่ยวข้องกับแต่ละ skill ต่อไป ส่วนการสรุปเนื้อหาเรียนและการจัด Roadmap เป็นขั้นถัดไป แยกจาก Career Match
 
 ## 10. ความผิดพลาดและกรณีขอบ
 
@@ -263,11 +259,11 @@ UI แสดงทักษะที่ตรงและ gap; ขั้น RAG 
 
 ## 11. API, การคำนวณซ้ำ และการจัดเก็บ
 
-ระบบคำนวณเมื่อผู้ใช้ขอดูผล และยังไม่บันทึกคะแนนลงฐานข้อมูล เพราะคะแนน derive จากโปรไฟล์และ market stats ซึ่งเปลี่ยนได้เมื่อผู้ใช้แก้ CV หรือข้อมูลตลาดอัปเดต
+ระบบคำนวณเมื่อผู้ใช้ขอดูผล และยังไม่บันทึก Career Match ลงฐานข้อมูล เพราะคะแนน derive จากโปรไฟล์และ market stats ซึ่งเปลี่ยนได้เมื่อผู้ใช้แก้ CV หรือข้อมูลตลาดอัปเดต
 
 Calculation service แยกจาก route/database access แล้ว หากภายหลังต้องเก็บประวัติผล ให้เก็บ snapshot พร้อม `computed_at`, market window/version และ input reference เพื่ออธิบายคะแนนย้อนหลังได้
 
-route ที่ implementation ใช้: `GET /api/profiles/{profileId}/career-match?careerProfileId=...` โดยส่ง anonymous session ผ่าน header `X-Session-Id` และตรวจให้ตรงกับ profile ก่อนคืน evidence; การรับ career profile เป็น parameter ทำให้ยังไม่ผูกกับ career goal ที่บันทึกไว้
+route ที่ implementation ใช้: `GET /api/profiles/{profileId}/career-match?careerProfileId=...` สำหรับคำนวณคะแนนและ gap โดยส่ง anonymous session ผ่าน header `X-Session-Id` และตรวจให้ตรงกับ profile ก่อนคืนข้อมูล; `careerProfileId` คือ career profile ของงานที่ผู้ใช้เลือกเปรียบเทียบ
 
 ## 12. การตรวจคุณภาพก่อนปล่อยใช้
 
@@ -293,75 +289,12 @@ route ที่ implementation ใช้: `GET /api/profiles/{profileId}/career-
 
 ## 14. ประเด็นที่ควร review และปรับจากผลทดลอง
 
-ค่าเริ่มต้นสำหรับ demo ที่ implement แล้วคือแสดง Core 20 coverage แยกจาก all-market coverage, แสดง proficiency/assessment แยกกัน, คำนวณ gap priority เฉพาะ Core skills และรับ `careerProfileId` ที่ผู้ใช้เลือกในคำขอ ประเด็นที่ยังต้องตัดสินใจก่อน production คือคุณภาพและความสดของ market data, การปรับเทียบ rubric ระดับ proficiency, การจัดการ inferred levels และการสื่อสารข้อจำกัดให้ผู้ใช้เข้าใจ
+1. เห็นด้วยไหมให้แสดง 2 score แยกกัน คือ Market Skill Coverage กับ Proficiency Alignment พร้อม Assessment Coverage?
+2. ยอมรับสูตร `weighted_demand_score` สำหรับ coverage รุ่นแรกไหม และยืนยันได้หรือไม่ว่าสูตร aggregate ปัจจุบันรวม prevalence แล้ว?
+3. ควรนับเฉพาะโปรไฟล์ที่ user confirmed หรือให้คะแนน provisional ก่อนกดยืนยันได้ด้วย?
+4. จะกำหนดขั้นต่ำของ `total_jobs`, `level_observation_count`, `target_level_confidence` และความสดใหม่อย่างไร?
+5. รับ rubric ระดับ 0.00 / 0.33 / 0.67 / 1.00 เป็นจุดเริ่มต้นสำหรับ demo หรืออยากให้ proficiency alignment แสดงเป็นสถานะ/จำนวน gap ก่อน โดยยังไม่มีเปอร์เซ็นต์?
+6. ต้องเพิ่ม field สำหรับ `proficiency_basis` หรือ proficiency confidence ใน schema ก่อนคำนวณระดับหรือไม่?
+7. คะแนนควรผูกกับ role ที่เลือกในคำขอ หรือ career goal ที่บันทึกอยู่ในโปรไฟล์?
 
-## 15. Backend implementation handoff: Onboarding → Career Match
-
-ส่วนนี้เป็นข้อกำหนดสำหรับ backend/API และ frontend จริง ใช้ endpoint และ field ที่ demo ปัจจุบัน implement ไว้เป็นจุดเริ่มต้น โดยไม่ต้องเพิ่มตารางหรือ migration สำหรับการคำนวณรอบนี้
-
-### 15.1 ลำดับการทำงาน
-
-1. ผู้ใช้ตรวจและยืนยันข้อมูลโปรไฟล์จาก CV หรือกรอกโปรไฟล์เอง
-2. Backend บันทึก profile และ canonical user skills ลง `app.user_profiles`, `app.user_skills` และ `app.user_skill_evidence` ตาม flow เดิม
-3. ผู้ใช้เลือกอาชีพ/ระดับเป้าหมาย ซึ่งต้อง resolve เป็น `careerProfileId` ที่มี market snapshot
-4. Client เรียก `GET /api/profiles/{profileId}/career-match?careerProfileId={id}` พร้อม `X-Session-Id` ของ anonymous session
-5. Backend ตรวจเจ้าของ profile, โหลด user skills ที่ยืนยันแล้ว, โหลด market rows จาก coherent window เดียว, แล้วคำนวณคะแนนแบบ deterministic โดยไม่เรียก LLM/RAG
-6. Client แสดง Core 20 score, คะแนนประกอบ, สถานะคุณภาพข้อมูล, potential gaps และข้อมูลตลาดที่ใช้คำนวณ
-7. หากต่อไปจะส่ง gap เข้า Roadmap/RAG ให้ส่งเฉพาะ skill IDs พร้อมสถานะและหลักฐานจากผล API นี้ ห้ามให้ RAG คำนวณคะแนนซ้ำหรืออนุมานว่า `missing_from_profile` คือผู้ใช้ไม่มีทักษะจริง
-
-### 15.2 แหล่งข้อมูลและการกรอง
-
-- **ผู้ใช้:** ใช้ canonical `skill_id` ที่ matched และ profile ที่ผู้ใช้ยืนยันแล้วเท่านั้น; unmatched/needs-review labels คืนแยกและไม่เข้า score
-- **ตลาด:** ใช้ `market.career_skill_stats` ของ `careerProfileId` ที่เลือก เลือก latest coherent analysis window ตาม `analysis_end_date` แล้ว `analysis_start_date`; ห้ามรวมหลาย window
-- **Market weight:** ใช้ `weighted_demand_score` ที่มีค่ามากกว่า 0; null/zero ถูกตัดออกจากตัวหารพร้อมรายงาน `excludedMarketSkills`
-- **ระดับ:** ใช้ `target_level` เฉพาะเมื่อ confidence และจำนวน observations ผ่าน quality gates; ค่า `unknown` ห้ามแทนเป็น beginner
-- **ไม่บันทึกคะแนน:** คะแนน derive ใหม่ทุก request จากโปรไฟล์และ market snapshot ปัจจุบัน; หากต้องการประวัติในอนาคต ให้เพิ่ม snapshot/version design แยกต่างหาก
-
-### 15.3 สูตรที่ backend ต้องใช้ร่วมกัน
-
-เรียง market rows ที่มีน้ำหนักใช้ได้จาก `weighted_demand_score` มากไปน้อย โดยใช้ชื่อ skill แบบ case-insensitive เป็นตัวตัดสินลำดับให้คงที่ เลือก 20 รายการแรก แล้วรวม skill ทุกตัวที่น้ำหนักเท่ากับน้ำหนักอันดับ 20 ด้วย (`coreSkillPolicy.version = weighted-top-20-with-cutoff-ties-v1`). ถ้ามี usable skills น้อยกว่า 20 ให้ใช้ทั้งหมด
-
-```text
-coreSkillMatchPct = 100 × sum(weight ของ Core skills ที่พบในโปรไฟล์ที่ยืนยันแล้ว)
-                       / sum(weight ของ Core skills ทั้งหมด)
-
-marketSkillCoveragePct = 100 × sum(weight ของ usable market skills ที่พบในโปรไฟล์)
-                            / sum(weight ของ usable market skills ทั้งหมด)
-
-level_gap = market_target_level_index - user_level_index
-level_fit = max(0, 1 - max(0, level_gap) / 3)
-proficiencyAlignmentPct = weighted average(level_fit) ของ skill ที่ประเมินระดับได้
-assessmentCoveragePct = 100 × usable market weight ที่ประเมินระดับได้ / usable market weight ทั้งหมด
-
-gapScore = 1.0                         เมื่อ Core skill ไม่พบใน confirmed profile
-gapScore = level_gap / 3               เมื่อ Core skill มี positive proficiency gap
-gapScore = null                        เมื่อไม่ใช่ gap หรือข้อมูลประเมินไม่ได้
-priorityScore = 100 × gapScore × (skill_weight / total_core_weight)
-```
-
-`coreSkillMatchPct` วัดการมี skill ในโปรไฟล์ ไม่วัด proficiency และไม่ใช่ job-readiness score ผู้ใช้ที่มี skill แต่ระดับ `unknown` ยังนับว่าพบใน coverage แต่ระดับจะเป็น `not_assessed` และไม่เข้า proficiency denominator
-
-เรียง potential gaps ด้วย `priorityScore` มากไปน้อย; กรณีเสมอให้เรียง `weightedDemandScore` มากไปน้อย แล้วชื่อ skill แบบ case-insensitive จากน้อยไปมาก `priorityRank` ใช้เฉพาะ Core skills ที่คำนวณ gap score ได้ สถานะ `missing_from_profile` และ `not_assessed` ต้องส่ง `requiresConfirmation=true`; ถ้าผู้ใช้มี skill แต่ระดับเป็น inferred/unknown ก็ต้องให้ผู้ใช้ตรวจระดับก่อนนำไปวางแผนเรียน
-
-### 15.4 Response ที่ client ต้องใช้
-
-- `scores.coreSkillMatchPct`: คะแนนหลักสำหรับภาพรวมการครอบคลุม Core skills
-- `scores.marketSkillCoveragePct`: คะแนนภาพรวมทุก usable market skills เพื่อเทียบกับ Core score
-- `scores.proficiencyAlignmentPct` และ `scores.assessmentCoveragePct`: แสดงแยกกัน ห้ามรวมกับ Core score เป็นคะแนนเดียว
-- `coreSkillPolicy`: version, nominal limit และจำนวน skill จริงหลังรวม ties
-- `skillSummary.coreCovered/coreConsidered`: จำนวน Core skills ที่พบ/ที่ใช้คำนวณ
-- `skills[]`: รายละเอียด canonical skill, target/current level, status/reason, market weight, `isCoreSkill`, `coreRank`, `gapScore`, `priorityScore`, `priorityRank`, `requiresConfirmation` และ evidence excerpts
-- `status`/`warnings`/`marketWindow`/`marketSample`: ต้องแสดงเพื่อให้ผู้ใช้ทราบว่าคะแนนมาจากข้อมูลช่วงใดและมีข้อจำกัดอะไร
-
-หน้าทดลอง `/onboarding/cv` เรียก API เดียวกันและแสดง field เหล่านี้เพื่อตรวจสูตร ไม่ใช่ข้อกำหนดว่าหน้า onboarding จริงต้องใช้ layout เดียวกัน
-
-### 15.5 เกณฑ์ตรวจรับสำหรับ backend integration
-
-- เมื่อ Core skill หนึ่งรายการมีน้ำหนักสูงขึ้น คะแนน Core coverage เปลี่ยนตามสัดส่วนของ Core weights; all-market score ยังใช้ตัวหาร all usable skills
-- การเปลี่ยน confirmed profile skill จากไม่มีเป็นมี ทำให้ coverage ของ skill นั้นเพิ่มตาม weight; การเปลี่ยนระดับอย่างเดียวกระทบ proficiency alignment/gap แต่ไม่เปลี่ยน presence coverage
-- Skills นอก Core ไม่มี `gapScore`, `priorityScore` หรือ `priorityRank`
-- `missing_from_profile` แสดงเป็น potential gap ที่ผู้ใช้ยืนยันได้ ไม่แสดงว่า “ไม่มีความสามารถ”
-- `unknown`, market target confidence ต่ำ, sample เล็ก, ข้อมูลเก่า หรือไม่มี usable weights ต้องคืนสถานะ/คำเตือนตาม contract โดยไม่สร้างตัวเลขปลอม
-- ผล API ที่ frontend ใหม่ใช้ต้องเทียบกับรายการราย skill และ market snapshot เดียวกันได้ และต้องไม่เรียก RAG เพื่อคำนวณ Match score ซ้ำ
-
-ข้อจำกัดที่ยังต้องสื่อสาร: Top 20 เป็นขอบเขตคะแนนเพื่อให้ภาพรวมไม่ถูก skill หางยาวครอบงำ ไม่ได้แปลว่าผู้ใช้ต้องเรียนครบ 20 skills; ลำดับ priority ไม่ใช่ prerequisite/dependency; และ gap score เป็น heuristic สำหรับ demo ที่ยังต้องทบทวนกับ CV และ market snapshots จริงก่อนใช้เป็นเกณฑ์ production
+ค่าเริ่มต้นเหล่านี้ใช้เปิดการทดลองได้ แต่ควร review ก่อนนำคะแนนไปใช้จริงกับผู้ใช้และก่อนเชื่อมขั้น RAG

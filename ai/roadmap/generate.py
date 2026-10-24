@@ -71,6 +71,14 @@ def generate_roadmap(context: AgentContext, model: RoadmapModel, *, prepared: Pr
             turn = model.repair(turn, check.fatal)
             usage = turn.usage
             check = validate_draft(turn.draft, context, prepared.budget)
+        if check.fatal:
+            # Give the model one repair opportunity first. If only the learning
+            # evidence remains unusable, publish that skill as a blurred
+            # placeholder instead of failing the complete roadmap.
+            fallback = validate_draft(turn.draft, context, prepared.budget,
+                                      placeholder_invalid_citations=True)
+            if not fallback.fatal:
+                check = fallback
     except ModelError as err:
         usage = err.usage or usage
         raise GenerationFailed(err.code, err.message, usage=usage, cost_usd=cost(), retryable=err.retryable) from err
@@ -81,6 +89,7 @@ def generate_roadmap(context: AgentContext, model: RoadmapModel, *, prepared: Pr
     generation = Generation(provider=model.provider, model=model.model_id, prompt_version=PROMPT_VERSION,
                             context_id=context.context_id)
     view = build_view(check.draft, context, prepared.budget, generation,
+                      unavailable_skill_ids=check.unavailable_skill_ids,
                       generated_at=datetime.now(timezone.utc).isoformat())
     return GenerationResult(view=view, draft=check.draft, warnings=check.warnings, usage=usage,
                             cost_usd=cost(), input_sha256=prepared.input_sha256)
