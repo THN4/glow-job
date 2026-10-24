@@ -5,7 +5,7 @@
 หน้า Roadmap อ่านแผนจริง แสดง citation และบันทึก checklist/สถานะ step ผ่าน API แล้ว
 หน้า `/onboarding/cv` เป็นหน้าทดลอง CV แยกจาก flow ดังกล่าว
 
-การใช้ `ROADMAP_PROVIDER=mock` ข้ามเฉพาะโมเดลสร้าง roadmap; การสร้าง Agent Context แบบ RAG ยังใช้ Gemini สำหรับ embedding/review และอาจมีค่าใช้จ่าย
+การใช้ `ROADMAP_PROVIDER=mock` ข้ามเฉพาะโมเดลสร้าง roadmap; การสร้าง Agent Context แบบ RAG ยังใช้ Gemini สำหรับ embedding และ Nova 2 Lite สำหรับ review ซึ่งอาจมีค่าใช้จ่าย
 `ROADMAP_CONTEXT_FIXTURE` ใช้ได้สำหรับการพัฒนาในเครื่องเท่านั้น
 
 - สัญญา API: [api-contract.md](api-contract.md)
@@ -144,7 +144,7 @@ sequenceDiagram
 1. **Kickoff (30–60 นาที):** อ่าน api-contract.md ด้วยกัน และตอบคำถามด้านล่าง
 2. **FE ทำ UI จากไฟล์ตัวอย่าง:** import JSON ใน `examples/` แทน mock เดิม ไม่ต้องรอ backend
 3. **FE เชื่อม API จริง (mock provider):** ทดสอบ flow ทั้งหมดใน Docker
-4. **Backend เปิด Gemini ชั่วคราว** กับ profile ตัวอย่าง 2–3 ครั้ง เพื่อดูความยาวข้อความจริงในการ์ด
+4. **Backend เปิด Nova 2 Lite ชั่วคราว** กับ profile ตัวอย่าง 2–3 ครั้ง เพื่อดูความยาวข้อความจริงในการ์ด
 5. **รีวิวร่วมกัน:** ถ้อยคำ, สถานะ error และการแสดง citation
 
 ### การตัดสินใจที่ตกลงแล้ว (2026-10-22)

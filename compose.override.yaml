@@ -1,5 +1,5 @@
 # Default LOCAL development configuration, automatically loaded by `docker compose`.
-# CV extraction, RAG text review and roadmaps use Nova Pro; embeddings stay on Gemini.
+# All text generation uses Nova 2 Lite; embeddings use Gemini by default (Nova remains optional).
 # Deployments using task/instance roles should explicitly use -f compose.yaml instead.
 services:
   backend:

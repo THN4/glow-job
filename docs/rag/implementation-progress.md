@@ -84,7 +84,7 @@
 |---|---|---|
 | 2 | ตรวจ/ปรับตัวอย่างคะแนนและกำหนด eligibility/ranking policy | ใช้ policy v0.4: weighted Core Top 20 with cutoff ties; แชร์สูตรกับ Resume Career Match |
 | 3 | Dependency จากเอกสารที่เตรียมไว้ + approve/reject + AI handoff | Apply 18 คู่ที่อนุมัติลง DB แล้ว; reject 5 / pending 0; อ่านกลับครบ 18 คู่ (ordering 1 / scoped Context 14 / related 3) |
-| 4 | Embedding retrieval + Gemini text review + citations/coverage/budget | มี CLI/typed knowledge preview และประกอบเข้า Agent Context แล้ว; ยังต้อง calibrate retrieval และเพิ่ม/ทบทวนเนื้อหาบาง skill |
+| 4 | Gemini embedding retrieval + Nova 2 Lite text review + citations/coverage/budget | มี CLI/typed knowledge preview และประกอบเข้า Agent Context แล้ว; ยังต้อง calibrate retrieval และเพิ่ม/ทบทวนเนื้อหาบาง skill |
 | 5 | Final Agent Context, contract validation และตัวอย่างส่งต่อทีม AI/Backend | schema v0.5, คะแนนครบ cohort, project summaries, quality gates และตัวอย่างจริงผ่าน validation; roadmap job บันทึก Context กับ generation แล้ว แต่การ trigger หลัง onboarding, เลือก RAG ตาม gap และ UI ยังต้องเชื่อม |
 
 Learning modules กลางยังเลื่อนออกไป ส่วนการสร้าง Roadmap Agent, หน้าจอ และ App persistence เป็นงานทีมปลายทางตามข้อสรุป R1/R2

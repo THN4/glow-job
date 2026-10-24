@@ -70,7 +70,7 @@ chunk while the learner waits (up to 4 chunks per check, in parallel):
 
 1. The same prompt and code checks as offline drafts.
 2. A strict blind check: a question is dropped if the second answer disagrees or fails.
-3. Kept as `provisional` (`generated_by: gemini-on-demand`) and reused by every later learner.
+3. Kept as `provisional` (`generated_by: nova-on-demand`) and reused by every later learner.
 
 Guards: one run per chunk at a time (two learners at once cause one run), the daily cap, no new run for
 7 days after a run that kept nothing or 1 hour after a failure (`app.assessment_generations`), and the time

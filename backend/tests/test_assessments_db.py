@@ -255,7 +255,7 @@ async def test_on_demand_questions_for_a_step_check(gen_db):
     with gen_db.connect() as c:
         rows = c.execute("SELECT status, generated_by FROM app.assessment_items WHERE chunk_id >= %s",
                          (GEN_CHUNK,)).fetchall()
-        assert rows == [("provisional", "gemini-on-demand")] * 2
+        assert rows == [("provisional", "nova-on-demand")] * 2
         assert c.execute("SELECT count(*) FROM app.assessment_generations WHERE chunk_id >= %s AND outcome = 'created'",
                          (GEN_CHUNK,)).fetchone()[0] == 2
         # level checks ignore provisional questions, and an approved one replaces them in step checks

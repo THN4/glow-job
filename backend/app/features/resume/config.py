@@ -48,7 +48,7 @@ class CvSettings(ResumeModelSettings):
 
     # Step checks: draft questions with a model when a study task has none (docs/assessments/question-bank.md).
     # off by default, so nothing calls a model unless it is switched on.
-    ASSESSMENT_AI_GENERATION: Literal["off", "gemini"] = "off"
+    ASSESSMENT_AI_GENERATION: Literal["off", "bedrock_converse"] = "off"
     ASSESSMENT_DAILY_GENERATIONS: int = Field(default=50, ge=0)  # chunks per day, about two model calls each
     ASSESSMENT_GENERATION_TIMEOUT_S: float = Field(default=20, gt=0)
 

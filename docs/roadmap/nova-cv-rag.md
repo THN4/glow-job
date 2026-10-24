@@ -1,22 +1,24 @@
-# Nova Pro for CV extraction and RAG text review
+# Nova 2 Lite for CV extraction and RAG text review
 
-The CV extractor and the RAG evidence-review transport now support Nova Pro
-through Bedrock Converse. The existing final-roadmap provider remains Nova Pro.
-No frontend, API, database schema, retrieval/ranking policy, prompt rules,
-profile normalization, citation validation or persistence logic is changed.
+CV extraction, RAG evidence review, and roadmap text generation use Nova 2 Lite
+through Bedrock Converse. Retrieval embeddings use Gemini Embedding 2 by default.
+The optional Nova Multimodal embedding path remains available to the batch scripts.
+No frontend, prompt rules, profile normalization, citation validation, or
+roadmap persistence logic is changed. The knowledge table adds a parallel
+1024-dimensional vector column while retaining legacy Gemini vectors.
 
 ## Model boundary
 
 | Stage | Model |
 | --- | --- |
-| CV text / scanned-image extraction | `amazon.nova-pro-v1:0` |
-| Query and stored-document embeddings | **Unchanged:** `gemini-embedding-2`, 768 dimensions |
-| RAG evidence review | `amazon.nova-pro-v1:0` |
-| Final roadmap generation | Existing Nova Pro provider |
+| CV text / scanned-image extraction | `us.amazon.nova-2-lite-v1:0` |
+| Query and stored-document embeddings | `gemini-embedding-2`, 768 dimensions |
+| RAG evidence review | `us.amazon.nova-2-lite-v1:0` |
+| Final roadmap generation | `us.amazon.nova-2-lite-v1:0` |
 
-Other pipeline jobs (market extraction and dependency extraction) and optional
-assessment generation retain their existing providers. Keep `GEMINI_API_KEY`:
-live retrieval still requires it. No re-embedding or migration is needed.
+Market skill extraction, dependency proposals, and on-demand assessment
+generation also use Nova 2 Lite. Gemini API key remains necessary for embeddings
+and the optional legacy Gemini resume path.
 
 ## Configuration
 
@@ -25,27 +27,33 @@ existing `.env` belonging to the working directory):
 
 ```dotenv
 RESUME_EXTRACTOR=bedrock_converse
-BEDROCK_EXTRACTION_MODEL=amazon.nova-pro-v1:0
-BEDROCK_RAG_MODEL=amazon.nova-pro-v1:0
+BEDROCK_EXTRACTION_MODEL=us.amazon.nova-2-lite-v1:0
+BEDROCK_RAG_MODEL=us.amazon.nova-2-lite-v1:0
 RESUME_BEDROCK_TIMEOUT_MS=180000
 AWS_DEFAULT_REGION=us-east-1
+AWS_BEARER_TOKEN_BEDROCK=<your-bedrock-api-key>
 ```
 
-The extraction model and RAG model are independently configurable; an account
-requiring an inference profile can supply `us.amazon.nova-pro-v1:0`. An explicit
+The API key is passed to the backend container by Compose. It authenticates
+the existing Boto3 Converse calls; no OpenAI base URL is needed for Nova.
+
+The extraction model and RAG model are independently configurable. Their default
+US inference profile is `us.amazon.nova-2-lite-v1:0`. An explicit
 `AWS_REGION` takes precedence for these two adapters; otherwise they use
 `AWS_DEFAULT_REGION`, defaulting to `us-east-1`.
 
 Default local `docker compose` automatically loads the Nova override, selects
-`bedrock_converse` for CV extraction, and reuses the existing AWS profile/cache
-mount. It selects Pro for both new model variables unless explicitly overridden:
+`bedrock_converse` for CV extraction and passes the Bedrock API key from the
+root `.env`. CV extraction and RAG default to Nova 2 Lite; roadmap generation
+defaults to Nova 2 Lite. The text tasks share the configured Bedrock text model;
+override it with `BEDROCK_TEXT_MODEL` if needed:
 
 ```powershell
 docker compose up -d --build --no-deps backend
 ```
 
 With explicit `-f compose.yaml`, set `RESUME_EXTRACTOR=bedrock_converse` yourself
-and provide AWS credentials/role as appropriate. Mock and legacy Gemini CV
+and provide `AWS_BEARER_TOKEN_BEDROCK` or an AWS credentials/role. Mock and legacy Gemini CV
 extraction remain available explicitly. RAG text review now defaults to Nova;
 retrieval without text review still performs no generation call.
 
@@ -66,15 +74,15 @@ logs record only schema field names and error types, never CV field values or
 unrecognized model-generated property names. Failed output still receives one
 repair attempt; validation rules are not relaxed.
 
-Nova v1 has a 5000-token output cap, so the adapter uses 5000 instead of the
-Gemini adapter's 8192. Truncated, filtered and empty responses are rejected;
+The Lite adapter caps output at 5000 tokens instead of the Gemini adapter's
+8192. Truncated, filtered and empty responses are rejected;
 partial profiles are never silently accepted. SDK retries are bounded to three
 total attempts. Provider errors do not expose source documents or credentials.
 
 RAG sends its existing prompt unchanged, then uses the existing JSON and exact
-quote validators and its existing one repair attempt. Query/document embedding
-code and compatible-vector filtering remain unchanged. Preview metadata reports
-the RAG text model separately from the Gemini embedding model.
+quote validators and its existing one repair attempt. Query and document vectors
+use Nova's `TEXT_RETRIEVAL` and `GENERIC_INDEX` purposes and only search the Nova
+column. Preview metadata reports the embedding and RAG text models separately.
 
 Converse image blocks follow the [AWS Converse API documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html).
 
@@ -98,6 +106,7 @@ With the backend running, the opt-in synthetic live test is:
 Get-Content -Raw scripts/roadmap/nova_cv_rag_smoke_test.py | docker compose exec -T backend python - --allow-spend
 ```
 
-It makes paid model calls, never queries the database, and does not invoke or
-change Gemini embeddings. The synthetic CV schema and RAG exact-quote checks
-have been verified against `amazon.nova-pro-v1:0` in the local container.
+It makes paid model calls, never queries the database, and does not invoke the
+embedding model. The synthetic CV schema and RAG exact-quote checks
+were previously verified against Nova Pro. Re-run the paid synthetic smoke
+test when validating the Lite model configuration.

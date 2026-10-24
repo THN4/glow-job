@@ -90,7 +90,7 @@ Document collection, parsing, chunking, embedding และ vector storage ใ�
 | `knowledge.knowledge_chunks` | `chunk_id`, `source_id`, content, topic, metadata, embedding model/vector |
 | `knowledge.knowledge_chunk_skills` | `chunk_id`, `skill_id` แบบ many-to-many |
 
-**ไม่มี `skill_id` ใน `knowledge.knowledge_chunks` หลัง migration 013** การกรอง skill ต้องใช้ตารางกลาง ชุดข้อมูลที่ค้นร่วมกันต้องใช้ embedding model และมิติที่เข้ากัน ปัจจุบัน prototype ใช้ `gemini-embedding-2` และ `vector(768)`
+**ไม่มี `skill_id` ใน `knowledge.knowledge_chunks` หลัง migration 013** การกรอง skill ต้องใช้ตารางกลาง ชุดข้อมูลที่ค้นร่วมกันต้องใช้ embedding model และมิติที่เข้ากัน ปัจจุบัน retrieval ใช้ Amazon Nova Multimodal Embeddings และ `vector(1024)`; Gemini `vector(768)` เดิมเก็บไว้เป็น fallback.
 
 การมี embedding ไม่ได้แปลว่า skill นั้นมีเอกสารครอบคลุมทุกหัวข้อ หรือมี dependency พร้อมใช้ ต้องรายงาน coverage แยกกัน
 
@@ -962,7 +962,7 @@ Pipeline-owned migrations อยู่ใน sub repo ส่วน App/user/road
 2. เตรียม dependency migration และ interface อ่าน User/Goal/Market data โดยไม่ผูกการทำงานกับ learning modules
 3. ทำตัวอย่าง User/Market Context และเปรียบเทียบคะแนน Career Match เดิมกับนโยบายที่เสนอ ให้ผู้ใช้ตรวจผลก่อนเลือกสูตร/รูปแบบคะแนน
 4. ทำ scoring/selection policies ที่ผ่านการเลือก พร้อมเครื่องมือเสนอและตรวจ dependency ชุดแรกจากเอกสารใน corpus
-5. ทำ embedding candidate retrieval + Gemini text review + typed RAG Context
+5. ทำ Gemini embedding candidate retrieval + Nova 2 Lite text review + typed RAG Context
 6. ประกอบ Agent Context และ input/output contract ให้ทีม AI/Backend เรียกใช้ ตรวจด้วยตัวอย่างข้อมูลโดยไม่ต้องมี Roadmap Agent จริงก่อน
 7. ส่งต่อ Context/citations พร้อมตัวอย่างผล ข้อจำกัด และข้อกำหนดเก็บ Roadmap version ให้ทีม AI/Backend พัฒนา integration ต่อ
 8. ประเมินข้อมูลจริงและบันทึก policy/config ที่เลือกจากผลประเมินก่อนส่งมอบ

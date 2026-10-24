@@ -1,4 +1,4 @@
-"""Nova roadmap adapter for Bedrock Runtime's Converse API (not Claude Mantle).
+"""Amazon Nova roadmap adapter for Bedrock Runtime's Converse API.
 
 The provider returns the existing RoadmapDraft; context assembly, semantic
 validation, persistence and progress stay in the shared generation pipeline.
@@ -8,14 +8,16 @@ from __future__ import annotations
 
 import errno
 import json
+import logging
 from typing import Any
 
 from ai.roadmap.contracts import RoadmapDraft
 from ai.roadmap.prompt import SYSTEM_PROMPT, build_repair_message, build_user_message
 from ai.roadmap.providers import ModelError, ModelTurn, Usage
 
-DEFAULT_NOVA_MODEL = "amazon.nova-pro-v1:0"
-NOVA_V1_MAX_TOKENS = 5000
+DEFAULT_NOVA_MODEL = "us.amazon.nova-2-lite-v1:0"
+NOVA_MAX_OUTPUT_TOKENS = 5000
+log = logging.getLogger("roadmap")
 
 
 def credential_cache_error(usage: Usage | None = None) -> ModelError:
@@ -44,22 +46,32 @@ def create_converse_client(region: str) -> Any:
 class BedrockConverseRoadmapModel:
     provider = "bedrock_converse"
 
-    def __init__(self, client: Any, *, model_id: str = DEFAULT_NOVA_MODEL, max_tokens: int = NOVA_V1_MAX_TOKENS):
+    def __init__(self, client: Any, *, model_id: str = DEFAULT_NOVA_MODEL, max_tokens: int = NOVA_MAX_OUTPUT_TOKENS):
         self._client = client
         self.model_id = model_id
-        # Existing ROADMAP_MAX_TOKENS defaults to 24k. Nova v1 permits at most 5k.
-        self._max_tokens = min(max_tokens, NOVA_V1_MAX_TOKENS)
-        self._system = SYSTEM_PROMPT + (
-            "\nReturn only one JSON object, with no markdown or commentary. "
-            "Match this JSON schema exactly:\n" + json.dumps(RoadmapDraft.model_json_schema(), ensure_ascii=False)
-        )
+        # Nova's previous Converse adapter capped generation at 5,000 tokens.
+        self._max_tokens = min(max_tokens, NOVA_MAX_OUTPUT_TOKENS)
+        # Keep the Gemini system prompt unchanged. The required JSON structure is
+        # supplied through tool configuration, not appended to the prompt.
+        self._system = SYSTEM_PROMPT
+        self._tool_schema = RoadmapDraft.model_json_schema()
 
     def generate(self, compact: dict[str, Any]) -> ModelTurn:
-        return self._call([{"role": "user", "content": [{"text": build_user_message(compact)}]}], Usage())
+        return self._call_with_retry([{"role": "user", "content": [{"text": build_user_message(compact)}]}], Usage())
 
     def repair(self, turn: ModelTurn, issues: list[str]) -> ModelTurn:
         messages = [*turn.messages, {"role": "user", "content": [{"text": build_repair_message(issues)}]}]
-        return self._call(messages, turn.usage)
+        return self._call_with_retry(messages, turn.usage)
+
+    def _call_with_retry(self, messages: list[dict[str, Any]], usage: Usage) -> ModelTurn:
+        try:
+            return self._call(messages, usage)
+        except ModelError as error:
+            if error.code != "MODEL_INVALID_OUTPUT":
+                raise
+            # A fresh call can recover when Nova ignores the requested tool or
+            # produces a malformed object. Keep the original prompt and schema.
+            return self._call(messages, usage)
 
     def _call(self, messages: list[dict[str, Any]], usage: Usage) -> ModelTurn:
         from botocore.exceptions import BotoCoreError, ClientError, ConnectionError, ReadTimeoutError
@@ -70,6 +82,14 @@ class BedrockConverseRoadmapModel:
                 system=[{"text": self._system}],
                 messages=messages,
                 inferenceConfig={"maxTokens": self._max_tokens, "temperature": 0},
+                toolConfig={
+                    "tools": [{"toolSpec": {
+                        "name": "submit_roadmap",
+                        "description": "Return the roadmap matching the required schema.",
+                        "inputSchema": {"json": self._tool_schema},
+                    }}],
+                    "toolChoice": {"tool": {"name": "submit_roadmap"}},
+                },
             )
         except ClientError as error:
             code = error.response.get("Error", {}).get("Code", "Unknown")
@@ -100,12 +120,24 @@ class BedrockConverseRoadmapModel:
             raise ModelError("MODEL_REFUSAL", "Bedrock declined to create this roadmap.", usage=usage)
         if stop == "max_tokens":
             raise ModelError("MODEL_OUTPUT_TRUNCATED", "Nova reached its output token limit before completing the roadmap.", usage=usage)
-        if stop != "end_turn":
-            raise ModelError("MODEL_INVALID_OUTPUT", "Bedrock did not return a completed roadmap.", usage=usage)
         message = response.get("output", {}).get("message", {})
-        text = "".join(block.get("text", "") for block in message.get("content", []))
+        content = message.get("content", [])
+        tool_uses = [block["toolUse"] for block in content if "toolUse" in block]
+        if stop == "tool_use" and len(tool_uses) == 1 and tool_uses[0].get("name") == "submit_roadmap" \
+                and isinstance(tool_uses[0].get("input"), dict):
+            text = json.dumps(tool_uses[0]["input"], ensure_ascii=False)
+        elif stop == "end_turn" and not tool_uses:
+            # Nova sometimes returns the requested JSON as text despite a
+            # forced tool choice. It must still pass the exact draft schema.
+            text = "".join(block.get("text", "") for block in content)
+        else:
+            log.warning("roadmap model output shape invalid stop=%s blocks=%s", stop,
+                        [list(block) for block in content])
+            raise ModelError("MODEL_INVALID_OUTPUT", "Bedrock did not return the required roadmap structure.", usage=usage)
         try:
             draft = RoadmapDraft.model_validate_json(text)
         except ValueError as error:
+            log.warning("roadmap model schema invalid stop=%s blocks=%s error_type=%s", stop,
+                        [list(block) for block in content], type(error).__name__)
             raise ModelError("MODEL_INVALID_OUTPUT", "Nova returned an invalid roadmap JSON object.", usage=usage) from error
         return ModelTurn(draft=draft, usage=usage, messages=[*messages, message])

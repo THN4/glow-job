@@ -1,16 +1,18 @@
-# Nova Pro roadmap generation through Bedrock Converse
+# Nova 2 Lite roadmap generation through Bedrock Converse
 
 This page documents final roadmap generation. CV extraction and RAG text review
-also use Nova Pro in the default local setup; see [CV/RAG configuration](nova-cv-rag.md).
-Query/document embeddings, validation, storage and the frontend retain their existing paths.
+use Nova 2 Lite in the default local setup; see [CV/RAG configuration](nova-cv-rag.md).
+Query/document embeddings use Gemini Embedding 2 by default; validation, storage and
+the frontend retain their existing paths.
 The existing `bedrock` provider remains Claude Mantle; use `bedrock_converse` for Nova.
 
 ## Default local startup
 
 `compose.override.yaml` is loaded automatically by ordinary `docker compose`.
-It selects Nova Pro even if the root `.env` still contains a legacy Gemini
-ROADMAP_PROVIDER/MODEL_ID. It also mounts the host AWS profile and writable
-login cache using the existing local profile override. Normal local startup is:
+It selects Nova 2 Lite even if the root `.env` still contains a legacy Gemini
+ROADMAP_PROVIDER/MODEL_ID. It passes `AWS_BEARER_TOKEN_BEDROCK` from the root
+`.env`; the optional host profile mount remains available as an alternate auth
+method. Normal local startup is:
 
 ```powershell
 docker compose up -d --build --no-deps backend
@@ -38,7 +40,8 @@ No secrets need to be placed inside `ai` or `rag`.
 ```dotenv
 ROADMAP_PROVIDER=bedrock_converse
 AWS_DEFAULT_REGION=us-east-1
-BEDROCK_ROADMAP_MODEL=amazon.nova-pro-v1:0
+AWS_BEARER_TOKEN_BEDROCK=<your-bedrock-api-key>
+BEDROCK_ROADMAP_MODEL=us.amazon.nova-2-lite-v1:0
 ROADMAP_MODEL_ID=
 ROADMAP_AWS_REGION=
 ROADMAP_PRICE_INPUT_PER_MTOK=
@@ -47,22 +50,27 @@ ROADMAP_PRICE_OUTPUT_PER_MTOK=
 
 `ROADMAP_MODEL_ID` overrides `BEDROCK_ROADMAP_MODEL` when nonempty. Clear an old
 Gemini model override before switching. Region precedence is `ROADMAP_AWS_REGION`,
-`AWS_DEFAULT_REGION`, then `AWS_REGION`. Keep `GEMINI_API_KEY` for live RAG embeddings.
+`AWS_DEFAULT_REGION`, then `AWS_REGION`. `GEMINI_API_KEY` is only needed by other
+Gemini-backed pipeline jobs.
 
-The SDK uses the AWS credential chain. On the host, use your existing AWS profile
-(SSO/assumed role). Containers cannot automatically see the host's SSO files.
-For local Docker, export temporary AWS credentials into the shell and use:
+For local inference, Boto3 reads `AWS_BEARER_TOKEN_BEDROCK` and sends the Bedrock
+API key with the existing Converse request. `OPENAI_BASE_URL` is not needed for
+Nova through this native Bedrock API. Keep the key in the ignored root `.env`;
+Compose passes it into the backend container. AWS also supports short-term API
+keys that expire with the session and long-term keys for exploration.
+
+If you use temporary AWS credentials instead of an API key, use:
 
 ```powershell
 docker compose -f compose.yaml -f compose.nova-local.yaml up -d --build --no-deps backend
 ```
 
-This opt-in override selects Nova and passes shell credentials without persisting
-them in source files. For deployment use an ECS task or EC2 instance role. Never
-commit credentials, or run `docker compose config` into shared logs containing secrets.
+This opt-in override selects Nova and passes shell credentials. For deployment,
+use a task or instance role when appropriate. Never commit credentials, or run
+`docker compose config` into shared logs containing secrets.
 
-If the host SDK uses `aws login` or SSO/profile files instead of shell credentials,
-use the optional profile mount (the directory stays outside the repo):
+If you use AWS SSO/profile files instead of the API key, use the optional profile
+mount (the directory stays outside the repo):
 
 ```powershell
 $env:AWS_CONFIG_DIR = Join-Path $env:USERPROFILE '.aws'
@@ -81,8 +89,8 @@ cache writable. Environment credentials take precedence
 over profile credentials, so clear stale AWS_ACCESS_KEY_ID/SECRET_ACCESS_KEY/SESSION_TOKEN
 variables when testing a login/SSO profile.
 
-The caller needs `bedrock:InvokeModel`. If direct invocation isn't supported for
-your account/model, set `BEDROCK_ROADMAP_MODEL=us.amazon.nova-pro-v1:0` explicitly.
+The caller needs `bedrock:InvokeModel`. If the selected profile is unavailable,
+verify Bedrock model access and region for `us.amazon.nova-2-lite-v1:0`.
 This US inference profile can route to its permitted US destination regions;
 permissions must cover the profile and its destination models. No automatic
 cross-region fallback is performed.
@@ -96,13 +104,13 @@ does not grant database permissions or change schemas.
 From the repo root, test AWS access with synthetic text only (billed):
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m scripts.roadmap.nova_smoke_test --region us-east-1 --model amazon.nova-pro-v1:0 --allow-spend
+.\backend\.venv\Scripts\python.exe -m scripts.roadmap.nova_smoke_test --region us-east-1 --model us.amazon.nova-2-lite-v1:0 --allow-spend
 ```
 
 Then generate from the committed sample context, not a real CV (also billed):
 
 ```powershell
-.\backend\.venv\Scripts\python.exe -m ai.roadmap.cli --provider bedrock_converse --aws-region us-east-1 --model amazon.nova-pro-v1:0 --context ai/roadmap/fixtures/agent-context-demo-student.json --output rag/data/nova-roadmap.json --allow-spend
+.\backend\.venv\Scripts\python.exe -m ai.roadmap.cli --provider bedrock_converse --aws-region us-east-1 --model us.amazon.nova-2-lite-v1:0 --context ai/roadmap/fixtures/agent-context-demo-student.json --output rag/data/nova-roadmap.json --allow-spend
 ```
 
 Run API end-to-end afterwards: save goal, create roadmap job, poll until success,
@@ -125,9 +133,8 @@ The network timeout is 120 seconds per attempt, with up to three adaptive SDK
 attempts; this is not a 120-second total job deadline.
 
 Usage accumulates across generation and semantic repair and uses the existing
-`system.ai_runs` accounting. Nova Pro defaults to an estimated $0.80/$3.20 per
+`system.ai_runs` accounting. Nova 2 Lite defaults to an estimated $0.33/$2.75 per
 million input/output tokens; explicit `ROADMAP_PRICE_*` settings override them.
-The local Docker override uses `NOVA_PRICE_*` to avoid old Gemini settings.
 Other Converse models need explicit prices. These estimates aren't an AWS billing
 cap and exclude the existing RAG calls; verify rates and billing in AWS.
 

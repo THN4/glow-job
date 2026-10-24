@@ -1,7 +1,7 @@
 """Settings for roadmap generation. Read from environment variables / backend .env.
 
 The mock Roadmap provider makes no generation call, but live RAG still calls
-Gemini for query embeddings and evidence review. Roadmap model calls are guarded
+Gemini for query embeddings and Nova Lite for evidence review. Roadmap model calls are guarded
 by daily limits and a monthly budget computed from system.ai_runs.
 """
 
@@ -17,14 +17,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class RoadmapSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    # mock = rule-based roadmap, no model call; gemini = Google Gemini API.
-    # anthropic and bedrock remain available as alternate providers.
+    # mock = rule-based roadmap, no model call. Gemini and Anthropic remain
+    # selectable for compatibility; the local Bedrock setup uses Nova 2 Lite.
     ROADMAP_PROVIDER: Literal["mock", "gemini", "anthropic", "bedrock", "bedrock_converse"] = "mock"
-    ROADMAP_MODEL_ID: str | None = None  # Gemini default: gemini-3.8-flash
+    ROADMAP_MODEL_ID: str | None = None
     ROADMAP_AWS_REGION: str | None = None
     AWS_DEFAULT_REGION: str | None = None
     AWS_REGION: str | None = None
-    BEDROCK_ROADMAP_MODEL: str = "amazon.nova-pro-v1:0"
+    BEDROCK_ROADMAP_MODEL: str = "us.amazon.nova-2-lite-v1:0"
     ROADMAP_EFFORT: Literal["low", "medium", "high", "xhigh", "max"] = "medium"
     ROADMAP_MAX_TOKENS: int = Field(default=24000, ge=4000, le=128000)
     ROADMAP_CACHE_CONTEXT: bool = False

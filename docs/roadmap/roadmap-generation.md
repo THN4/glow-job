@@ -1,9 +1,10 @@
 # Roadmap generation
 
 Turns a learner's Agent Context (profile, goal, market gap, cited knowledge) into a
-saved, personal learning roadmap. The configured provider for this project is Gemini
-3.8 Flash through Google's Gen AI SDK. The `mock` provider skips the Roadmap
-generation call; live RAG still uses Gemini unless a development fixture is set.
+saved, personal learning roadmap. The local Bedrock configuration uses Nova 2 Lite
+for roadmap generation and evidence review, with Gemini Embedding 2 for retrieval.
+The `mock` provider skips the Roadmap generation call; live RAG still uses embeddings
+unless a development fixture is set.
 
 ```mermaid
 flowchart LR
@@ -15,7 +16,7 @@ flowchart LR
     C --> X[compact_context<br/>~70% fewer characters]
     X --> H{Same input hash<br/>as active roadmap?}
     H -- yes --> R[Reuse saved roadmap<br/>no model call]
-    H -- no --> M[One Gemini call<br/>structured JSON output]
+    H -- no --> M[One Nova 2 Lite call<br/>structured JSON output]
     M --> V[validate_draft in code]
     V -- fixable --> F[Fix + warning]
     V -- structural --> Y[One repair call]

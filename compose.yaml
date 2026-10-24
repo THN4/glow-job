@@ -31,8 +31,10 @@ services:
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       RESUME_GEMINI_TIMEOUT_MS: ${RESUME_GEMINI_TIMEOUT_MS:-180000}
       RESUME_BEDROCK_TIMEOUT_MS: ${RESUME_BEDROCK_TIMEOUT_MS:-180000}
-      BEDROCK_EXTRACTION_MODEL: ${BEDROCK_EXTRACTION_MODEL:-amazon.nova-pro-v1:0}
-      BEDROCK_RAG_MODEL: ${BEDROCK_RAG_MODEL:-amazon.nova-pro-v1:0}
+      BEDROCK_EXTRACTION_MODEL: ${BEDROCK_EXTRACTION_MODEL:-us.amazon.nova-2-lite-v1:0}
+      BEDROCK_RAG_MODEL: ${BEDROCK_RAG_MODEL:-us.amazon.nova-2-lite-v1:0}
+      BEDROCK_TEXT_MODEL: ${BEDROCK_TEXT_MODEL:-us.amazon.nova-2-lite-v1:0}
+      ASSESSMENT_AI_GENERATION: ${ASSESSMENT_AI_GENERATION:-bedrock_converse}
       MAX_FILE_MB: ${MAX_FILE_MB:-10}
       MAX_PDF_PAGES: ${MAX_PDF_PAGES:-10}
       MAX_IMAGE_PAGES: ${MAX_IMAGE_PAGES:-4}
@@ -44,14 +46,15 @@ services:
       DB_NAME: ${DB_TARGET_NAME:-${DB_NAME:-glowjob}}
       DB_USER: ${DB_TARGET_USER:-${DB_USER:-glowjob}}
       DB_PASSWORD: ${DB_TARGET_PASSWORD:-${DB_PASSWORD:?Set DB_PASSWORD in the root .env file}}
-      # mock skips Roadmap generation calls; live RAG uses Nova text review and Gemini embeddings.
+      # mock skips Roadmap generation calls; live RAG uses Nova review and Gemini embeddings.
       ROADMAP_PROVIDER: ${ROADMAP_PROVIDER:-mock}
       ROADMAP_MODEL_ID: ${ROADMAP_MODEL_ID:-}
       ROADMAP_AWS_REGION: ${ROADMAP_AWS_REGION:-}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
-      BEDROCK_ROADMAP_MODEL: ${BEDROCK_ROADMAP_MODEL:-amazon.nova-pro-v1:0}
+      AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
+      BEDROCK_ROADMAP_MODEL: ${BEDROCK_ROADMAP_MODEL:-us.amazon.nova-2-lite-v1:0}
       ROADMAP_EFFORT: ${ROADMAP_EFFORT:-medium}
-      # Empty uses the provider/model defaults instead of applying Gemini prices to Nova.
+      # Empty uses provider defaults; set both prices for non-default Bedrock models.
       ROADMAP_PRICE_INPUT_PER_MTOK: ${ROADMAP_PRICE_INPUT_PER_MTOK:-}
       ROADMAP_PRICE_OUTPUT_PER_MTOK: ${ROADMAP_PRICE_OUTPUT_PER_MTOK:-}
       ROADMAP_MONTHLY_BUDGET_USD: ${ROADMAP_MONTHLY_BUDGET_USD:-50}

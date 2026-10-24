@@ -24,23 +24,21 @@ from app.features.resume.config import CvSettings
 
 log = logging.getLogger(__name__)
 LOCK_NAMESPACE = 7301  # pg_advisory_lock(namespace, chunk_id)
-GENERATED_BY = "gemini-on-demand"
+GENERATED_BY = "nova-on-demand"
 STEP_MAX_CHUNKS = 4
 SKILL_MAX_CHUNKS = 2
 USABLE = ("approved", "provisional")
 
 
-def gemini_generate(api_key: str, timeout_s: float) -> tuple[Callable[[str], str], str]:
-    """A JSON-mode Gemini call with the model shared with the data pipeline."""
-    from src.shared.llm.gemini_client import GEMINI_MODEL, create_gemini_client
+def nova_generate(timeout_s: float) -> tuple[Callable[[str], str], str]:
+    """Use the shared Bedrock Nova text model for draft and blind-check prompts."""
+    from src.shared.llm.bedrock_client import BedrockTextSettings, nova_generate as generate_text
 
+    model = BedrockTextSettings().model_id
     def generate(prompt: str) -> str:
-        with create_gemini_client(api_key=api_key, timeout_ms=int(timeout_s * 1000)) as client:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL, contents=prompt, config={"response_mime_type": "application/json"})
-            return response.text or ""
+        return generate_text(prompt, timeout_ms=int(timeout_s * 1000), model_id=model)
 
-    return generate, GEMINI_MODEL
+    return generate, model
 
 
 class QuestionGenerator:
@@ -206,12 +204,8 @@ class QuestionGenerator:
 
 
 def build_generator(settings: CvSettings) -> QuestionGenerator | None:
-    if settings.ASSESSMENT_AI_GENERATION != "gemini":
+    if settings.ASSESSMENT_AI_GENERATION != "bedrock_converse":
         return None
-    key = (settings.GEMINI_API_KEY or "").strip()
-    if not key:
-        log.warning("ASSESSMENT_AI_GENERATION=gemini but GEMINI_API_KEY is empty; on-demand questions are off")
-        return None
-    generate, model = gemini_generate(key, settings.ASSESSMENT_GENERATION_TIMEOUT_S)
+    generate, model = nova_generate(settings.ASSESSMENT_GENERATION_TIMEOUT_S)
     return QuestionGenerator(settings, generate, model=model, daily_limit=settings.ASSESSMENT_DAILY_GENERATIONS,
                              timeout_s=settings.ASSESSMENT_GENERATION_TIMEOUT_S)

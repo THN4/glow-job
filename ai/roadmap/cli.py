@@ -46,7 +46,7 @@ def main() -> int:
     context = AgentContext.model_validate_json(args.context.read_bytes())
     model_id = args.model
     if not model_id and args.provider == "bedrock_converse":
-        model_id = os.getenv("BEDROCK_ROADMAP_MODEL") or "amazon.nova-pro-v1:0"
+        model_id = os.getenv("BEDROCK_ROADMAP_MODEL") or "us.amazon.nova-2-lite-v1:0"
     pricing = pricing_for_model(args.provider, model_id, input_price=args.input_price, output_price=args.output_price)
     model = create_model(args.provider, model_id=model_id, aws_region=args.aws_region,
                          effort=args.effort, max_tokens=args.max_tokens)

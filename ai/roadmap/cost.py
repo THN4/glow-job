@@ -21,15 +21,18 @@ class Pricing:
 
 def pricing_for_model(provider: str, model_id: str | None, *, input_price: float | None = None,
                       output_price: float | None = None) -> Pricing:
-    """Use Nova Pro rates for Converse, keeping existing providers' defaults.
+    """Use known Amazon Nova rates for Converse, keeping existing providers' defaults.
 
-    Nova Pro standard text inference: $0.80/$3.20 per million tokens. Explicit
-    prices win; other Converse models require prices rather than inheriting Gemini rates.
+    Nova Pro standard inference is $0.80/$3.20 and Nova 2 Lite is $0.33/$2.75
+    per million tokens in us-east-1. Explicit prices win; unknown Converse models
+    require prices rather than inheriting Gemini rates.
     """
     defaults = Pricing()
     if provider == "bedrock_converse":
         if model_id and "amazon.nova-pro-v1:" in model_id:
             defaults = Pricing(0.8, 3.2)
+        elif model_id and "amazon.nova-2-lite-v1:" in model_id:
+            defaults = Pricing(0.33, 2.75)
         elif input_price is None or output_price is None:
             raise ValueError("Set both ROADMAP_PRICE_INPUT_PER_MTOK and ROADMAP_PRICE_OUTPUT_PER_MTOK for this Converse model")
     return Pricing(input_price if input_price is not None else defaults.input_per_mtok,

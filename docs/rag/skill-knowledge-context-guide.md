@@ -14,7 +14,7 @@ flowchart TD
     C -->|Mapped compatible vectors| E[Embed query: Gemini Embedding 2 / 768]
     E --> V[pgvector candidates filtered by skill ID and active source]
     V --> B[Whole chunks within per-skill and total character budgets]
-    B --> T[Shared Gemini text model reviews actual passages]
+    B --> T[Nova 2 Lite reviews actual passages]
     T --> Q[Validate citation IDs and exact quotes]
     Q --> O[Cited Skill Knowledge Context preview]
     C -->|No teaching content| G[Explicit content gap; other main skills continue]
