@@ -1,0 +1,28 @@
+[Unit]
+Description=Glow Job FastAPI
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=glowjob
+Group=glowjob
+WorkingDirectory=/opt/glow-job/backend
+Environment=PYTHONPATH=/opt/glow-job/data-pipeline:/opt/glow-job
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Reuse the existing backend .env for settings AND AWS SDK credentials.
+EnvironmentFile=/opt/glow-job/backend/.env
+# Optional compatibility with deployments that already use a separate file.
+# Entries in this file override matching keys from backend/.env.
+EnvironmentFile=-/etc/glow-job-credentials.env
+ExecStart=/opt/glow-job/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8787 --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=60
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
