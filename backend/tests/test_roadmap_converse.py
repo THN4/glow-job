@@ -83,6 +83,8 @@ def test_repair_keeps_converse_history_and_accumulates_usage(payload):
     repaired = model.repair(first, ["Citation must match the reviewed source."])
     assert [m["role"] for m in client.calls[1]["messages"]] == ["user", "assistant", "user"]
     assert "Citation must match" in client.calls[1]["messages"][-1]["content"][0]["text"]
+    tool_result = client.calls[1]["messages"][-1]["content"][1]["toolResult"]
+    assert tool_result["toolUseId"] == "roadmap" and tool_result["status"] == "error"
     assert client.calls[1]["inferenceConfig"]["maxTokens"] == 4000
     assert repaired.usage.calls == 2 and repaired.usage.input_tokens == 2000
 
@@ -178,8 +180,41 @@ def test_invalid_first_output_is_retried_with_schema_feedback(payload):
     first = client.calls[0]["messages"]
     retry = client.calls[1]["messages"]
     assert first[0]["content"][0]["text"] in retry[0]["content"][0]["text"]
-    assert "overview" in retry[0]["content"][-1]["text"]
-    assert "Field required" in retry[0]["content"][-1]["text"]
+    assert [message["role"] for message in retry] == ["user", "assistant", "user"]
+    assert retry[1]["content"][0]["toolUse"]["input"] == {"title": "incomplete"}
+    assert "overview" in retry[-1]["content"][0]["text"]
+    assert "Field required" in retry[-1]["content"][0]["text"]
+    assert retry[-1]["content"][1]["toolResult"]["toolUseId"] == "roadmap"
+
+
+def test_missing_task_titles_repair_preserves_the_rejected_draft(payload):
+    incomplete = copy.deepcopy(payload)
+    task = next(task for step in incomplete["steps"] for task in step["tasks"])
+    task.pop("title")
+    client = ConverseClient(response(incomplete), response(payload))
+
+    turn = BedrockConverseRoadmapModel(client).generate({"goal": "example"})
+
+    retry = client.calls[1]["messages"]
+    assert retry[1]["content"][0]["toolUse"]["input"] == incomplete
+    assert ".title: Field required" in retry[-1]["content"][0]["text"]
+    assert "complete corrected object" in retry[-1]["content"][0]["text"]
+    assert turn.draft.model_dump() == payload
+    assert turn.usage.calls == 2 and turn.usage.output_tokens == 1000
+
+
+def test_invalid_text_draft_repair_does_not_send_a_tool_result(payload):
+    invalid = {"output": {"message": {"role": "assistant", "content": [
+        {"text": json.dumps({"overview": "Only an overview"})},
+    ]}}, "stopReason": "end_turn", "usage": {"inputTokens": 20, "outputTokens": 10}}
+    client = ConverseClient(invalid, response(payload))
+
+    turn = BedrockConverseRoadmapModel(client).generate({})
+
+    retry = client.calls[1]["messages"]
+    assert retry[1] == invalid["output"]["message"]
+    assert all("toolResult" not in block for block in retry[-1]["content"])
+    assert turn.draft.model_dump() == payload
 
 
 def test_valid_json_text_is_accepted_when_nova_ends_without_tool(payload):

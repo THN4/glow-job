@@ -20,6 +20,35 @@ NOVA_MAX_OUTPUT_TOKENS = 5000
 log = logging.getLogger("roadmap")
 
 
+class _InvalidRoadmapOutput(ModelError):
+    """Keep the rejected assistant turn for repair without logging its contents."""
+
+    def __init__(self, *, usage: Usage, issues: list[str], messages: list[dict[str, Any]]):
+        super().__init__("MODEL_INVALID_OUTPUT", "Nova returned an invalid roadmap JSON object.",
+                         usage=usage, issues=issues)
+        self.messages = messages
+
+
+def _repair_messages(messages: list[dict[str, Any]], issues: list[str]) -> list[dict[str, Any]]:
+    feedback = (
+        build_repair_message(issues)
+        + "\nCall submit_roadmap with the complete corrected object, not a patch or an error report."
+        + " Include every required top-level field and a title for every task."
+    )
+    content: list[dict[str, Any]] = [{"text": feedback}]
+    if messages and messages[-1].get("role") == "assistant":
+        for block in messages[-1].get("content", []):
+            tool = block.get("toolUse", {})
+            if tool.get("toolUseId"):
+                # Converse requires a matching result before the next model turn.
+                content.append({"toolResult": {
+                    "toolUseId": tool["toolUseId"],
+                    "content": [{"text": feedback}],
+                    "status": "error",
+                }})
+    return [*messages, {"role": "user", "content": content}]
+
+
 def credential_cache_error(usage: Usage | None = None) -> ModelError:
     return ModelError("MODEL_UNAVAILABLE", "AWS could not update its credentials cache. Allow writes to the login cache directory and retry.",
                       usage=usage)
@@ -60,7 +89,7 @@ class BedrockConverseRoadmapModel:
         return self._call_with_retry([{"role": "user", "content": [{"text": build_user_message(compact)}]}], Usage())
 
     def repair(self, turn: ModelTurn, issues: list[str]) -> ModelTurn:
-        messages = [*turn.messages, {"role": "user", "content": [{"text": build_repair_message(issues)}]}]
+        messages = _repair_messages(turn.messages, issues)
         return self._call_with_retry(messages, turn.usage)
 
     def _call_with_retry(self, messages: list[dict[str, Any]], usage: Usage) -> ModelTurn:
@@ -72,7 +101,9 @@ class BedrockConverseRoadmapModel:
             # Give Nova actionable schema feedback instead of repeating the same
             # prompt when its tool input fails Pydantic validation.
             retry_messages = messages
-            if error.issues and messages and messages[-1].get("role") == "user":
+            if isinstance(error, _InvalidRoadmapOutput):
+                retry_messages = _repair_messages(error.messages, error.issues)
+            elif error.issues and messages and messages[-1].get("role") == "user":
                 retry_messages = [*messages[:-1], {
                     **messages[-1],
                     "content": [
@@ -94,7 +125,7 @@ class BedrockConverseRoadmapModel:
                 toolConfig={
                     "tools": [{"toolSpec": {
                         "name": "submit_roadmap",
-                        "description": "Return the roadmap matching the required schema.",
+                        "description": "Return the complete roadmap matching the required schema. Every task must include title, detail and task_kind. Do not return a patch or a wrapper object.",
                         "inputSchema": {"json": self._tool_schema},
                     }}],
                     "toolChoice": {"tool": {"name": "submit_roadmap"}},
@@ -153,6 +184,6 @@ class BedrockConverseRoadmapModel:
                     issues.append(f"{location}: {item.get('msg', 'invalid value')} ({item.get('type', 'invalid')})")
             log.warning("roadmap model schema invalid stop=%s blocks=%s error_type=%s issues=%s", stop,
                         [list(block) for block in content], type(error).__name__, issues)
-            raise ModelError("MODEL_INVALID_OUTPUT", "Nova returned an invalid roadmap JSON object.",
-                             usage=usage, issues=issues) from error
+            raise _InvalidRoadmapOutput(usage=usage, issues=issues,
+                                        messages=[*messages, message]) from error
         return ModelTurn(draft=draft, usage=usage, messages=[*messages, message])
