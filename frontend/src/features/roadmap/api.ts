@@ -1,0 +1,312 @@
+import { getSavedProfileId, getSessionId, loadCareerProfiles, saveCareerGoal } from '../resume/api'
+import type { CareerGoalPreferences } from '../resume/api'
+import type { CareerGoal, CareerGoalInput, RoadmapJob, RoadmapView, StepProgressInput } from './api-types'
+import type { ProgressOverview } from './progressOverview'
+import type { RoadmapEvidence } from './type'
+
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
+// RAG reviews multiple skills before generation; a healthy job can exceed five minutes.
+const ROADMAP_POLL_TIMEOUT_MS = 15 * 60_000
+
+type ApiErrorBody = { error?: { message?: string } }
+
+export type SkillEvidence = RoadmapEvidence & { skillId: number; createdAt: string }
+
+export type RejectionReplanOptions = {
+  applicationId: number
+  role: string
+  company: string
+  rejectionCategory: 'skill-gap'
+  rejectionReason: string
+  reasonSource: 'user_reported'
+  goalCareerProfileId: number
+  matchingMode: 'feedback_mentions' | 'market_gaps' | 'no_mentions'
+  options: {
+    skillId: number
+    name: string
+    gapStatus: 'missing_from_profile' | 'proficiency_gap' | 'covered' | 'not_assessed'
+    priorityRank: number | null
+    requirementType: 'required' | 'preferred' | null
+    source: 'feedback_mention' | 'job_requirement' | 'career_market'
+    alreadyPlanned: boolean
+    completedInRoadmap: boolean
+    inProfile: boolean
+    alreadyCompleted: boolean
+    learningContentAvailable: boolean
+  }[]
+}
+
+export type MarketReplanOptions = {
+  careerProfileId: number
+  careerName: string
+  isDemo: true
+  notice: string
+  marketWindow: { analysisStartDate: string; analysisEndDate: string; analysisDateBasis: string } | null
+  options: {
+    skillId: number
+    name: string
+    gapStatus: 'covered' | 'proficiency_gap' | 'missing_from_profile' | 'not_assessed' | 'market_data_insufficient'
+    priorityRank: number | null
+    importanceTier: string
+    demandCount: number
+    totalJobs: number
+    demandPercentage: number
+    learningContentAvailable: boolean
+    alreadyInAgentContext: boolean
+    alertDetail: string
+  }[]
+}
+
+export type RoadmapHistoryEntry = {
+  roadmapId: number
+  version: number
+  status: 'active' | 'completed' | 'replaced' | 'archived' | 'draft'
+  generationReason: string
+  previousRoadmapId: number | null
+  generatedAt: string
+  replanTrigger: {
+    kind: 'application_rejection'
+    application_id: number
+    job_title: string
+    rejection_category: 'skill-gap'
+    reason_summary: string
+    focus_skill_ids: number[]
+    review_skill_ids: number[]
+    source: 'user_reported_application'
+  } | {
+    kind: 'market_update'
+    focus_skill_ids: number[]
+    review_skill_ids: number[]
+    source: 'demo_market_snapshot'
+    is_demo: true
+    market_window: { analysis_start_date: string; analysis_end_date: string; analysis_date_basis: string }
+  } | null
+}
+
+export async function loadRoadmapHistory(): Promise<RoadmapHistoryEntry[]> {
+  const result = await request<{ roadmaps: RoadmapHistoryEntry[] }>(`/profiles/${profileId()}/roadmaps/history`)
+  return result.roadmaps
+}
+
+export async function loadRoadmapVersion(roadmapId: number): Promise<RoadmapView> {
+  const result = await request<{ roadmap: RoadmapView }>(`/profiles/${profileId()}/roadmaps/${roadmapId}`)
+  return result.roadmap
+}
+
+export async function loadRejectionReplanOptions(applicationId: string): Promise<RejectionReplanOptions> {
+  return request(`/profiles/${profileId()}/applications/${encodeURIComponent(applicationId)}/replan-options`)
+}
+
+export async function loadMarketReplanOptions(): Promise<MarketReplanOptions> {
+  return request(`/profiles/${profileId()}/market-replan-options`)
+}
+
+type SkillEvidenceApi = {
+  evidenceId: number
+  skillId: number
+  evidenceType: 'github_project' | 'certificate' | 'self_report'
+  title: string
+  url: string | null
+  notes: string
+  photoData: string | null
+  createdAt: string
+}
+type EvidenceType = SkillEvidenceApi['evidenceType']
+
+function adaptSkillEvidence(item: SkillEvidenceApi): SkillEvidence {
+  const evidenceType: Record<EvidenceType, RoadmapEvidence['type']> = {
+    github_project: 'GitHub project', certificate: 'Certificate', self_report: 'Self report',
+  }
+  return {
+    id: String(item.evidenceId), skillId: item.skillId,
+    type: evidenceType[item.evidenceType],
+    title: item.title, url: item.url ?? undefined, notes: item.notes, photo: item.photoData ?? undefined,
+    createdAt: item.createdAt,
+  }
+}
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: { 'X-Session-Id': getSessionId(), ...init.headers },
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new Error('ติดต่อ Backend ไม่ได้ กรุณาตรวจการเชื่อมต่อแล้วลองใหม่', { cause: error })
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new Error(body.error?.message ?? `คำขอไม่สำเร็จ (${response.status})`)
+  }
+  return (await response.json()) as T
+}
+
+function profileId(): string {
+  const id = getSavedProfileId()
+  if (!id) throw new Error('ไม่พบโปรไฟล์ที่บันทึกไว้ กรุณากลับไปยืนยันโปรไฟล์ก่อน')
+  return encodeURIComponent(id)
+}
+
+export async function loadRoadmapGoal(signal?: AbortSignal): Promise<CareerGoal | null> {
+  if (!getSavedProfileId()) return null
+  const result = await request<{ goal: CareerGoal | null }>(`/profiles/${profileId()}/goal`, { signal })
+  return result.goal
+}
+
+export function loadProgressOverview(signal?: AbortSignal): Promise<ProgressOverview> {
+  return request(`/profiles/${profileId()}/progress-overview`, { signal })
+}
+
+export async function updateRoadmapGoal(goal: CareerGoalInput): Promise<CareerGoal> {
+  const result = await request<{ goal: CareerGoal }>(`/profiles/${profileId()}/goal`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(goal),
+  })
+  return result.goal
+}
+
+export async function saveRoadmapGoal(goal: CareerGoalPreferences): Promise<void> {
+  const careers = await loadCareerProfiles()
+  const chosen = goal.targetRole.trim().toLocaleLowerCase()
+  const matches = careers.filter((career) =>
+    career.profileName.trim().toLocaleLowerCase() === chosen)
+  if (matches.length !== 1) {
+    const supported = [...new Set(careers.map((career) => career.profileName))].join(', ')
+    throw new Error(`Roadmap รองรับอาชีพที่มีในระบบก่อน กรุณาเลือกชื่อให้ตรงกับ: ${supported}`)
+  }
+  const body: CareerGoalInput = {
+    careerProfileId: matches[0].careerProfileId,
+    targetRoleTitle: goal.targetRole.trim(),
+    readinessTimeframe: {
+      '3_months': 'three_months', '6_months': 'six_months', '1_year': 'one_year', custom: 'no_fixed_deadline',
+    }[goal.deadline] as CareerGoalInput['readinessTimeframe'],
+    targetDate: goal.deadline === 'custom' ? goal.customDeadlineDate : null,
+    weeklyAvailability: {
+      under_2: 'under_2_hours', '2_to_5': 'hours_2_to_5', '5_to_10': 'hours_5_to_10', over_10: 'hours_10_plus',
+    }[goal.hoursPerWeek] as CareerGoalInput['weeklyAvailability'],
+    availableHoursPerWeek: null,
+    preferredLearningStyle: {
+      courses: 'structured_courses', projects: 'hands_on_projects',
+      reading: 'reading_articles', videos: 'videos_tutorials',
+    }[goal.learningStyle] as CareerGoalInput['preferredLearningStyle'],
+    additionalContext: goal.notes.trim() || null,
+  }
+  await saveCareerGoal(goal)
+  await request(`/profiles/${profileId()}/goal`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })
+}
+
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new DOMException('Aborted', 'AbortError'))
+    const timer = window.setTimeout(() => {
+      signal?.removeEventListener('abort', abort)
+      resolve()
+    }, ms)
+    const abort = () => {
+      window.clearTimeout(timer)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+    signal?.addEventListener('abort', abort, { once: true })
+  })
+}
+
+export async function loadCurrentRoadmap(signal?: AbortSignal): Promise<RoadmapView | null> {
+  const id = getSavedProfileId()
+  if (!id) return null
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}/profiles/${encodeURIComponent(id)}/roadmaps/current`, {
+      headers: { 'X-Session-Id': getSessionId() }, signal,
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error
+    throw new Error('ติดต่อ Backend ไม่ได้ กรุณาตรวจการเชื่อมต่อแล้วลองใหม่', { cause: error })
+  }
+  if (response.status === 404) {
+    const body = (await response.json().catch(() => ({}))) as { error?: { code?: string; message?: string } }
+    if (body.error?.code === 'ROADMAP_NOT_FOUND') return null
+    throw new Error(body.error?.message ?? 'ไม่พบโปรไฟล์')
+  }
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as ApiErrorBody
+    throw new Error(body.error?.message ?? `คำขอไม่สำเร็จ (${response.status})`)
+  }
+  const body = (await response.json()) as { roadmap: RoadmapView }
+  return body.roadmap
+}
+
+export async function generateRoadmap(onStage: (stage: RoadmapJob['stage']) => void,
+                                      signal?: AbortSignal, force = false,
+                                      replan?: { applicationId: number; focusSkillIds: number[] }
+                                        | { marketFocusSkillIds: number[] }): Promise<RoadmapView> {
+  const id = profileId()
+  const started = await request<RoadmapJob>(`/profiles/${id}/roadmaps`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(replan && 'applicationId' in replan
+      ? { rejectionApplicationId: replan.applicationId, focusSkillIds: replan.focusSkillIds }
+      : replan ? { marketFocusSkillIds: replan.marketFocusSkillIds } : { force }), signal,
+  })
+  onStage(started.stage)
+  const startedAt = Date.now()
+  let job = started
+  while (true) {
+    if (job.status === 'failed') throw new Error(job.error?.message ?? 'สร้าง roadmap ไม่สำเร็จ')
+    if (job.status === 'succeeded') {
+      const roadmap = await loadCurrentRoadmap(signal)
+      if (!roadmap) throw new Error('สร้าง roadmap แล้วแต่ไม่พบข้อมูลที่บันทึกไว้')
+      return roadmap
+    }
+    // Inspect the latest terminal status before checking the deadline, including
+    // a success received by the final poll at the timeout boundary.
+    if (Date.now() - startedAt >= ROADMAP_POLL_TIMEOUT_MS) break
+    await wait(2000, signal)
+    job = await request<RoadmapJob>(`/roadmap-jobs/${encodeURIComponent(started.jobId)}`, { signal })
+    onStage(job.stage)
+  }
+  throw new Error('ใช้เวลาสร้าง roadmap นานเกินไป กรุณาลองใหม่')
+}
+
+export async function setRoadmapTask(roadmapId: number, taskId: string,
+                                     completed: boolean): Promise<RoadmapView> {
+  const result = await request<{ roadmap: RoadmapView }>(
+    `/profiles/${profileId()}/roadmaps/${roadmapId}/tasks/${encodeURIComponent(taskId)}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ completed }) },
+  )
+  return result.roadmap
+}
+
+export async function setRoadmapStep(roadmapId: number, stepKey: string,
+                                     status: StepProgressInput): Promise<RoadmapView> {
+  const result = await request<{ roadmap: RoadmapView }>(
+    `/profiles/${profileId()}/roadmaps/${roadmapId}/steps/${encodeURIComponent(stepKey)}`,
+    { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) },
+  )
+  return result.roadmap
+}
+
+export async function loadSkillEvidence(): Promise<SkillEvidence[]> {
+  const result = await request<{ evidence: SkillEvidenceApi[] }>(`/profiles/${profileId()}/skill-evidence`)
+  return result.evidence.map(adaptSkillEvidence)
+}
+
+export async function addSkillEvidence(skillId: number, evidence: RoadmapEvidence): Promise<SkillEvidence> {
+  const evidenceType: Record<RoadmapEvidence['type'], EvidenceType> = {
+    'GitHub project': 'github_project', Certificate: 'certificate', 'Self report': 'self_report',
+  }
+  const result = await request<{ evidence: SkillEvidenceApi }>(
+    `/profiles/${profileId()}/skills/${skillId}/evidence`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
+      evidenceType: evidenceType[evidence.type], title: evidence.title, url: evidence.url ?? null, notes: evidence.notes,
+      photoData: evidence.photo ?? null,
+    }) },
+  )
+  return adaptSkillEvidence(result.evidence)
+}
+
+export async function deleteSkillEvidence(evidenceId: string): Promise<void> {
+  await request<{ deleted: boolean }>(`/profiles/${profileId()}/skill-evidence/${encodeURIComponent(evidenceId)}`,
+    { method: 'DELETE' })
+}

@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Schedule the Glow-Job JSearch ingestion command on an EC2 managed node through Systems Manager.
+
+Parameters:
+  WorkerInstanceId:
+    Type: String
+    Description: EC2 instance ID registered as a Systems Manager managed node.
+    AllowedPattern: "^i-[0-9a-f]+$"
+  WorkerCommand:
+    Type: String
+    Default: bash /opt/glow-job/data-pipeline/scripts/market/run_scheduled_ingestion.sh
+    Description: Shell command that starts the ingestion runner script on the EC2 instance.
+  ScheduleExpression:
+    Type: String
+    Default: "cron(0 8 * * ? *)"
+    Description: EventBridge Scheduler cron or rate expression.
+  ScheduleState:
+    Type: String
+    Default: DISABLED
+    AllowedValues:
+      - ENABLED
+      - DISABLED
+    Description: Keep disabled until the EC2 runner has been tested manually.
+
+Resources:
+  SchedulerExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Allows this schedule to send the configured SSM command to one EC2 worker.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: scheduler.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnEquals:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:scheduler:${AWS::Region}:${AWS::AccountId}:schedule/default/glow-job-jsearch-ingestion
+      Policies:
+        - PolicyName: SendJSearchIngestionCommand
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ssm:SendCommand
+                Resource:
+                  - !Sub arn:${AWS::Partition}:ec2:${AWS::Region}:${AWS::AccountId}:instance/${WorkerInstanceId}
+                  - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}::document/AWS-RunShellScript
+
+  JSearchIngestionSchedule:
+    Type: AWS::Scheduler::Schedule
+    Properties:
+      Name: glow-job-jsearch-ingestion
+      Description: Run the JSearch ingestion script on the EC2 worker.
+      GroupName: default
+      ScheduleExpression: !Ref ScheduleExpression
+      ScheduleExpressionTimezone: Asia/Bangkok
+      State: !Ref ScheduleState
+      FlexibleTimeWindow:
+        Mode: OFF
+      Target:
+        Arn: arn:aws:scheduler:::aws-sdk:ssm:sendCommand
+        RoleArn: !GetAtt SchedulerExecutionRole.Arn
+        Input:
+          Fn::Sub:
+            - '{"DocumentName":"AWS-RunShellScript","InstanceIds":["${WorkerInstanceId}"],"Parameters":{"commands":["${WorkerCommand}"]}}'
+            - WorkerInstanceId: !Ref WorkerInstanceId
+              WorkerCommand: !Ref WorkerCommand
+        RetryPolicy:
+          MaximumEventAgeInSeconds: 3600
+          MaximumRetryAttempts: 2
+
+Outputs:
+  ScheduleArn:
+    Description: ARN of the scheduled SSM command.
+    Value: !GetAtt JSearchIngestionSchedule.Arn
+  SchedulerExecutionRoleArn:
+    Description: Role assumed by EventBridge Scheduler to send the SSM command.
+    Value: !GetAtt SchedulerExecutionRole.Arn

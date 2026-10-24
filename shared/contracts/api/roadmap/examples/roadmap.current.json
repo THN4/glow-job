@@ -1,0 +1,468 @@
+{
+  "roadmap": {
+    "roadmapId": 1,
+    "version": 1,
+    "status": "active",
+    "generatedAt": "2026-10-19T09:00:00+00:00",
+    "generation": {
+      "provider": "mock",
+      "model": "mock-roadmap-v1",
+      "promptVersion": "roadmap-prompt-v14",
+      "contextId": "ctx_88025785443b4aac8bfe0f4efe0f4e94",
+      "reused": false
+    },
+    "summary": {
+      "title": "Data Engineer roadmap",
+      "overview": "A focused plan built from your saved goal and current profile.",
+      "targetRole": "Data Engineer",
+      "careerName": "Data Engineer",
+      "readinessTimeframe": "three_months",
+      "targetDate": "2027-01-18",
+      "weeklyAvailability": "hours_2_to_5",
+      "learningStyle": "hands_on_projects",
+      "estimatedHours": {
+        "min": 21.0,
+        "max": 38.0
+      },
+      "budgetHours": {
+        "min": 26.0,
+        "max": 65.0
+      },
+      "weeklyHours": {
+        "min": 2.0,
+        "max": 5.0
+      },
+      "durationLabel": "3 months",
+      "timeRemainingLabel": "3 months remaining",
+      "planningNote": "Hours are rough estimates based on your saved weekly time.",
+      "assumptions": [
+        "Weekly time uses the saved range 2-5 hours; no exact hours were given.",
+        "About 13 weeks remain until the saved target date 2027-01-18."
+      ]
+    },
+    "nextAction": {
+      "nodeKey": "check-docker",
+      "text": "Start with the first step this week."
+    },
+    "currentNodeKey": "check-docker",
+    "layout": {
+      "columns": 3,
+      "rows": 5
+    },
+    "nodes": [
+      {
+        "key": "check-docker",
+        "kind": "foundation-check",
+        "title": "Check your Docker basics",
+        "subtitle": "Quick check",
+        "summary": "Apache Airflow material uses Docker. Confirm you can use it before you start.",
+        "whyItMatters": [
+          "Used in the Apache Airflow tutorials you will follow."
+        ],
+        "skill": {
+          "skillId": 85,
+          "name": "Docker",
+          "currentLevel": "unknown",
+          "targetLevel": null,
+          "gapStatus": null,
+          "inProfile": true,
+          "profileLabel": "In your profile, level not assessed",
+          "profileEvidence": [
+            {
+              "evidenceType": "project",
+              "excerpt": "Built a fictional pipeline with Python, SQL and Pandas, versioned with Git, and tried Docker. Demo Unmapped Skill is an intentional testing label."
+            }
+          ]
+        },
+        "estimatedHours": {
+          "min": 1.0,
+          "max": 2.0
+        },
+        "dependsOn": [],
+        "layer": 0,
+        "order": 0,
+        "position": {
+          "row": 1,
+          "column": 2
+        },
+        "status": "not_started",
+        "checklist": [
+          {
+            "id": "check-docker.1",
+            "label": "Try a small Docker exercise",
+            "detail": "If it feels easy, mark this done and move on.",
+            "taskKind": "check",
+            "completed": false,
+            "citations": []
+          }
+        ],
+        "details": [],
+        "baselineComplete": false,
+        "citations": [],
+        "notice": null,
+        "recommendedOrder": null
+      },
+      {
+        "key": "apache-airflow",
+        "kind": "skill",
+        "title": "Learn Apache Airflow",
+        "subtitle": "Upcoming",
+        "summary": "Work through the core Apache Airflow concepts.",
+        "whyItMatters": [
+          "Mentioned in 4 of 45 recent Data Engineer job posts.",
+          "Not in your profile yet."
+        ],
+        "skill": {
+          "skillId": 103,
+          "name": "Apache Airflow",
+          "currentLevel": null,
+          "targetLevel": "unknown",
+          "gapStatus": "missing_from_profile",
+          "inProfile": false,
+          "profileLabel": "Not in your profile yet"
+        },
+        "estimatedHours": {
+          "min": 8.0,
+          "max": 14.0
+        },
+        "dependsOn": [
+          "check-docker"
+        ],
+        "layer": 1,
+        "order": 0,
+        "position": {
+          "row": 2,
+          "column": 2
+        },
+        "status": "not_started",
+        "checklist": [
+          {
+            "id": "apache-airflow.1",
+            "label": "Study: Airflow 101: Building Your First Workflow",
+            "detail": "Read this part of \"Airflow 101: Building Your First Workflow\".",
+            "taskKind": "learn",
+            "completed": false,
+            "citations": [
+              {
+                "chunkId": 1,
+                "title": "Airflow 101: Building Your First Workflow",
+                "url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+                "heading": "Airflow 101: Building Your First Workflow",
+                "quote": "Welcome to the world of Apache Airflow!"
+              }
+            ]
+          },
+          {
+            "id": "apache-airflow.2",
+            "label": "Study: What is a Dag?",
+            "detail": "Read this part of \"Airflow 101: Building Your First Workflow\".",
+            "taskKind": "learn",
+            "completed": false,
+            "citations": [
+              {
+                "chunkId": 2,
+                "title": "Airflow 101: Building Your First Workflow",
+                "url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+                "heading": "What is a Dag?",
+                "quote": "At its core, a Dag is a collection of tasks organized in a way that reflects their relationships and dependencies."
+              }
+            ]
+          },
+          {
+            "id": "apache-airflow.3",
+            "label": "Study: Understanding Operators",
+            "detail": "Read this part of \"Airflow 101: Building Your First Workflow\".",
+            "taskKind": "learn",
+            "completed": false,
+            "citations": [
+              {
+                "chunkId": 8,
+                "title": "Airflow 101: Building Your First Workflow",
+                "url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+                "heading": "Understanding Operators",
+                "quote": "An operator represents a unit of work in Airflow."
+              }
+            ]
+          },
+          {
+            "id": "apache-airflow.4",
+            "label": "Practice Apache Airflow on a small example",
+            "detail": "Repeat the tutorial steps on your own data.",
+            "taskKind": "practice",
+            "completed": false,
+            "citations": []
+          }
+        ],
+        "details": [],
+        "baselineComplete": false,
+        "citations": [
+          {
+            "chunkId": 1,
+            "title": "Airflow 101: Building Your First Workflow",
+            "url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+            "heading": "Airflow 101: Building Your First Workflow",
+            "quote": "Welcome to the world of Apache Airflow!"
+          },
+          {
+            "chunkId": 2,
+            "title": "Airflow 101: Building Your First Workflow",
+            "url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+            "heading": "What is a Dag?",
+            "quote": "At its core, a Dag is a collection of tasks organized in a way that reflects their relationships and dependencies."
+          },
+          {
+            "chunkId": 8,
+            "title": "Airflow 101: Building Your First Workflow",
+            "url": "https://airflow.apache.org/docs/apache-airflow/stable/tutorial/fundamentals.html",
+            "heading": "Understanding Operators",
+            "quote": "An operator represents a unit of work in Airflow."
+          }
+        ],
+        "notice": null,
+        "recommendedOrder": 1
+      },
+      {
+        "key": "rag",
+        "kind": "skill",
+        "title": "Learn RAG",
+        "subtitle": "Upcoming",
+        "summary": "Work through the core RAG concepts.",
+        "whyItMatters": [
+          "Mentioned in 2 of 45 recent Data Engineer job posts.",
+          "Not in your profile yet."
+        ],
+        "skill": {
+          "skillId": 87,
+          "name": "RAG",
+          "currentLevel": null,
+          "targetLevel": "unknown",
+          "gapStatus": "missing_from_profile",
+          "inProfile": false,
+          "profileLabel": "Not in your profile yet"
+        },
+        "estimatedHours": {
+          "min": 8.0,
+          "max": 14.0
+        },
+        "dependsOn": [],
+        "layer": 2,
+        "order": 0,
+        "position": {
+          "row": 3,
+          "column": 2
+        },
+        "status": "not_started",
+        "checklist": [
+          {
+            "id": "rag.1",
+            "label": "Study: Include relevant context information",
+            "detail": "Read this part of \"Search the API docs\".",
+            "taskKind": "learn",
+            "completed": false,
+            "citations": [
+              {
+                "chunkId": 389,
+                "title": "Search the API docs",
+                "url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+                "heading": "Include relevant context information",
+                "quote": "It is often useful to include additional context information the model can use to generate a response within the prompt you give the model."
+              }
+            ]
+          },
+          {
+            "id": "rag.2",
+            "label": "Study: Planning for the context window",
+            "detail": "Read this part of \"Search the API docs\".",
+            "taskKind": "learn",
+            "completed": false,
+            "citations": [
+              {
+                "chunkId": 390,
+                "title": "Search the API docs",
+                "url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+                "heading": "Planning for the context window",
+                "quote": "Models can only handle so much data within the context they consider during a generation request."
+              }
+            ]
+          },
+          {
+            "id": "rag.3",
+            "label": "Practice RAG on a small example",
+            "detail": "Repeat the tutorial steps on your own data.",
+            "taskKind": "practice",
+            "completed": false,
+            "citations": []
+          }
+        ],
+        "details": [],
+        "baselineComplete": false,
+        "citations": [
+          {
+            "chunkId": 389,
+            "title": "Search the API docs",
+            "url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+            "heading": "Include relevant context information",
+            "quote": "It is often useful to include additional context information the model can use to generate a response within the prompt you give the model."
+          },
+          {
+            "chunkId": 390,
+            "title": "Search the API docs",
+            "url": "https://developers.openai.com/api/docs/guides/prompt-engineering",
+            "heading": "Planning for the context window",
+            "quote": "Models can only handle so much data within the context they consider during a generation request."
+          }
+        ],
+        "notice": null,
+        "recommendedOrder": 2
+      },
+      {
+        "key": "portfolio-project",
+        "kind": "project",
+        "title": "Build a small portfolio project",
+        "subtitle": "Upcoming project",
+        "summary": "Combine what you learned into one project you can show employers.",
+        "whyItMatters": [
+          "Turns your learning into evidence for your CV."
+        ],
+        "skill": null,
+        "estimatedHours": {
+          "min": 4.0,
+          "max": 8.0
+        },
+        "dependsOn": [
+          "apache-airflow",
+          "rag"
+        ],
+        "layer": 3,
+        "order": 0,
+        "position": {
+          "row": 4,
+          "column": 2
+        },
+        "status": "not_started",
+        "checklist": [
+          {
+            "id": "portfolio-project.1",
+            "label": "Build and document the project",
+            "detail": "Push it to GitHub with a README.",
+            "taskKind": "practice",
+            "completed": false,
+            "citations": []
+          }
+        ],
+        "details": [],
+        "baselineComplete": false,
+        "citations": [],
+        "notice": null,
+        "recommendedOrder": null
+      },
+      {
+        "key": "goal",
+        "kind": "goal",
+        "title": "Data Engineer",
+        "subtitle": "Target: Jan 18, 2027",
+        "summary": "Your target role: Data Engineer.",
+        "whyItMatters": [
+          "Everything above builds toward this goal."
+        ],
+        "skill": null,
+        "estimatedHours": null,
+        "dependsOn": [],
+        "layer": 4,
+        "order": 0,
+        "position": {
+          "row": 5,
+          "column": 2
+        },
+        "status": "not_started",
+        "checklist": [],
+        "details": [],
+        "baselineComplete": false,
+        "citations": [],
+        "notice": null,
+        "recommendedOrder": null
+      }
+    ],
+    "edges": [
+      {
+        "from": "check-docker",
+        "to": "apache-airflow",
+        "optional": true,
+        "kind": "prerequisite"
+      },
+      {
+        "from": "apache-airflow",
+        "to": "portfolio-project",
+        "optional": false,
+        "kind": "prerequisite"
+      },
+      {
+        "from": "rag",
+        "to": "portfolio-project",
+        "optional": false,
+        "kind": "prerequisite"
+      },
+      {
+        "from": "portfolio-project",
+        "to": "goal",
+        "optional": true,
+        "kind": "recommended_order"
+      },
+      {
+        "from": "apache-airflow",
+        "to": "rag",
+        "optional": true,
+        "kind": "recommended_order"
+      }
+    ],
+    "deferred": [
+      {
+        "skillId": 78,
+        "skillName": "Java",
+        "reasonCode": "CONTENT_OUTLINE_ONLY",
+        "note": "Only a topic outline is available. Plan it once full lessons are ready."
+      }
+    ],
+    "confirmations": [
+      {
+        "skillId": 85,
+        "skillName": "Docker",
+        "question": "How comfortable are you with Docker?"
+      }
+    ],
+    "contentNotices": [
+      {
+        "skillId": 15,
+        "skillName": "Database Systems",
+        "notice": "Related foundation found, but learning content is not ready yet.",
+        "recommendedOrder": null
+      },
+      {
+        "skillId": 218,
+        "skillName": "vector databases",
+        "notice": "Related foundation found, but learning content is not ready yet.",
+        "recommendedOrder": null
+      },
+      {
+        "skillId": 369,
+        "skillName": "JSON",
+        "notice": "Related foundation found, but learning content is not ready yet.",
+        "recommendedOrder": null
+      }
+    ],
+    "limitations": [
+      "Roadmap progress counts completed tasks only; it is not a career-readiness percentage.",
+      "\"Not in your profile yet\" means your CV did not show it, not that you cannot do it.",
+      "Hours are rough planning estimates, not measured learning time.",
+      "Some skills only have a topic outline or partial sources so far."
+    ],
+    "progress": {
+      "completedSteps": 0,
+      "totalSteps": 4,
+      "completedTasks": 0,
+      "totalTasks": 9,
+      "percent": 0,
+      "label": "0 of 9 tasks done"
+    }
+  }
+}

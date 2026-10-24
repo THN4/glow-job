@@ -1,0 +1,3326 @@
+[
+  {
+    "skill_id": 1,
+    "skill_name": "Tableau",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 2,
+    "skill_name": "CI/CD",
+    "skill_category": "other",
+    "aliases": [
+      "CI/CD Pipeline",
+      "CI/CD pipelines"
+    ]
+  },
+  {
+    "skill_id": 3,
+    "skill_name": "Microsoft Excel",
+    "skill_category": "other",
+    "aliases": [
+      "Excel",
+      "MS Excel"
+    ]
+  },
+  {
+    "skill_id": 4,
+    "skill_name": "AI",
+    "skill_category": "other",
+    "aliases": [
+      "artificial intelligence"
+    ]
+  },
+  {
+    "skill_id": 5,
+    "skill_name": "Node.js",
+    "skill_category": "other",
+    "aliases": [
+      "NodeJS"
+    ]
+  },
+  {
+    "skill_id": 6,
+    "skill_name": "Golang",
+    "skill_category": "programming_language",
+    "aliases": [
+      "Go"
+    ]
+  },
+  {
+    "skill_id": 7,
+    "skill_name": "APIs",
+    "skill_category": "other",
+    "aliases": [
+      "API",
+      "API integration"
+    ]
+  },
+  {
+    "skill_id": 8,
+    "skill_name": "React",
+    "skill_category": "other",
+    "aliases": [
+      "React.js",
+      "ReactJS"
+    ]
+  },
+  {
+    "skill_id": 9,
+    "skill_name": "ETL",
+    "skill_category": "data_practice",
+    "aliases": [
+      "ETL tools"
+    ]
+  },
+  {
+    "skill_id": 10,
+    "skill_name": "Generative AI",
+    "skill_category": "other",
+    "aliases": [
+      "GenAI"
+    ]
+  },
+  {
+    "skill_id": 11,
+    "skill_name": "LLM",
+    "skill_category": "other",
+    "aliases": [
+      "LLMs"
+    ]
+  },
+  {
+    "skill_id": 12,
+    "skill_name": "AI Agents",
+    "skill_category": "other",
+    "aliases": [
+      "agentic AI"
+    ]
+  },
+  {
+    "skill_id": 13,
+    "skill_name": "BI tools",
+    "skill_category": "data_tool",
+    "aliases": [
+      "BI tool"
+    ]
+  },
+  {
+    "skill_id": 14,
+    "skill_name": "Data Studio",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 15,
+    "skill_name": "Database Systems",
+    "skill_category": "database",
+    "aliases": [
+      "database",
+      "databases"
+    ]
+  },
+  {
+    "skill_id": 16,
+    "skill_name": "Microservices",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 17,
+    "skill_name": "Public Cloud",
+    "skill_category": "other",
+    "aliases": [
+      "public cloud technologies"
+    ]
+  },
+  {
+    "skill_id": 18,
+    "skill_name": "Visual Basic",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 19,
+    "skill_name": "Web Development",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 20,
+    "skill_name": "Cloud Warehouses",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 21,
+    "skill_name": "Data Quality Frameworks",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 22,
+    "skill_name": "Looker Studio",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 23,
+    "skill_name": "Message Queuing",
+    "skill_category": "other",
+    "aliases": [
+      "message queues"
+    ]
+  },
+  {
+    "skill_id": 24,
+    "skill_name": "Microsoft Office 365 tools",
+    "skill_category": "other",
+    "aliases": [
+      "Microsoft Office 365"
+    ]
+  },
+  {
+    "skill_id": 25,
+    "skill_name": "OOKLA",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 26,
+    "skill_name": "Power Platform",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 27,
+    "skill_name": "Programming Methodology",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 28,
+    "skill_name": "Scripting",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 29,
+    "skill_name": "Software Process",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 30,
+    "skill_name": "ACA",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 31,
+    "skill_name": "AI-assisted development tools",
+    "skill_category": "other",
+    "aliases": [
+      "AI-Assisted Tools",
+      "AI-powered coding and development tools",
+      "AI/automation tools"
+    ]
+  },
+  {
+    "skill_id": 32,
+    "skill_name": "AOS",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 33,
+    "skill_name": "ATD",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 34,
+    "skill_name": "BI datasets",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 35,
+    "skill_name": "Big Data Technology",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 36,
+    "skill_name": "causal AI",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 37,
+    "skill_name": "classical ML",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 38,
+    "skill_name": "CRM tools",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 39,
+    "skill_name": "Cross-platform Development",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 40,
+    "skill_name": "Data Architecture",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 41,
+    "skill_name": "Data Pipeline",
+    "skill_category": "data_practice",
+    "aliases": [
+      "data pipeline architecture",
+      "data pipelines"
+    ]
+  },
+  {
+    "skill_id": 42,
+    "skill_name": "Data Platform Design",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 43,
+    "skill_name": "DCIM platforms",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 44,
+    "skill_name": "EAD",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 45,
+    "skill_name": "Exploratory Data Analysis",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 46,
+    "skill_name": "GitLab Pipeline",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 47,
+    "skill_name": "Google Analytics",
+    "skill_category": "other",
+    "aliases": [
+      "GA4"
+    ]
+  },
+  {
+    "skill_id": 48,
+    "skill_name": "Google OR-Tools",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 49,
+    "skill_name": "Google Suit platform",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 50,
+    "skill_name": "Infrastructure Engineering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 51,
+    "skill_name": "Marketing Data Science",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 52,
+    "skill_name": "Maven",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 53,
+    "skill_name": "Gradle",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 54,
+    "skill_name": "Mesa",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 55,
+    "skill_name": "OctoTools",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 56,
+    "skill_name": "OpenEvolve",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 57,
+    "skill_name": "Operational Risk Controls",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 58,
+    "skill_name": "ORM tools",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 59,
+    "skill_name": "Production Debugging",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 60,
+    "skill_name": "Programmatic",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 61,
+    "skill_name": "Promotion Effectiveness",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 62,
+    "skill_name": "Sales Force Effectiveness",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 63,
+    "skill_name": "Spring Framework",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 64,
+    "skill_name": "Test Design",
+    "skill_category": "other",
+    "aliases": [
+      "test design methodologies",
+      "testing"
+    ]
+  },
+  {
+    "skill_id": 65,
+    "skill_name": "Tool Calling",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 66,
+    "skill_name": "Tool ecosystems",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 67,
+    "skill_name": "VB",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 68,
+    "skill_name": "Visualization tools",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 69,
+    "skill_name": "VoC programs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 70,
+    "skill_name": "WordPress Plug-in",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 71,
+    "skill_name": "SQL",
+    "skill_category": "query_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 72,
+    "skill_name": "Microsoft Access",
+    "skill_category": "database",
+    "aliases": [
+      "microsoft office Access"
+    ]
+  },
+  {
+    "skill_id": 73,
+    "skill_name": "TypeScript",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 74,
+    "skill_name": "GCP",
+    "skill_category": "other",
+    "aliases": [
+      "Google Cloud",
+      "Google Cloud Platform"
+    ]
+  },
+  {
+    "skill_id": 75,
+    "skill_name": "Next.js",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 76,
+    "skill_name": "A/B testing",
+    "skill_category": "data_practice",
+    "aliases": [
+      "A/B tests"
+    ]
+  },
+  {
+    "skill_id": 77,
+    "skill_name": "Azure",
+    "skill_category": "other",
+    "aliases": [
+      "Azure services"
+    ]
+  },
+  {
+    "skill_id": 78,
+    "skill_name": "Java",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 79,
+    "skill_name": "data modeling",
+    "skill_category": "data_practice",
+    "aliases": [
+      "data models"
+    ]
+  },
+  {
+    "skill_id": 80,
+    "skill_name": "machine learning",
+    "skill_category": "other",
+    "aliases": [
+      "Machine Learning (ML)",
+      "machine learning concepts",
+      "machine learning models"
+    ]
+  },
+  {
+    "skill_id": 81,
+    "skill_name": "NoSQL",
+    "skill_category": "database",
+    "aliases": [
+      "non-relational databases"
+    ]
+  },
+  {
+    "skill_id": 82,
+    "skill_name": "natural language processing",
+    "skill_category": "other",
+    "aliases": [
+      "Natural Language Processing (NLP)",
+      "NLP",
+      "NLP models"
+    ]
+  },
+  {
+    "skill_id": 83,
+    "skill_name": "JavaScript",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 84,
+    "skill_name": "Jenkins",
+    "skill_category": "container_tool",
+    "aliases": [
+      "Jenkins CI/CD"
+    ]
+  },
+  {
+    "skill_id": 85,
+    "skill_name": "Docker",
+    "skill_category": "container_tool",
+    "aliases": [
+      "Docker build/deploy"
+    ]
+  },
+  {
+    "skill_id": 86,
+    "skill_name": "Spring Boot",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 87,
+    "skill_name": "RAG",
+    "skill_category": "data_practice",
+    "aliases": [
+      "RAG pipelines",
+      "RAG systems",
+      "Retrieval-Augmented Generation (RAG) pipelines"
+    ]
+  },
+  {
+    "skill_id": 88,
+    "skill_name": "Power BI",
+    "skill_category": "data_tool",
+    "aliases": [
+      "PowerBI"
+    ]
+  },
+  {
+    "skill_id": 89,
+    "skill_name": "ELT",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 90,
+    "skill_name": "Database Schema",
+    "skill_category": "database",
+    "aliases": [
+      "database schemas"
+    ]
+  },
+  {
+    "skill_id": 91,
+    "skill_name": "Python",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 92,
+    "skill_name": "AWS",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 93,
+    "skill_name": "Databricks",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 94,
+    "skill_name": "Git",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 95,
+    "skill_name": "Snowflake",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 96,
+    "skill_name": "Spark",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 97,
+    "skill_name": "PostgreSQL",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 98,
+    "skill_name": "Hive",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 99,
+    "skill_name": "Kubernetes",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 100,
+    "skill_name": "MongoDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 101,
+    "skill_name": "MySQL",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 102,
+    "skill_name": "R",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 103,
+    "skill_name": "Apache Airflow",
+    "skill_category": "orchestration_tool",
+    "aliases": [
+      "airflow"
+    ]
+  },
+  {
+    "skill_id": 104,
+    "skill_name": "Looker",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 105,
+    "skill_name": "Superset",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 106,
+    "skill_name": "Angular",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 107,
+    "skill_name": "Cloudera",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 108,
+    "skill_name": "data analysis",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 109,
+    "skill_name": "dbt",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 110,
+    "skill_name": "GitHub Copilot",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 111,
+    "skill_name": "Hadoop",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 112,
+    "skill_name": "Kafka",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 113,
+    "skill_name": "SSIS",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 114,
+    "skill_name": "Agile",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 115,
+    "skill_name": "C#",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 116,
+    "skill_name": "Claude Code",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 117,
+    "skill_name": "Data Science",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 118,
+    "skill_name": "Data Warehouse",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 119,
+    "skill_name": "Delta Lake",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 120,
+    "skill_name": "DevOps",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 121,
+    "skill_name": "Kotlin",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 122,
+    "skill_name": "Metabase",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 123,
+    "skill_name": "Oracle",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 124,
+    "skill_name": "PySpark",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 125,
+    "skill_name": "SQL Server",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 126,
+    "skill_name": "ADF",
+    "skill_category": "orchestration_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 127,
+    "skill_name": "Azure DevOps",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 128,
+    "skill_name": "BigQuery",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 129,
+    "skill_name": "computer vision",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 130,
+    "skill_name": "containerization technologies",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 131,
+    "skill_name": "data analytics",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 132,
+    "skill_name": "data modelling",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 133,
+    "skill_name": "GitHub Actions",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 134,
+    "skill_name": "HDFS",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 135,
+    "skill_name": "PyTorch",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 136,
+    "skill_name": "Redis",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 137,
+    "skill_name": "Redshift",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 138,
+    "skill_name": "SAS",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 139,
+    "skill_name": "Scikit-learn",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 140,
+    "skill_name": "StarRocks",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 141,
+    "skill_name": "Vertica",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 142,
+    "skill_name": ".NET",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 143,
+    "skill_name": "Agile/Scrum",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 144,
+    "skill_name": "Claude",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 145,
+    "skill_name": "CSS",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 146,
+    "skill_name": "data visualization",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 147,
+    "skill_name": "data warehousing",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 148,
+    "skill_name": "Database Management",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 149,
+    "skill_name": "Design Patterns",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 150,
+    "skill_name": "Google BigQuery",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 151,
+    "skill_name": "Google Sheets",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 152,
+    "skill_name": "Grafana",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 153,
+    "skill_name": "HTML",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 154,
+    "skill_name": "LLM APIs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 155,
+    "skill_name": "Microsoft Azure",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 156,
+    "skill_name": "OpenAI",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 157,
+    "skill_name": "Oracle Aconex",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 158,
+    "skill_name": "Oracle Fusion",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 159,
+    "skill_name": "Oracle Primavera",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 160,
+    "skill_name": "PHP",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 161,
+    "skill_name": "RESTful APIs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 162,
+    "skill_name": "SAP",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 163,
+    "skill_name": "Scala",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 164,
+    "skill_name": "statistics",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 165,
+    "skill_name": "TensorFlow",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 166,
+    "skill_name": "XML",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 167,
+    "skill_name": "AKS",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 168,
+    "skill_name": "Apache Spark Batch/Real Time",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 169,
+    "skill_name": "API Design",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 170,
+    "skill_name": "AutoGen",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 171,
+    "skill_name": "AWS DynamoDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 172,
+    "skill_name": "Azure OpenAI",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 173,
+    "skill_name": "Azure Synapse",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 174,
+    "skill_name": "Code Review",
+    "skill_category": "other",
+    "aliases": [
+      "Review Code"
+    ]
+  },
+  {
+    "skill_id": 175,
+    "skill_name": "CrewAI",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 176,
+    "skill_name": "data integration",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 177,
+    "skill_name": "data processing",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 178,
+    "skill_name": "database development",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 179,
+    "skill_name": "Databricks SQL",
+    "skill_category": "query_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 180,
+    "skill_name": "dimensional design",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 181,
+    "skill_name": "distributed data processing",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 182,
+    "skill_name": "electrical",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 183,
+    "skill_name": "electronic circuit",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 184,
+    "skill_name": "FastAPI",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 185,
+    "skill_name": "Figma",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 186,
+    "skill_name": "Flyway",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 187,
+    "skill_name": "GitLab CI",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 188,
+    "skill_name": "GraphQL",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 189,
+    "skill_name": "Great Expectations",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 190,
+    "skill_name": "InfluxDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 191,
+    "skill_name": "LangChain",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 192,
+    "skill_name": "LangGraph",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 193,
+    "skill_name": "Liquibase",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 194,
+    "skill_name": "LlamaIndex",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 195,
+    "skill_name": "MATLAB",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 196,
+    "skill_name": "MCP",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 197,
+    "skill_name": "Microsoft Office",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 198,
+    "skill_name": "MLOps",
+    "skill_category": "data_practice",
+    "aliases": [
+      "ML operations (MLOps)"
+    ]
+  },
+  {
+    "skill_id": 199,
+    "skill_name": "n8n",
+    "skill_category": "orchestration_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 200,
+    "skill_name": "NestJS",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 201,
+    "skill_name": "Oracle Data Integration",
+    "skill_category": "data_tool",
+    "aliases": [
+      "Oracle Data Integration (ODI)"
+    ]
+  },
+  {
+    "skill_id": 202,
+    "skill_name": "Postgres",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 203,
+    "skill_name": "React Native",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 204,
+    "skill_name": "relational databases",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 205,
+    "skill_name": "REST API",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 206,
+    "skill_name": "REST APIs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 207,
+    "skill_name": "RESTful API",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 208,
+    "skill_name": "Root Cause Analysis",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 209,
+    "skill_name": "SEO",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 210,
+    "skill_name": "SharePoint",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 211,
+    "skill_name": "statistical analysis",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 212,
+    "skill_name": "statistical methods",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 213,
+    "skill_name": "stream processing",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 214,
+    "skill_name": "Tailwind CSS",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 215,
+    "skill_name": "Test-Driven Development",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 216,
+    "skill_name": "time series forecasting",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 217,
+    "skill_name": "VBA",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 218,
+    "skill_name": "vector databases",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 219,
+    "skill_name": "vector search",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 220,
+    "skill_name": "Vue",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 221,
+    "skill_name": "Vue.js",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 222,
+    "skill_name": "WordPress",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 223,
+    "skill_name": ".NET Core",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 224,
+    "skill_name": "Academic research",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 225,
+    "skill_name": "active learning",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 226,
+    "skill_name": "Affiliate",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 227,
+    "skill_name": "Agent Runtime",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 228,
+    "skill_name": "AgentScope",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 229,
+    "skill_name": "Agile methodology",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 230,
+    "skill_name": "AI engineering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 231,
+    "skill_name": "AI governance",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 232,
+    "skill_name": "AI/ML Engineering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 233,
+    "skill_name": "Airbyte",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 234,
+    "skill_name": "algorithms",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 235,
+    "skill_name": "AlloyDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 236,
+    "skill_name": "Amazon Q",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 237,
+    "skill_name": "anomaly detection",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 238,
+    "skill_name": "Anthropic",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 239,
+    "skill_name": "Apache",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 240,
+    "skill_name": "Apache Zeppelin",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 241,
+    "skill_name": "Architecture",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 242,
+    "skill_name": "Aurora",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 243,
+    "skill_name": "AutoCAD",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 244,
+    "skill_name": "AWS Bedrock",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 245,
+    "skill_name": "AWS Bedrock Agents",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 246,
+    "skill_name": "Azure AI Search",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 247,
+    "skill_name": "Azure Data Explorer",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 248,
+    "skill_name": "Azure Data Factory",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 249,
+    "skill_name": "Azure Databricks",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 250,
+    "skill_name": "Azure Firewall",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 251,
+    "skill_name": "Azure Functions",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 252,
+    "skill_name": "Azure Landing Zone",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 253,
+    "skill_name": "Azure Machine Learning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 254,
+    "skill_name": "Azure ML",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 255,
+    "skill_name": "Azure OpenAI Service",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 256,
+    "skill_name": "Basel III/IV",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 257,
+    "skill_name": "Bitbucket",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 258,
+    "skill_name": "BMS",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 259,
+    "skill_name": "Business Intelligence",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 260,
+    "skill_name": "C++",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 261,
+    "skill_name": "causal inference",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 262,
+    "skill_name": "CDCDP",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 263,
+    "skill_name": "CDFOM",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 264,
+    "skill_name": "ChatGPT",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 265,
+    "skill_name": "Chroma",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 266,
+    "skill_name": "ChromaDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 267,
+    "skill_name": "Citus",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 268,
+    "skill_name": "Code Reviews",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 269,
+    "skill_name": "CodeIgniter",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 270,
+    "skill_name": "Codex",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 271,
+    "skill_name": "Container Apps",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 272,
+    "skill_name": "containers",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 273,
+    "skill_name": "Core Web Vitals",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 274,
+    "skill_name": "Cosmos DB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 275,
+    "skill_name": "CRM data",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 276,
+    "skill_name": "cross-validation",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 277,
+    "skill_name": "Cursor",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 278,
+    "skill_name": "customer journey mapping",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 279,
+    "skill_name": "Cypress",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 280,
+    "skill_name": "data agent optimization",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 281,
+    "skill_name": "Data Cleansing",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 282,
+    "skill_name": "data engineering",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 283,
+    "skill_name": "Data Factory",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 284,
+    "skill_name": "data governance",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 285,
+    "skill_name": "Data Lineage",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 286,
+    "skill_name": "data management",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 287,
+    "skill_name": "data mining",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 288,
+    "skill_name": "data structures",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 289,
+    "skill_name": "Data Transformation",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 290,
+    "skill_name": "data warehouse/lakehouse design principles",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 291,
+    "skill_name": "Database Architecture",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 292,
+    "skill_name": "database connection pooling",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 293,
+    "skill_name": "Datadog",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 294,
+    "skill_name": "Datastream",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 295,
+    "skill_name": "DAX",
+    "skill_category": "query_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 296,
+    "skill_name": "Debezium",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 297,
+    "skill_name": "deep-learning",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 298,
+    "skill_name": "defect management",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 299,
+    "skill_name": "DevSecOps",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 300,
+    "skill_name": "digital marketing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 301,
+    "skill_name": "distributed system design",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 302,
+    "skill_name": "distributed systems",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 303,
+    "skill_name": "DoWhy",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 304,
+    "skill_name": "DPO",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 305,
+    "skill_name": "Draw.io",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 306,
+    "skill_name": "EC2",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 307,
+    "skill_name": "EKS",
+    "skill_category": "container_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 308,
+    "skill_name": "Elasticsearch",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 309,
+    "skill_name": "Electrical Engineering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 310,
+    "skill_name": "ELK",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 311,
+    "skill_name": "embeddings",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 312,
+    "skill_name": "EPMS",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 313,
+    "skill_name": "Event Hubs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 314,
+    "skill_name": "Evolutionary Algorithms",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 315,
+    "skill_name": "experimentation",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 316,
+    "skill_name": "experiments",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 317,
+    "skill_name": "Express.js",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 318,
+    "skill_name": "Facebook Business Manager",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 319,
+    "skill_name": "Fanpage Karma",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 320,
+    "skill_name": "feature engineering",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 321,
+    "skill_name": "Fine-tuning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 322,
+    "skill_name": "fire protection",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 323,
+    "skill_name": "Firebase",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 324,
+    "skill_name": "Fivetran",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 325,
+    "skill_name": "Flask",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 326,
+    "skill_name": "Flink",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 327,
+    "skill_name": "Flutter",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 328,
+    "skill_name": "Foundation Model Fine-Tuning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 329,
+    "skill_name": "Foundation Models",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 330,
+    "skill_name": "Front-End",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 331,
+    "skill_name": "Full Stack",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 332,
+    "skill_name": "Function Calling",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 333,
+    "skill_name": "Gemini",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 334,
+    "skill_name": "Gemini API",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 335,
+    "skill_name": "GitLab",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 336,
+    "skill_name": "GMP",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 337,
+    "skill_name": "Google Ads",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 338,
+    "skill_name": "Google Colab",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 339,
+    "skill_name": "Google Docs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 340,
+    "skill_name": "Google Docs API",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 341,
+    "skill_name": "Google MCC",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 342,
+    "skill_name": "Google Sheets API",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 343,
+    "skill_name": "Google Tag Manager",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 344,
+    "skill_name": "Google Vertex AI",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 345,
+    "skill_name": "Google Vertex AI Agent Builder",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 346,
+    "skill_name": "Google Vertex AI Vector",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 347,
+    "skill_name": "Google Workspace APIs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 348,
+    "skill_name": "Google/SEM",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 349,
+    "skill_name": "GPT-4",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 350,
+    "skill_name": "graph algorithms",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 351,
+    "skill_name": "Graphite",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 352,
+    "skill_name": "Greengrass",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 353,
+    "skill_name": "Groovy",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 354,
+    "skill_name": "hierarchical clustering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 355,
+    "skill_name": "Hostaway",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 356,
+    "skill_name": "human feedback loops",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 357,
+    "skill_name": "HVAC",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 358,
+    "skill_name": "hypothesis testing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 359,
+    "skill_name": "ICAAP",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 360,
+    "skill_name": "IFRS 9",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 361,
+    "skill_name": "IFRS 9 ECL",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 362,
+    "skill_name": "inference optimization",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 363,
+    "skill_name": "Infrastructure as Code",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 364,
+    "skill_name": "Ionic",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 365,
+    "skill_name": "IoT Edge",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 366,
+    "skill_name": "Jest",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 367,
+    "skill_name": "Jira",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 368,
+    "skill_name": "JPA/Hibernate",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 369,
+    "skill_name": "JSON",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 370,
+    "skill_name": "Jupyter",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 371,
+    "skill_name": "JVM",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 372,
+    "skill_name": "knowledge graphs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 373,
+    "skill_name": "Lakehouse architecture",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 374,
+    "skill_name": "LangChain Orchestration",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 375,
+    "skill_name": "Laravel",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 376,
+    "skill_name": "Large Language Model Fine-Tuning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 377,
+    "skill_name": "large language models",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 378,
+    "skill_name": "Large Language Models (LLMs)",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 379,
+    "skill_name": "LGD",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 380,
+    "skill_name": "LightGBM",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 381,
+    "skill_name": "LINE",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 382,
+    "skill_name": "Linux",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 383,
+    "skill_name": "Linux Server",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 384,
+    "skill_name": "LLaMA",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 385,
+    "skill_name": "LLM evaluation",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 386,
+    "skill_name": "LLM integration",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 387,
+    "skill_name": "LLM observability",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 388,
+    "skill_name": "Load Test",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 389,
+    "skill_name": "Loki",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 390,
+    "skill_name": "Magento",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 391,
+    "skill_name": "Maintenance Engineering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 392,
+    "skill_name": "Managed Identity",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 393,
+    "skill_name": "Master Data",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 394,
+    "skill_name": "Matplotlib",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 395,
+    "skill_name": "MCP servers",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 396,
+    "skill_name": "Mechanical Engineering",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 397,
+    "skill_name": "Medallion Architecture",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 398,
+    "skill_name": "messaging middleware",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 399,
+    "skill_name": "Meta Blueprint",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 400,
+    "skill_name": "Meta Pixel",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 401,
+    "skill_name": "Metadata",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 402,
+    "skill_name": "microservices architecture",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 403,
+    "skill_name": "Microsoft Entra ID",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 404,
+    "skill_name": "Microsoft Graph API",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 405,
+    "skill_name": "Microsoft Power BI",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 406,
+    "skill_name": "Mistral",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 407,
+    "skill_name": "ML",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 408,
+    "skill_name": "MLflow",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 409,
+    "skill_name": "Modbus",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 410,
+    "skill_name": "model lifecycle management",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 411,
+    "skill_name": "mongo",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 412,
+    "skill_name": "MQTT",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 413,
+    "skill_name": "MS Access",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 414,
+    "skill_name": "MS SQL Server",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 415,
+    "skill_name": "multimodal document understanding",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 416,
+    "skill_name": "multimodal models",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 417,
+    "skill_name": "Navisworks",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 418,
+    "skill_name": "Nginx",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 419,
+    "skill_name": "NoSQL database",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 420,
+    "skill_name": "object-oriented design",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 421,
+    "skill_name": "OPC UA",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 422,
+    "skill_name": "OpenAI APIs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 423,
+    "skill_name": "OpenCV",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 424,
+    "skill_name": "OpenTelemetry",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 425,
+    "skill_name": "OPERA Application",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 426,
+    "skill_name": "operations research",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 427,
+    "skill_name": "Optuna",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 428,
+    "skill_name": "Oracle ERP",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 429,
+    "skill_name": "OWASP",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 430,
+    "skill_name": "Pandas",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 431,
+    "skill_name": "Payload CMS",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 432,
+    "skill_name": "Payment Gateway",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 433,
+    "skill_name": "PDPA",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 434,
+    "skill_name": "PeerDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 435,
+    "skill_name": "Performance Test",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 436,
+    "skill_name": "pgvector",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 437,
+    "skill_name": "Pinecone",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 438,
+    "skill_name": "Plotly",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 439,
+    "skill_name": "plumbing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 440,
+    "skill_name": "Polar",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 441,
+    "skill_name": "Postgres extension development",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 442,
+    "skill_name": "power distribution",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 443,
+    "skill_name": "Power Query",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 444,
+    "skill_name": "preference optimization",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 445,
+    "skill_name": "prescriptive analytic",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 446,
+    "skill_name": "price elasticity",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 447,
+    "skill_name": "pricing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 448,
+    "skill_name": "principal components analysis (PCA)",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 449,
+    "skill_name": "probability",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 450,
+    "skill_name": "process improvement",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 451,
+    "skill_name": "project management",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 452,
+    "skill_name": "Prometheus",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 453,
+    "skill_name": "Prompting",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 454,
+    "skill_name": "PyMC",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 455,
+    "skill_name": "quantitative analysis",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 456,
+    "skill_name": "quantization",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 457,
+    "skill_name": "query optimisation",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 458,
+    "skill_name": "RAG evaluation",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 459,
+    "skill_name": "rating models",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 460,
+    "skill_name": "Ray",
+    "skill_category": "data_framework",
+    "aliases": []
+  },
+  {
+    "skill_id": 461,
+    "skill_name": "Redux",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 462,
+    "skill_name": "Redux Toolkit",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 463,
+    "skill_name": "regression",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 464,
+    "skill_name": "Regular expressions (RegEx)",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 465,
+    "skill_name": "reinforcement learning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 466,
+    "skill_name": "responsible AI",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 467,
+    "skill_name": "Responsive Design",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 468,
+    "skill_name": "retail commercial concepts",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 469,
+    "skill_name": "retail/FMCG",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 470,
+    "skill_name": "Revit",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 471,
+    "skill_name": "risk analytics",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 472,
+    "skill_name": "Route Table",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 473,
+    "skill_name": "RPC",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 474,
+    "skill_name": "Ruby",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 475,
+    "skill_name": "S3",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 476,
+    "skill_name": "S3 Vector",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 477,
+    "skill_name": "SageMaker",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 478,
+    "skill_name": "Salesforce",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 479,
+    "skill_name": "SAP-Mii",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 480,
+    "skill_name": "SciPy",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 481,
+    "skill_name": "Scrum",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 482,
+    "skill_name": "SCSS",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 483,
+    "skill_name": "Seaborn",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 484,
+    "skill_name": "semi-supervised learning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 485,
+    "skill_name": "serverless",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 486,
+    "skill_name": "Serverless architecture",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 487,
+    "skill_name": "service governance",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 488,
+    "skill_name": "SFDC",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 489,
+    "skill_name": "SFT",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 490,
+    "skill_name": "SGLang",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 491,
+    "skill_name": "SIT",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 492,
+    "skill_name": "Software Architecture",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 493,
+    "skill_name": "SOLID principles",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 494,
+    "skill_name": "SOPs",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 495,
+    "skill_name": "Sparkplug B",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 496,
+    "skill_name": "Spring MVC",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 497,
+    "skill_name": "SPSS",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 498,
+    "skill_name": "statistical learning",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 499,
+    "skill_name": "stress testing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 500,
+    "skill_name": "Striim",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 501,
+    "skill_name": "Stripe",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 502,
+    "skill_name": "Supabase",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 503,
+    "skill_name": "Supermetrics",
+    "skill_category": "data_tool",
+    "aliases": []
+  },
+  {
+    "skill_id": 504,
+    "skill_name": "supervised fine-tuning",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 505,
+    "skill_name": "system architecture",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 506,
+    "skill_name": "system design",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 507,
+    "skill_name": "system integrations",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 508,
+    "skill_name": "T-distributed Stochastic Neighbor Embedding (t-SNE)",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 509,
+    "skill_name": "TDD",
+    "skill_category": "data_practice",
+    "aliases": []
+  },
+  {
+    "skill_id": 510,
+    "skill_name": "Tempo",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 511,
+    "skill_name": "Terraform",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 512,
+    "skill_name": "Testing & Commissioning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 513,
+    "skill_name": "TikTok",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 514,
+    "skill_name": "Tiktok Ads",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 515,
+    "skill_name": "TikTok Business Center",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 516,
+    "skill_name": "time series foundation models",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 517,
+    "skill_name": "TimescaleDB",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 518,
+    "skill_name": "traditional machine learning",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 519,
+    "skill_name": "Twilio",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 520,
+    "skill_name": "UAT",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 521,
+    "skill_name": "Unit Testing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 522,
+    "skill_name": "Unit Tests",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 523,
+    "skill_name": "Unity",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 524,
+    "skill_name": "UPS",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 525,
+    "skill_name": "Usability Testing",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 526,
+    "skill_name": "User Acceptance Testing (UAT)",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 527,
+    "skill_name": "Visual FoxPro",
+    "skill_category": "programming_language",
+    "aliases": []
+  },
+  {
+    "skill_id": 528,
+    "skill_name": "vLLM",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 529,
+    "skill_name": "Weaviate",
+    "skill_category": "database",
+    "aliases": []
+  },
+  {
+    "skill_id": 530,
+    "skill_name": "Web Accessibility",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 531,
+    "skill_name": "web backend development",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 532,
+    "skill_name": "web/app tagging",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 533,
+    "skill_name": "WebSocket",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 534,
+    "skill_name": "Windsurf",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 535,
+    "skill_name": "WooCommerce",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 536,
+    "skill_name": "workflow automation",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 537,
+    "skill_name": "XGBoost",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 538,
+    "skill_name": "YAML",
+    "skill_category": "other",
+    "aliases": []
+  },
+  {
+    "skill_id": 539,
+    "skill_name": "Zustand",
+    "skill_category": "other",
+    "aliases": []
+  }
+]

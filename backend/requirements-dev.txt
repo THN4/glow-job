@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=8
+pytest-asyncio>=0.23
+fonttools>=4.40   # only for tests/make_sample_cvs.py (font subsetting)

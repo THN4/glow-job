@@ -1,0 +1,8 @@
+# Default LOCAL development configuration, automatically loaded by `docker compose`.
+# All text generation uses Nova 2 Lite; embeddings use Gemini by default (Nova remains optional).
+# Deployments using task/instance roles should explicitly use -f compose.yaml instead.
+services:
+  backend:
+    extends:
+      file: compose.nova-profile-local.yaml
+      service: backend

@@ -1,0 +1,248 @@
+[
+  {
+    "file": "01-fullstack-developer-en.pdf",
+    "kind": "text PDF",
+    "language": "en",
+    "pages": 1,
+    "description": "Single column, full-stack developer. The baseline sample.",
+    "expect": {
+      "fullName": "Alex Example",
+      "institutions": [
+        "Chulalongkorn University"
+      ],
+      "organizations": [
+        "Self-employed",
+        "Siam Digital Co., Ltd."
+      ],
+      "skills": [
+        "JavaScript",
+        "TypeScript",
+        "React",
+        "Next.js",
+        "PostgreSQL",
+        "Docker"
+      ],
+      "projects": [
+        "MODNOI"
+      ],
+      "skillLevels": {
+        "JavaScript": "advanced",
+        "TypeScript": "intermediate",
+        "Python": "beginner"
+      }
+    }
+  },
+  {
+    "file": "02-data-analyst-en.pdf",
+    "kind": "text PDF",
+    "language": "en",
+    "pages": 2,
+    "description": "Two pages, summary, three jobs, master's degree, certifications and projects.",
+    "expect": {
+      "fullName": "Nina Park",
+      "institutions": [
+        "Chiang Mai University"
+      ],
+      "organizations": [
+        "Orbit Analytics Co., Ltd.",
+        "Lanna Retail Group",
+        "Doi Digital Studio"
+      ],
+      "skills": [
+        "SQL",
+        "Python",
+        "pandas",
+        "Tableau",
+        "Power BI"
+      ],
+      "projects": [
+        "Bangkok Air Quality Explorer",
+        "Customer Churn Model"
+      ]
+    }
+  },
+  {
+    "file": "03-fresh-graduate-en.pdf",
+    "kind": "text PDF",
+    "language": "en",
+    "pages": 1,
+    "description": "Student with NO work experience. Experience must stay empty (no invented jobs).",
+    "expect": {
+      "fullName": "Sam Lee",
+      "institutions": [
+        "Khon Kaen University"
+      ],
+      "organizations": [],
+      "skills": [
+        "Java",
+        "C",
+        "Python",
+        "MySQL",
+        "Git"
+      ],
+      "projects": [
+        "Library Management System",
+        "Smart Plant Watering"
+      ],
+      "skillLevels": {
+        "Python": "beginner"
+      }
+    }
+  },
+  {
+    "file": "04-thai-developer-th.pdf",
+    "kind": "text PDF",
+    "language": "th",
+    "pages": 1,
+    "description": "Fully Thai CV. Dates use the Buddhist Era (2559-2563 = 2016-2020): they are converted to Common Era and flagged needsReview.",
+    "expect": {
+      "fullName": "สมชาย ตัวอย่าง",
+      "institutions": [
+        "มหาวิทยาลัยเชียงใหม่"
+      ],
+      "organizations": [
+        "บริษัท ตัวอย่าง ดิจิทัล จำกัด",
+        "บริษัท สยามซอฟต์ จำกัด"
+      ],
+      "skills": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL",
+        "Docker"
+      ],
+      "projects": []
+    }
+  },
+  {
+    "file": "05-mixed-thai-english.pdf",
+    "kind": "text PDF",
+    "language": "mixed",
+    "pages": 1,
+    "description": "English CV with Thai names, Thai university name and Thai bullet points.",
+    "expect": {
+      "fullName": "Napat Wongsakul",
+      "institutions": [
+        "King Mongkut's University of Technology Thonburi"
+      ],
+      "organizations": [
+        "Krungthep Fintech Co., Ltd.",
+        "Bangna Studio"
+      ],
+      "skills": [
+        "Flutter",
+        "Dart",
+        "Kotlin",
+        "Firebase"
+      ],
+      "projects": []
+    }
+  },
+  {
+    "file": "06-designer-two-column-en.pdf",
+    "kind": "text PDF",
+    "language": "en",
+    "pages": 1,
+    "description": "Two-column layout with a sidebar. Tests text reading order across columns.",
+    "expect": {
+      "fullName": "Maya Okafor",
+      "institutions": [
+        "Silpakorn University"
+      ],
+      "organizations": [
+        "Andaman Travel Tech",
+        "PayBridge Fintech",
+        "Pixel Garden Studio"
+      ],
+      "skills": [
+        "Figma",
+        "Adobe XD",
+        "Miro"
+      ],
+      "projects": [
+        "Island Hopper",
+        "Open-source icon set"
+      ]
+    }
+  },
+  {
+    "file": "07-senior-devops-long-en.pdf",
+    "kind": "text PDF",
+    "language": "en",
+    "pages": 3,
+    "description": "Three pages, 4 jobs, many skills and certifications. Tests long input.",
+    "expect": {
+      "fullName": "Marcus Webb",
+      "institutions": [
+        "Chulalongkorn University"
+      ],
+      "organizations": [
+        "Meridian Payments",
+        "Coral Logistics",
+        "Nimbus Software",
+        "Sunrise Hosting"
+      ],
+      "skills": [
+        "AWS",
+        "Kubernetes",
+        "Terraform",
+        "Docker",
+        "Python"
+      ],
+      "projects": []
+    }
+  },
+  {
+    "file": "08-scanned-fresh-graduate.pdf",
+    "kind": "scanned PDF (image only)",
+    "language": "en",
+    "pages": 1,
+    "description": "Image-only PDF without a text layer. Needs a vision model.",
+    "expect": {
+      "fullName": "Sam Lee",
+      "institutions": [
+        "Khon Kaen University"
+      ],
+      "organizations": [],
+      "skills": [
+        "Java",
+        "C",
+        "MySQL"
+      ],
+      "projects": [
+        "Library Management System"
+      ]
+    }
+  },
+  {
+    "file": "09-phone-photo-data-analyst.jpg",
+    "kind": "JPEG photo",
+    "language": "en",
+    "pages": 1,
+    "description": "Photo of a printed CV: rotated, uneven lighting, noise. Needs a vision model.",
+    "expect": {
+      "fullName": "Nina Park",
+      "institutions": [
+        "Chiang Mai University"
+      ],
+      "organizations": [
+        "Orbit Analytics Co., Ltd."
+      ],
+      "skills": [
+        "SQL",
+        "Python",
+        "Tableau"
+      ],
+      "projects": []
+    }
+  },
+  {
+    "file": "10-not-a-cv-receipt.pdf",
+    "kind": "text PDF",
+    "language": "en",
+    "pages": 1,
+    "description": "A receipt. Must fail with NOT_A_CV.",
+    "expect": {
+      "error": "NOT_A_CV"
+    }
+  }
+]

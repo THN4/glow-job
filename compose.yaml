@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.7-pg16-bookworm
+    environment:
+      POSTGRES_DB: ${DB_NAME:-glowjob}
+      POSTGRES_USER: ${DB_USER:-glowjob}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in the root .env file}
+    # DB_PORT is the host port; DB_CONTAINER_PORT is PostgreSQL's port in Docker.
+    ports:
+      - "${DB_PORT:-5432}:${DB_CONTAINER_PORT:-5432}"
+    command: ["postgres", "-p", "${DB_CONTAINER_PORT:-5432}"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -p ${DB_CONTAINER_PORT:-5432} -U ${DB_USER:-glowjob} -d ${DB_NAME:-glowjob}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8787}
+      API_PREFIX: /api
+      DATA_DIR: /app/backend/.data
+      RESUME_EXTRACTOR: ${RESUME_EXTRACTOR:-mock}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      RESUME_GEMINI_TIMEOUT_MS: ${RESUME_GEMINI_TIMEOUT_MS:-180000}
+      RESUME_BEDROCK_TIMEOUT_MS: ${RESUME_BEDROCK_TIMEOUT_MS:-180000}
+      BEDROCK_EXTRACTION_MODEL: ${BEDROCK_EXTRACTION_MODEL:-us.amazon.nova-2-lite-v1:0}
+      BEDROCK_RAG_MODEL: ${BEDROCK_RAG_MODEL:-us.amazon.nova-2-lite-v1:0}
+      BEDROCK_TEXT_MODEL: ${BEDROCK_TEXT_MODEL:-us.amazon.nova-2-lite-v1:0}
+      ASSESSMENT_AI_GENERATION: ${ASSESSMENT_AI_GENERATION:-bedrock_converse}
+      MAX_FILE_MB: ${MAX_FILE_MB:-10}
+      MAX_PDF_PAGES: ${MAX_PDF_PAGES:-10}
+      MAX_IMAGE_PAGES: ${MAX_IMAGE_PAGES:-4}
+      DAILY_EXTRACTION_LIMIT: ${DAILY_EXTRACTION_LIMIT:-0}
+      DB_HOST: ${DB_HOST:-postgres}
+      # DB_TARGET_PORT can differ from the local Postgres container port when
+      # Backend connects through a host SSH tunnel to RDS.
+      DB_PORT: ${DB_TARGET_PORT:-${DB_CONTAINER_PORT:-5432}}
+      DB_NAME: ${DB_TARGET_NAME:-${DB_NAME:-glowjob}}
+      DB_USER: ${DB_TARGET_USER:-${DB_USER:-glowjob}}
+      DB_PASSWORD: ${DB_TARGET_PASSWORD:-${DB_PASSWORD:?Set DB_PASSWORD in the root .env file}}
+      # mock skips Roadmap generation calls; live RAG uses Nova review and Gemini embeddings.
+      ROADMAP_PROVIDER: ${ROADMAP_PROVIDER:-mock}
+      ROADMAP_MODEL_ID: ${ROADMAP_MODEL_ID:-}
+      ROADMAP_AWS_REGION: ${ROADMAP_AWS_REGION:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+      AWS_BEARER_TOKEN_BEDROCK: ${AWS_BEARER_TOKEN_BEDROCK:-}
+      BEDROCK_ROADMAP_MODEL: ${BEDROCK_ROADMAP_MODEL:-us.amazon.nova-2-lite-v1:0}
+      ROADMAP_EFFORT: ${ROADMAP_EFFORT:-medium}
+      # Empty uses provider defaults; set both prices for non-default Bedrock models.
+      ROADMAP_PRICE_INPUT_PER_MTOK: ${ROADMAP_PRICE_INPUT_PER_MTOK:-}
+      ROADMAP_PRICE_OUTPUT_PER_MTOK: ${ROADMAP_PRICE_OUTPUT_PER_MTOK:-}
+      ROADMAP_MONTHLY_BUDGET_USD: ${ROADMAP_MONTHLY_BUDGET_USD:-50}
+      ROADMAP_DAILY_LIMIT: ${ROADMAP_DAILY_LIMIT:-100}
+      ROADMAP_DAILY_LIMIT_PER_PROFILE: ${ROADMAP_DAILY_LIMIT_PER_PROFILE:-20}
+      ROADMAP_CONTEXT_FIXTURE: ${ROADMAP_CONTEXT_FIXTURE:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    ports:
+      - "${BACKEND_PORT:-8787}:8787"
+    volumes:
+      - backend_data:/app/backend/.data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    # The existing data-pipeline Compose project creates this named volume.
+    # External mode prevents accidentally starting with a fresh empty DB.
+    external: true
+    name: ${POSTGRES_VOLUME_NAME:-glow-job-data-pipeline_postgres_data}
+  backend_data:

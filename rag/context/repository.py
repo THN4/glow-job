@@ -1,0 +1,187 @@
+"""Read a single consistent input snapshot; never write user/catalog records."""
+
+from typing import Any
+
+from rag.context.models import (
+    Background, CareerProfile, ConfirmedSkill, ContextInputs, DateBasis, Evidence,
+    Goal, MarketInputs, MarketSkill, MarketWindow, ProjectSkill, UnresolvedSkill,
+    UserInputs, UserProject,
+)
+
+
+def _dicts(connection: Any, query: str, parameters: tuple) -> list[dict]:
+    cursor = connection.execute(query, parameters)
+    names = [column.name for column in cursor.description]
+    return [dict(zip(names, row)) for row in cursor.fetchall()]
+
+
+def load_inputs(
+    connection: Any, *, career_profile_id: int, profile_id: str | None = None,
+    date_basis: DateBasis = "posted_at",
+) -> ContextInputs:
+    """Use an idle connection whose caller already authorized access to the profile.
+
+    This is not an HTTP authentication boundary. A Backend caller must enforce
+    profile ownership before calling it. The CLI is for the local database owner.
+    """
+    if date_basis not in {"posted_at", "first_seen_at"}:
+        raise ValueError("Unknown market analysis date basis")
+    if connection.info.transaction_status != 0:
+        raise ValueError("Input repository requires an idle connection")
+    with connection.transaction():
+        connection.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+        careers = _dicts(connection, """
+            SELECT p.career_id, p.career_profile_id, c.career_name,
+                   p.profile_name, p.seniority_level
+            FROM core.career_profiles p JOIN core.careers c USING (career_id)
+            WHERE p.career_profile_id = %s AND p.is_active AND c.is_active
+        """, (career_profile_id,))
+        if not careers:
+            raise ValueError("Active career profile not found")
+        career = CareerProfile.model_validate(careers[0])
+        windows = _dicts(connection, """
+            SELECT DISTINCT analysis_start_date, analysis_end_date, analysis_date_basis
+            FROM market.career_skill_stats
+            WHERE career_profile_id = %s AND analysis_date_basis = %s
+            ORDER BY analysis_end_date DESC, analysis_start_date DESC LIMIT 1
+        """, (career_profile_id, date_basis))
+        window = MarketWindow.model_validate(windows[0]) if windows else None
+        skills = []
+        if window:
+            skills = _dicts(connection, """
+                SELECT s.skill_id, s.skill_name, m.demand_count, m.total_jobs,
+                       m.demand_percentage, m.required_count, m.preferred_count,
+                       m.optional_count, m.weighted_demand_score, m.target_level,
+                       m.target_level_confidence, m.level_observation_count,
+                       m.importance_tier, m.last_updated
+                FROM market.career_skill_stats m JOIN core.skills s USING (skill_id)
+                WHERE m.career_profile_id = %s AND m.analysis_date_basis = %s
+                  AND m.analysis_start_date = %s AND m.analysis_end_date = %s
+                ORDER BY s.skill_id
+            """, (career_profile_id, date_basis, window.analysis_start_date, window.analysis_end_date))
+        market = MarketInputs(
+            career_profile_id=career_profile_id, window=window,
+            skills=tuple(MarketSkill.model_validate(row) for row in skills),
+        )
+        warnings = [] if skills else ["NO_MARKET_DATA_FOR_DATE_BASIS"]
+        user = _load_user(connection, profile_id, career_profile_id) if profile_id else None
+        if user and user.goal is None:
+            warnings.append("NO_SAVED_GOAL_FOR_CAREER_PROFILE")
+        if user and user.background.current_status == "other":
+            warnings.append("OTHER_SITUATION_DETAIL_REQUIRES_BACKEND_SCHEMA_SUPPORT")
+        if any(skill.target_level == "unknown" for skill in market.skills):
+            warnings.append("SOME_MARKET_TARGET_LEVELS_UNKNOWN")
+        return ContextInputs(
+            career=career, market=market, user=user, warnings=tuple(warnings),
+        )
+
+
+def _load_user(connection: Any, profile_id: str, career_profile_id: int) -> UserInputs:
+    profiles = _dicts(connection, """
+        SELECT user_id, current_status::text, current_job_title, years_experience,
+               education_level, field_of_study
+        FROM app.user_profiles WHERE profile_id = %s
+    """, (profile_id,))
+    if not profiles:
+        raise ValueError("Saved profile not found")
+    profile = profiles[0]
+    user_id = profile.pop("user_id")
+    goals = _dicts(connection, """
+        SELECT g.goal_id, coalesce(g.career_id, exact_match.career_id) AS career_id,
+               coalesce(g.career_profile_id, exact_match.career_profile_id) AS career_profile_id,
+               g.target_role_title,
+               readiness_timeframe::text, target_date, weekly_availability::text,
+               available_hours_per_week, preferred_learning_style::text,
+               additional_context
+        FROM app.user_career_goals AS g
+        LEFT JOIN LATERAL (
+            SELECT min(candidate.career_id) AS career_id,
+                   min(candidate.career_profile_id) AS career_profile_id
+            FROM (
+                SELECT p.career_id, p.career_profile_id
+                FROM core.career_profiles AS p
+                JOIN core.careers AS c USING (career_id)
+                WHERE p.is_active AND c.is_active
+                  AND lower(btrim(p.profile_name)) = lower(btrim(g.target_role_title))
+            ) AS candidate
+            HAVING count(*) = 1
+        ) AS exact_match ON g.career_profile_id IS NULL
+        WHERE g.user_id = %s
+          AND coalesce(g.career_profile_id, exact_match.career_profile_id) = %s
+        ORDER BY g.is_primary DESC, g.updated_at DESC, g.goal_id DESC LIMIT 1
+    """, (user_id, career_profile_id))
+    rows = _dicts(connection, """
+        SELECT u.user_skill_id, u.skill_id, s.skill_name, u.raw_skill_name,
+               u.proficiency_level::text, u.proficiency_basis, u.confidence,
+               u.match_status::text
+        FROM app.user_skills u LEFT JOIN core.skills s USING (skill_id)
+        WHERE u.user_id = %s AND u.user_confirmed ORDER BY u.user_skill_id
+    """, (user_id,))
+    evidence_rows = _dicts(connection, """
+        SELECT e.user_skill_id, e.evidence_type, left(e.evidence_text, 1000) AS excerpt,
+               e.experience_id, e.confidence
+        FROM app.user_skill_evidence e
+        JOIN app.user_skills u USING (user_skill_id)
+        WHERE u.user_id = %s AND u.user_confirmed ORDER BY e.evidence_id
+    """, (user_id,))
+    evidence: dict[int, list[Evidence]] = {}
+    for row in evidence_rows:
+        row_id = row.pop("user_skill_id")
+        evidence.setdefault(row_id, []).append(Evidence.model_validate(row))
+    project_rows = _dicts(connection, """
+        SELECT experience_id, title, role, left(description, 2000) AS description,
+               highlights, start_date, end_date, is_current
+        FROM app.user_experiences
+        WHERE user_id = %s AND experience_type = 'project'::app.experience_type
+          AND user_confirmed
+        ORDER BY is_current DESC, end_date DESC NULLS LAST,
+                 start_date DESC NULLS LAST, experience_id DESC
+        LIMIT 50
+    """, (user_id,))
+    project_ids = [row["experience_id"] for row in project_rows]
+    project_skills: dict[int, list[ProjectSkill]] = {}
+    if project_ids:
+        linked_skills = _dicts(connection, """
+            SELECT DISTINCT e.experience_id, s.skill_id, s.skill_name
+            FROM app.user_skill_evidence e
+            JOIN app.user_skills u ON u.user_skill_id = e.user_skill_id
+            JOIN core.skills s ON s.skill_id = u.skill_id
+            WHERE u.user_id = %s AND u.user_confirmed AND u.match_status = 'matched'
+              AND e.experience_id = ANY(%s)
+            ORDER BY e.experience_id, s.skill_name
+        """, (user_id, project_ids))
+        for row in linked_skills:
+            project_skills.setdefault(row["experience_id"], []).append(
+                ProjectSkill(skill_id=row["skill_id"], skill_name=row["skill_name"])
+            )
+    projects = []
+    for row in project_rows:
+        highlights = row.get("highlights") or []
+        if not isinstance(highlights, (list, tuple)):
+            highlights = []
+        row["highlights"] = tuple(value for value in highlights if isinstance(value, str))
+        row["skills"] = tuple(project_skills.get(row["experience_id"], ()))
+        projects.append(UserProject.model_validate(row))
+    confirmed, unresolved = [], []
+    for row in rows:
+        item_evidence = tuple(evidence.get(row["user_skill_id"], ()))
+        if row["skill_id"] is not None and row["match_status"] == "matched":
+            confirmed.append(ConfirmedSkill(
+                **{key: row[key] for key in (
+                    "skill_id", "skill_name", "raw_skill_name", "proficiency_level",
+                    "proficiency_basis", "confidence",
+                )}, evidence=item_evidence,
+            ))
+        elif row["skill_id"] is None and row["match_status"] in {"needs_review", "unmatched"}:
+            unresolved.append(UnresolvedSkill(
+                raw_skill_name=row["raw_skill_name"], match_status=row["match_status"],
+                proficiency_level=row["proficiency_level"], evidence=item_evidence,
+            ))
+        else:
+            raise ValueError("User skill has an inconsistent catalog match")
+    return UserInputs(
+        profile_id=profile_id, background=Background.model_validate(profile),
+        goal=Goal.model_validate(goals[0]) if goals else None,
+        confirmed_skills=tuple(confirmed), unresolved_skills=tuple(unresolved),
+        projects=tuple(projects),
+    )

@@ -1,0 +1,984 @@
+{
+  "$defs": {
+    "ChecklistItem": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "taskKind": {
+          "enum": [
+            "learn",
+            "practice",
+            "check"
+          ],
+          "title": "Taskkind",
+          "type": "string"
+        },
+        "completed": {
+          "default": false,
+          "title": "Completed",
+          "type": "boolean"
+        },
+        "citations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "verified": {
+          "default": false,
+          "title": "Verified",
+          "type": "boolean"
+        },
+        "needsReview": {
+          "default": false,
+          "title": "Needsreview",
+          "type": "boolean"
+        },
+        "questionCount": {
+          "default": 0,
+          "title": "Questioncount",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "detail",
+        "taskKind"
+      ],
+      "title": "ChecklistItem",
+      "type": "object"
+    },
+    "Citation": {
+      "properties": {
+        "chunkId": {
+          "title": "Chunkid",
+          "type": "integer"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Url"
+        },
+        "heading": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Heading"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chunkId",
+        "title",
+        "url",
+        "heading",
+        "quote"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Confirmation": {
+      "properties": {
+        "skillId": {
+          "title": "Skillid",
+          "type": "integer"
+        },
+        "skillName": {
+          "title": "Skillname",
+          "type": "string"
+        },
+        "question": {
+          "title": "Question",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skillId",
+        "skillName",
+        "question"
+      ],
+      "title": "Confirmation",
+      "type": "object"
+    },
+    "ContentNotice": {
+      "properties": {
+        "skillId": {
+          "title": "Skillid",
+          "type": "integer"
+        },
+        "skillName": {
+          "title": "Skillname",
+          "type": "string"
+        },
+        "notice": {
+          "title": "Notice",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skillId",
+        "skillName",
+        "notice"
+      ],
+      "title": "ContentNotice",
+      "type": "object"
+    },
+    "DeferredSkill": {
+      "properties": {
+        "skillId": {
+          "title": "Skillid",
+          "type": "integer"
+        },
+        "skillName": {
+          "title": "Skillname",
+          "type": "string"
+        },
+        "reasonCode": {
+          "enum": [
+            "OUTSIDE_TIME_BUDGET",
+            "CONTENT_OUTLINE_ONLY",
+            "LOW_MARKET_SIGNAL",
+            "NEEDS_CONFIRMATION"
+          ],
+          "title": "Reasoncode",
+          "type": "string"
+        },
+        "note": {
+          "title": "Note",
+          "type": "string"
+        }
+      },
+      "required": [
+        "skillId",
+        "skillName",
+        "reasonCode",
+        "note"
+      ],
+      "title": "DeferredSkill",
+      "type": "object"
+    },
+    "Edge": {
+      "properties": {
+        "from": {
+          "title": "From",
+          "type": "string"
+        },
+        "to": {
+          "title": "To",
+          "type": "string"
+        },
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "kind": {
+          "default": "prerequisite",
+          "enum": [
+            "prerequisite",
+            "recommended_order",
+            "related"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "relationships": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ReviewedRelationship"
+          },
+          "title": "Relationships",
+          "type": "array"
+        }
+      },
+      "required": [
+        "from",
+        "to"
+      ],
+      "title": "Edge",
+      "type": "object"
+    },
+    "Generation": {
+      "properties": {
+        "provider": {
+          "title": "Provider",
+          "type": "string"
+        },
+        "model": {
+          "title": "Model",
+          "type": "string"
+        },
+        "promptVersion": {
+          "title": "Promptversion",
+          "type": "string"
+        },
+        "contextId": {
+          "title": "Contextid",
+          "type": "string"
+        },
+        "reused": {
+          "default": false,
+          "title": "Reused",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "provider",
+        "model",
+        "promptVersion",
+        "contextId"
+      ],
+      "title": "Generation",
+      "type": "object"
+    },
+    "HoursRange": {
+      "properties": {
+        "min": {
+          "title": "Min",
+          "type": "number"
+        },
+        "max": {
+          "title": "Max",
+          "type": "number"
+        }
+      },
+      "required": [
+        "min",
+        "max"
+      ],
+      "title": "HoursRange",
+      "type": "object"
+    },
+    "Layout": {
+      "properties": {
+        "columns": {
+          "title": "Columns",
+          "type": "integer"
+        },
+        "rows": {
+          "title": "Rows",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "columns",
+        "rows"
+      ],
+      "title": "Layout",
+      "type": "object"
+    },
+    "NextAction": {
+      "properties": {
+        "nodeKey": {
+          "title": "Nodekey",
+          "type": "string"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "nodeKey",
+        "text"
+      ],
+      "title": "NextAction",
+      "type": "object"
+    },
+    "NodeSkill": {
+      "properties": {
+        "skillId": {
+          "title": "Skillid",
+          "type": "integer"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "currentLevel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currentlevel"
+        },
+        "targetLevel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Targetlevel"
+        },
+        "gapStatus": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Gapstatus"
+        },
+        "inProfile": {
+          "title": "Inprofile",
+          "type": "boolean"
+        },
+        "profileLabel": {
+          "default": "",
+          "title": "Profilelabel",
+          "type": "string"
+        },
+        "profileEvidence": {
+          "items": {
+            "$ref": "#/$defs/ProfileEvidence"
+          },
+          "title": "Profileevidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "skillId",
+        "name",
+        "currentLevel",
+        "targetLevel",
+        "gapStatus",
+        "inProfile"
+      ],
+      "title": "NodeSkill",
+      "type": "object"
+    },
+    "Position": {
+      "description": "Canvas grid line numbers, starting at 1. column is 1-3.",
+      "properties": {
+        "row": {
+          "title": "Row",
+          "type": "integer"
+        },
+        "column": {
+          "title": "Column",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "row",
+        "column"
+      ],
+      "title": "Position",
+      "type": "object"
+    },
+    "ProfileEvidence": {
+      "properties": {
+        "evidenceType": {
+          "title": "Evidencetype",
+          "type": "string"
+        },
+        "excerpt": {
+          "title": "Excerpt",
+          "type": "string"
+        }
+      },
+      "required": [
+        "evidenceType",
+        "excerpt"
+      ],
+      "title": "ProfileEvidence",
+      "type": "object"
+    },
+    "Progress": {
+      "properties": {
+        "completedSteps": {
+          "title": "Completedsteps",
+          "type": "integer"
+        },
+        "totalSteps": {
+          "title": "Totalsteps",
+          "type": "integer"
+        },
+        "completedTasks": {
+          "title": "Completedtasks",
+          "type": "integer"
+        },
+        "totalTasks": {
+          "title": "Totaltasks",
+          "type": "integer"
+        },
+        "percent": {
+          "title": "Percent",
+          "type": "integer"
+        },
+        "label": {
+          "default": "",
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "completedSteps",
+        "totalSteps",
+        "completedTasks",
+        "totalTasks",
+        "percent"
+      ],
+      "title": "Progress",
+      "type": "object"
+    },
+    "ReviewedRelationship": {
+      "properties": {
+        "dependencyId": {
+          "title": "Dependencyid",
+          "type": "integer"
+        },
+        "relationshipType": {
+          "enum": [
+            "prerequisite",
+            "recommended_before",
+            "related"
+          ],
+          "title": "Relationshiptype",
+          "type": "string"
+        },
+        "scopeType": {
+          "enum": [
+            "general",
+            "document_specific",
+            "conditional"
+          ],
+          "title": "Scopetype",
+          "type": "string"
+        },
+        "scopeNote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Scopenote"
+        },
+        "sourceTitle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourcetitle"
+        },
+        "sourceUrl": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sourceurl"
+        },
+        "evidenceQuote": {
+          "title": "Evidencequote",
+          "type": "string"
+        }
+      },
+      "required": [
+        "dependencyId",
+        "relationshipType",
+        "scopeType",
+        "evidenceQuote"
+      ],
+      "title": "ReviewedRelationship",
+      "type": "object"
+    },
+    "RoadmapNode": {
+      "properties": {
+        "key": {
+          "title": "Key",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "skill",
+            "foundation-check",
+            "foundation-context",
+            "project",
+            "career-activity",
+            "goal"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "subtitle": {
+          "default": "",
+          "title": "Subtitle",
+          "type": "string"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "whyItMatters": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Whyitmatters",
+          "type": "array"
+        },
+        "skill": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/NodeSkill"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "estimatedHours": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HoursRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "dependsOn": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Dependson",
+          "type": "array"
+        },
+        "layer": {
+          "default": 0,
+          "title": "Layer",
+          "type": "integer"
+        },
+        "order": {
+          "default": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "recommendedOrder": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recommendedorder"
+        },
+        "position": {
+          "$ref": "#/$defs/Position",
+          "default": {
+            "row": 1,
+            "column": 1
+          }
+        },
+        "status": {
+          "default": "not_started",
+          "enum": [
+            "not_started",
+            "in_progress",
+            "completed",
+            "skipped"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "learningContentAvailable": {
+          "default": true,
+          "title": "Learningcontentavailable",
+          "type": "boolean"
+        },
+        "contextOnly": {
+          "default": false,
+          "title": "Contextonly",
+          "type": "boolean"
+        },
+        "checklist": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ChecklistItem"
+          },
+          "title": "Checklist",
+          "type": "array"
+        },
+        "details": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SkillDetail"
+          },
+          "title": "Details",
+          "type": "array"
+        },
+        "baselineComplete": {
+          "default": false,
+          "title": "Baselinecomplete",
+          "type": "boolean"
+        },
+        "citations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "notice": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Notice"
+        }
+      },
+      "required": [
+        "key",
+        "kind",
+        "title",
+        "summary",
+        "whyItMatters"
+      ],
+      "title": "RoadmapNode",
+      "type": "object"
+    },
+    "SkillDetail": {
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "detail": {
+          "title": "Detail",
+          "type": "string"
+        },
+        "citations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Citations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "detail"
+      ],
+      "title": "SkillDetail",
+      "type": "object"
+    },
+    "Summary": {
+      "properties": {
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "overview": {
+          "title": "Overview",
+          "type": "string"
+        },
+        "targetRole": {
+          "title": "Targetrole",
+          "type": "string"
+        },
+        "careerName": {
+          "title": "Careername",
+          "type": "string"
+        },
+        "readinessTimeframe": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Readinesstimeframe"
+        },
+        "targetDate": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Targetdate"
+        },
+        "weeklyAvailability": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Weeklyavailability"
+        },
+        "learningStyle": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Learningstyle"
+        },
+        "estimatedHours": {
+          "$ref": "#/$defs/HoursRange"
+        },
+        "budgetHours": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HoursRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "weeklyHours": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/HoursRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "durationLabel": {
+          "title": "Durationlabel",
+          "type": "string"
+        },
+        "timeRemainingLabel": {
+          "title": "Timeremaininglabel",
+          "type": "string"
+        },
+        "planningNote": {
+          "title": "Planningnote",
+          "type": "string"
+        },
+        "assumptions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "title",
+        "overview",
+        "targetRole",
+        "careerName",
+        "readinessTimeframe",
+        "targetDate",
+        "weeklyAvailability",
+        "learningStyle",
+        "estimatedHours",
+        "budgetHours",
+        "weeklyHours",
+        "durationLabel",
+        "timeRemainingLabel",
+        "planningNote",
+        "assumptions"
+      ],
+      "title": "Summary",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "roadmapId": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Roadmapid"
+    },
+    "version": {
+      "anyOf": [
+        {
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Version"
+    },
+    "status": {
+      "default": "draft",
+      "enum": [
+        "draft",
+        "active",
+        "completed",
+        "replaced",
+        "archived"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "generatedAt": {
+      "title": "Generatedat",
+      "type": "string"
+    },
+    "generation": {
+      "$ref": "#/$defs/Generation"
+    },
+    "summary": {
+      "$ref": "#/$defs/Summary"
+    },
+    "nextAction": {
+      "$ref": "#/$defs/NextAction"
+    },
+    "currentNodeKey": {
+      "default": "",
+      "title": "Currentnodekey",
+      "type": "string"
+    },
+    "layout": {
+      "$ref": "#/$defs/Layout",
+      "default": {
+        "columns": 3,
+        "rows": 1
+      }
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/RoadmapNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "edges": {
+      "items": {
+        "$ref": "#/$defs/Edge"
+      },
+      "title": "Edges",
+      "type": "array"
+    },
+    "deferred": {
+      "items": {
+        "$ref": "#/$defs/DeferredSkill"
+      },
+      "title": "Deferred",
+      "type": "array"
+    },
+    "confirmations": {
+      "items": {
+        "$ref": "#/$defs/Confirmation"
+      },
+      "title": "Confirmations",
+      "type": "array"
+    },
+    "contentNotices": {
+      "items": {
+        "$ref": "#/$defs/ContentNotice"
+      },
+      "title": "Contentnotices",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    },
+    "progress": {
+      "$ref": "#/$defs/Progress"
+    }
+  },
+  "required": [
+    "generatedAt",
+    "generation",
+    "summary",
+    "nextAction",
+    "nodes",
+    "edges",
+    "deferred",
+    "confirmations",
+    "contentNotices",
+    "limitations",
+    "progress"
+  ],
+  "title": "RoadmapView",
+  "type": "object"
+}

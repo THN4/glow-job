@@ -1,0 +1,1106 @@
+{
+  "version": "3.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "currentViewName": null,
+  "defaultView": {
+    "detailLevel": "All",
+    "relationshipMode": "All",
+    "tablePositions": [
+      {
+        "name": "companies",
+        "schemaName": "core",
+        "x": 12,
+        "y": 12
+      },
+      {
+        "name": "careers",
+        "schemaName": "core",
+        "x": 12,
+        "y": 552
+      },
+      {
+        "name": "career_profiles",
+        "schemaName": "core",
+        "x": 670.35302734375,
+        "y": 679
+      },
+      {
+        "name": "skills",
+        "schemaName": "core",
+        "x": 12,
+        "y": 282
+      },
+      {
+        "name": "skill_aliases",
+        "schemaName": "core",
+        "x": 670.35302734375,
+        "y": 74
+      },
+      {
+        "name": "job_postings",
+        "schemaName": "market",
+        "x": 1452.5439453125,
+        "y": 53
+      },
+      {
+        "name": "job_search_matches",
+        "schemaName": "market",
+        "x": 2426.9228515625,
+        "y": 12
+      },
+      {
+        "name": "job_skills",
+        "schemaName": "market",
+        "x": 2426.9228515625,
+        "y": 250
+      },
+      {
+        "name": "career_skill_stats",
+        "schemaName": "market",
+        "x": 1452.5439453125,
+        "y": 739
+      },
+      {
+        "name": "knowledge_sources",
+        "schemaName": "knowledge",
+        "x": 670.35302734375,
+        "y": 280
+      },
+      {
+        "name": "knowledge_chunks",
+        "schemaName": "knowledge",
+        "x": 1452.5439453125,
+        "y": 1329
+      },
+      {
+        "name": "skill_dependencies",
+        "schemaName": "knowledge",
+        "x": 1452.5439453125,
+        "y": 1727
+      },
+      {
+        "name": "learning_modules",
+        "schemaName": "knowledge",
+        "x": 670.35302734375,
+        "y": 1046
+      },
+      {
+        "name": "users",
+        "schemaName": "app",
+        "x": 670.35302734375,
+        "y": 1518
+      },
+      {
+        "name": "user_profiles",
+        "schemaName": "app",
+        "x": 12,
+        "y": 854
+      },
+      {
+        "name": "resumes",
+        "schemaName": "app",
+        "x": 1452.5439453125,
+        "y": 3178
+      },
+      {
+        "name": "resume_extractions",
+        "schemaName": "app",
+        "x": 2426.9228515625,
+        "y": 766
+      },
+      {
+        "name": "user_educations",
+        "schemaName": "app",
+        "x": 2426.9228515625,
+        "y": 1228
+      },
+      {
+        "name": "user_experiences",
+        "schemaName": "app",
+        "x": 2426.9228515625,
+        "y": 1818
+      },
+      {
+        "name": "user_skills",
+        "schemaName": "app",
+        "x": 1452.5439453125,
+        "y": 2684
+      },
+      {
+        "name": "user_skill_evidence",
+        "schemaName": "app",
+        "x": 3248.75146484375,
+        "y": 12
+      },
+      {
+        "name": "user_career_goals",
+        "schemaName": "app",
+        "x": 1452.5439453125,
+        "y": 3629
+      },
+      {
+        "name": "user_certifications",
+        "schemaName": "app",
+        "x": 2429.5256829909767,
+        "y": 2551.8509657125774
+      },
+      {
+        "name": "roadmaps",
+        "schemaName": "app",
+        "x": 2426.9228515625,
+        "y": 3041
+      },
+      {
+        "name": "roadmap_steps",
+        "schemaName": "app",
+        "x": 3248.75146484375,
+        "y": 378
+      },
+      {
+        "name": "roadmap_tasks",
+        "schemaName": "app",
+        "x": 3857.189453125,
+        "y": 12
+      },
+      {
+        "name": "user_roadmap_progress",
+        "schemaName": "app",
+        "x": 3857.189453125,
+        "y": 315
+      },
+      {
+        "name": "user_task_progress",
+        "schemaName": "app",
+        "x": 4448.30419921875,
+        "y": 12
+      },
+      {
+        "name": "job_applications",
+        "schemaName": "app",
+        "x": 2426.9228515625,
+        "y": 3535
+      },
+      {
+        "name": "application_feedback",
+        "schemaName": "app",
+        "x": 3248.75146484375,
+        "y": 872
+      },
+      {
+        "name": "interview_sessions",
+        "schemaName": "app",
+        "x": 2426.9228515625,
+        "y": 3933
+      },
+      {
+        "name": "interview_feedback",
+        "schemaName": "app",
+        "x": 3248.75146484375,
+        "y": 1142
+      },
+      {
+        "name": "ingestion_runs",
+        "schemaName": "system",
+        "x": 1452.5439453125,
+        "y": 2157
+      },
+      {
+        "name": "ai_runs",
+        "schemaName": "system",
+        "x": 1452.5439453125,
+        "y": 4123
+      }
+    ],
+    "tableGroupCollapseStates": [],
+    "stickyNoteLayouts": [],
+    "referencePaths": [
+      {
+        "firstFieldNames": [
+          "career_id"
+        ],
+        "firstTableName": "career_profiles",
+        "firstSchemaName": "core",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_id"
+        ],
+        "secondTableName": "careers",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "skill_aliases",
+        "firstSchemaName": "core",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "company_id"
+        ],
+        "firstTableName": "job_postings",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "company_id"
+        ],
+        "secondTableName": "companies",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_profile_id"
+        ],
+        "firstTableName": "job_postings",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_profile_id"
+        ],
+        "secondTableName": "career_profiles",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "job_id"
+        ],
+        "firstTableName": "job_search_matches",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "job_id"
+        ],
+        "secondTableName": "job_postings",
+        "secondSchemaName": "market",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "run_id"
+        ],
+        "firstTableName": "job_search_matches",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "run_id"
+        ],
+        "secondTableName": "ingestion_runs",
+        "secondSchemaName": "system",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_profile_id"
+        ],
+        "firstTableName": "job_search_matches",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_profile_id"
+        ],
+        "secondTableName": "career_profiles",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "job_id"
+        ],
+        "firstTableName": "job_skills",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "job_id"
+        ],
+        "secondTableName": "job_postings",
+        "secondSchemaName": "market",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "job_skills",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_profile_id"
+        ],
+        "firstTableName": "career_skill_stats",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_profile_id"
+        ],
+        "secondTableName": "career_profiles",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "career_skill_stats",
+        "firstSchemaName": "market",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "knowledge_sources",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "source_id"
+        ],
+        "firstTableName": "knowledge_chunks",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "source_id"
+        ],
+        "secondTableName": "knowledge_sources",
+        "secondSchemaName": "knowledge",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "knowledge_chunks",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "prerequisite_skill_id"
+        ],
+        "firstTableName": "skill_dependencies",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "target_skill_id"
+        ],
+        "firstTableName": "skill_dependencies",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "source_id"
+        ],
+        "firstTableName": "skill_dependencies",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "source_id"
+        ],
+        "secondTableName": "knowledge_sources",
+        "secondSchemaName": "knowledge",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "learning_modules",
+        "firstSchemaName": "knowledge",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_profiles",
+        "firstSchemaName": "app",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "resumes",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "resume_id"
+        ],
+        "firstTableName": "resume_extractions",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "resume_id"
+        ],
+        "secondTableName": "resumes",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_educations",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "source_resume_id"
+        ],
+        "firstTableName": "user_educations",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "resume_id"
+        ],
+        "secondTableName": "resumes",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_experiences",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "source_resume_id"
+        ],
+        "firstTableName": "user_experiences",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "resume_id"
+        ],
+        "secondTableName": "resumes",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_skills",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "user_skills",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_skill_evidence",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_skill_id"
+        ],
+        "firstTableName": "user_skill_evidence",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_skill_id"
+        ],
+        "secondTableName": "user_skills",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "resume_id"
+        ],
+        "firstTableName": "user_skill_evidence",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "resume_id"
+        ],
+        "secondTableName": "resumes",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "experience_id"
+        ],
+        "firstTableName": "user_skill_evidence",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "experience_id"
+        ],
+        "secondTableName": "user_experiences",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_career_goals",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_id"
+        ],
+        "firstTableName": "user_career_goals",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_id"
+        ],
+        "secondTableName": "careers",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_profile_id"
+        ],
+        "firstTableName": "user_career_goals",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_profile_id"
+        ],
+        "secondTableName": "career_profiles",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_certifications",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "source_resume_id"
+        ],
+        "firstTableName": "user_certifications",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "resume_id"
+        ],
+        "secondTableName": "resumes",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "roadmaps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "goal_id"
+        ],
+        "firstTableName": "roadmaps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "goal_id"
+        ],
+        "secondTableName": "user_career_goals",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_id"
+        ],
+        "firstTableName": "roadmaps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_id"
+        ],
+        "secondTableName": "careers",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_profile_id"
+        ],
+        "firstTableName": "roadmaps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_profile_id"
+        ],
+        "secondTableName": "career_profiles",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "previous_roadmap_id"
+        ],
+        "firstTableName": "roadmaps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "roadmap_id"
+        ],
+        "secondTableName": "roadmaps",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "roadmap_id"
+        ],
+        "firstTableName": "roadmap_steps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "roadmap_id"
+        ],
+        "secondTableName": "roadmaps",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "skill_id"
+        ],
+        "firstTableName": "roadmap_steps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "skill_id"
+        ],
+        "secondTableName": "skills",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "module_id"
+        ],
+        "firstTableName": "roadmap_steps",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "module_id"
+        ],
+        "secondTableName": "learning_modules",
+        "secondSchemaName": "knowledge",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "roadmap_step_id"
+        ],
+        "firstTableName": "roadmap_tasks",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "roadmap_step_id"
+        ],
+        "secondTableName": "roadmap_steps",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_roadmap_progress",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "roadmap_step_id"
+        ],
+        "firstTableName": "user_roadmap_progress",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "roadmap_step_id"
+        ],
+        "secondTableName": "roadmap_steps",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "user_task_progress",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "task_id"
+        ],
+        "firstTableName": "user_task_progress",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "task_id"
+        ],
+        "secondTableName": "roadmap_tasks",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "job_applications",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "job_id"
+        ],
+        "firstTableName": "job_applications",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "job_id"
+        ],
+        "secondTableName": "job_postings",
+        "secondSchemaName": "market",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "company_id"
+        ],
+        "firstTableName": "job_applications",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "company_id"
+        ],
+        "secondTableName": "companies",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "application_id"
+        ],
+        "firstTableName": "application_feedback",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "application_id"
+        ],
+        "secondTableName": "job_applications",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "interview_sessions",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "job_id"
+        ],
+        "firstTableName": "interview_sessions",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "job_id"
+        ],
+        "secondTableName": "job_postings",
+        "secondSchemaName": "market",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_id"
+        ],
+        "firstTableName": "interview_sessions",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_id"
+        ],
+        "secondTableName": "careers",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "interview_session_id"
+        ],
+        "firstTableName": "interview_feedback",
+        "firstSchemaName": "app",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "interview_session_id"
+        ],
+        "secondTableName": "interview_sessions",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "career_profile_id"
+        ],
+        "firstTableName": "ingestion_runs",
+        "firstSchemaName": "system",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "career_profile_id"
+        ],
+        "secondTableName": "career_profiles",
+        "secondSchemaName": "core",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "user_id"
+        ],
+        "firstTableName": "ai_runs",
+        "firstSchemaName": "system",
+        "firstRelation": "*",
+        "secondFieldNames": [
+          "user_id"
+        ],
+        "secondTableName": "users",
+        "secondSchemaName": "app",
+        "secondRelation": "1",
+        "checkPoints": []
+      }
+    ]
+  },
+  "views": {}
+}

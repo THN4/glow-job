@@ -1,0 +1,629 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
+
+/* Scoped scroll surfaces; leave browser scrolling elsewhere unchanged. */
+.scrollbar-subtle {
+  --scrollbar-size: 6px;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-hover: #94A3B8;
+}
+
+.roadmap-scrollbar {
+  --scrollbar-size: 7px;
+  --scrollbar-track: #EAF1FB;
+  --scrollbar-thumb: #93B4F5;
+  --scrollbar-hover: #2563EB;
+}
+
+.scrollbar-subtle, .roadmap-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scroll-behavior: auto;
+}
+
+.scrollbar-subtle:hover, .roadmap-scrollbar:hover {
+  scrollbar-color: var(--scrollbar-hover) var(--scrollbar-track);
+}
+
+@supports selector(::-webkit-scrollbar) {
+  /* Keep the standard hover rule from switching Chromium back to native bars. */
+  .scrollbar-subtle, .roadmap-scrollbar,
+  .scrollbar-subtle:hover, .roadmap-scrollbar:hover {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar {
+    width: var(--scrollbar-size);
+    height: var(--scrollbar-size);
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-track,
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-corner {
+    background: var(--scrollbar-track);
+    border-radius: 999px;
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 999px;
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-hover);
+  }
+  :is(.scrollbar-subtle, .roadmap-scrollbar)::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .scrollbar-subtle, .roadmap-scrollbar {
+    --scrollbar-thumb: ButtonText;
+    --scrollbar-hover: Highlight;
+    --scrollbar-track: Canvas;
+  }
+}
+
+@keyframes cv-analysis-float {
+  50% { translate: 0 -7px; }
+}
+
+@keyframes cv-analysis-scan {
+  0%, 15% { top: -20%; opacity: 0; }
+  25% { opacity: 1; }
+  80% { top: 100%; opacity: 0.7; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes cv-analysis-transfer {
+  0%, 15% { translate: 0 -50%; opacity: 0; }
+  30% { opacity: 1; }
+  80%, 100% { translate: 40px -50%; opacity: 0; }
+}
+
+@keyframes cv-analysis-highlight {
+  50% { background-color: #dbeafe80; }
+}
+
+@keyframes cv-analysis-twinkle {
+  50% { opacity: 0.45; scale: 0.88; }
+}
+
+.cv-analysis-visual:is([data-state="running"], [data-state="ready"]) .cv-analysis-document {
+  animation: cv-analysis-float 5s ease-in-out infinite;
+}
+
+.cv-analysis-visual:is([data-state="running"], [data-state="ready"]) .cv-analysis-profile {
+  animation: cv-analysis-float 6s ease-in-out -2s infinite;
+}
+
+.cv-analysis-visual[data-state="ready"] :is(.cv-analysis-document, .cv-analysis-profile) {
+  animation-duration: 9s;
+}
+
+.cv-analysis-scan, .cv-analysis-transfer {
+  opacity: 0;
+}
+
+.cv-analysis-visual[data-state="running"] .cv-analysis-scan {
+  background: linear-gradient(transparent, #60a5fa40);
+  border-bottom: 1px solid #60a5fa90;
+  box-shadow: 0 4px 12px #60a5fa30;
+  animation: cv-analysis-scan 3.8s ease-in-out infinite;
+}
+
+.cv-analysis-visual[data-state="running"] .cv-analysis-transfer {
+  box-shadow: 0 0 8px #38bdf8;
+  animation: cv-analysis-transfer 2.6s ease-in-out infinite;
+}
+
+.cv-analysis-visual[data-state="running"] .cv-analysis-row {
+  animation: cv-analysis-highlight 3s ease-in-out infinite;
+}
+
+.cv-analysis-visual[data-state="running"] :is(.cv-analysis-halo, .cv-analysis-sparkle) {
+  animation: cv-analysis-twinkle 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-analysis-visual * {
+    animation: none !important;
+  }
+}
+
+.onboarding-sidebar-scroll {
+  scrollbar-color: rgb(37 99 235 / 0.35) transparent;
+  scrollbar-width: thin;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-track,
+.onboarding-sidebar-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgb(37 99 235 / 0.28);
+  background-clip: padding-box;
+}
+
+.onboarding-sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(37 99 235 / 0.5);
+  background-clip: padding-box;
+}
+
+.deadline-option-group {
+  container-type: inline-size;
+}
+
+@container (max-width: 800px) {
+  .deadline-option-description {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .onboarding-sidebar-copy h2 {
+    margin-top: 1.25rem;
+  }
+
+  .onboarding-sidebar-copy p {
+    margin-top: 0.625rem;
+  }
+
+  .onboarding-sidebar-copy ul {
+    margin-top: 1rem;
+    padding-bottom: 5rem;
+  }
+
+  .onboarding-sidebar-copy li + li {
+    margin-top: 1rem;
+  }
+}
+
+@keyframes roadmap-build-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes roadmap-build-glow {
+  50% { opacity: 0.45; transform: scale(0.88); }
+}
+
+@keyframes roadmap-build-float {
+  50% { translate: 0 -9px; }
+}
+
+@keyframes roadmap-build-route {
+  to { stroke-dashoffset: -48; }
+}
+
+.roadmap-build-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.roadmap-build-scene {
+  position: relative;
+  height: 340px;
+  isolation: isolate;
+}
+
+.roadmap-build-halo {
+  position: absolute;
+  inset: 8% 0;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #c7d2fe90, #e0f2fe60 55%, transparent 72%);
+}
+
+.roadmap-build-board {
+  position: absolute;
+  inset: 18% 12% 13%;
+  border: 10px solid #c7d2fe;
+  border-top-color: #b9c5ff;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fff, #eef2ff);
+  padding: 18px;
+  rotate: 7deg;
+  box-shadow: 0 20px 40px #637ee52b, inset 0 0 20px #dbeafe;
+  animation: roadmap-build-float 6s ease-in-out infinite;
+}
+
+.roadmap-build-path {
+  position: absolute;
+  inset: 30% 2% 0;
+  width: 96%;
+  height: 60%;
+}
+
+.roadmap-build-route {
+  stroke-dasharray: 16 8;
+  animation: roadmap-build-route 3s linear infinite;
+}
+
+
+.roadmap-build-label {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 175px;
+  border: 1px solid #ffffffc9;
+  border-radius: 14px;
+  background: #ffffffdb;
+  padding: 10px;
+  color: #172554;
+  font-size: 11px;
+  line-height: 1.4;
+  box-shadow: 0 8px 26px #7399ee1f;
+  backdrop-filter: blur(8px);
+  animation: roadmap-build-float 4.5s ease-in-out infinite;
+}
+
+.roadmap-build-label > svg {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  padding: 6px;
+}
+
+.roadmap-build-label-one { left: 0; top: 21%; animation-delay: -1s; }
+.roadmap-build-label-two { right: 0; top: 5%; animation-delay: -2.5s; }
+.roadmap-build-label-three { left: 0; bottom: 10%; animation-delay: -3s; }
+.roadmap-build-label-four { right: 0; bottom: 6%; animation-delay: -0.5s; }
+
+@media (min-width: 1100px) {
+  .roadmap-build-layout {
+    grid-template-columns: minmax(0, 1.65fr) minmax(280px, 1fr);
+    align-items: start;
+  }
+}
+
+@media (max-width: 479px) {
+  .roadmap-build-scene { height: 280px; }
+  .roadmap-build-board { inset: 20% 5% 18%; padding: 12px; border-width: 7px; }
+  .roadmap-build-label { padding: 7px; font-size: 10px; gap: 5px; }
+  .roadmap-build-label > svg { width: 27px; height: 27px; }
+}
+
+@keyframes roadmap-build-dot {
+  50% { opacity: 0.55; transform: scale(0.75); }
+}
+
+.roadmap-build-orbit {
+  animation: roadmap-build-orbit 3.5s linear infinite;
+}
+
+.roadmap-build-glow {
+  animation: roadmap-build-glow 2.2s ease-in-out infinite;
+}
+
+.roadmap-build-dot {
+  animation: roadmap-build-dot 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-build-orbit,
+  .roadmap-build-board,
+  .roadmap-build-label,
+  .roadmap-build-route,
+  .roadmap-build-glow,
+  .roadmap-build-dot {
+    animation: none;
+  }
+}
+
+.application-form-layout {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.application-form-description {
+  border-top: 1px solid #bfdbfe;
+  padding-top: 1.25rem;
+}
+
+@media (min-width: 640px) {
+  .application-form-layout {
+    grid-template-columns: minmax(220px, 0.34fr) minmax(0, 0.66fr);
+    gap: 0;
+  }
+
+  .application-form-info {
+    padding-right: 1.5rem;
+  }
+
+  .application-form-description {
+    border-top: 0;
+    border-left: 1px solid #bfdbfe;
+    padding-top: 0;
+    padding-left: 1.5rem;
+  }
+}
+
+@custom-variant dark (&:is(.dark *));
+
+@keyframes roadmap-flow {
+  to { stroke-dashoffset: -30; }
+}
+
+@keyframes roadmap-current-flow {
+  to { stroke-dashoffset: -28; }
+}
+
+.roadmap-current-flow {
+  animation: roadmap-current-flow 2s linear infinite;
+}
+
+.roadmap-connection-flow {
+  opacity: 0;
+}
+
+.roadmap-connection-line {
+  transition: stroke 150ms, stroke-width 150ms;
+}
+
+.roadmap-connection:is(:hover, :focus-visible) .roadmap-connection-line {
+  stroke: currentColor;
+  stroke-width: 3;
+  opacity: 0.3;
+}
+
+.roadmap-connection:is(:hover, :focus-visible) .roadmap-connection-flow {
+  opacity: 1;
+  animation: roadmap-flow 900ms linear infinite;
+}
+
+@keyframes recent-activity-flow {
+  to { background-position: 0 32px; }
+}
+
+.recent-activity-circle {
+  transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+.recent-activity-item:is(:hover, :focus-within) .recent-activity-circle {
+  border-color: currentColor;
+  box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 14%, transparent),
+    0 0 16px color-mix(in srgb, currentColor 22%, transparent);
+  transform: scale(1.08);
+}
+
+.recent-activity-line {
+  position: relative;
+  overflow: hidden;
+}
+
+.recent-activity-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, #60a5fa 40%, #2563eb 60%, transparent);
+  background-size: 100% 32px;
+  opacity: 0;
+  transition: opacity 180ms ease;
+  animation: recent-activity-flow 900ms linear infinite paused;
+}
+
+.recent-activity-timeline:is(:hover, :focus-within) .recent-activity-line::after {
+  opacity: 1;
+  animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recent-activity-circle {
+    transition: none;
+  }
+  .recent-activity-item:is(:hover, :focus-within) .recent-activity-circle {
+    transform: none;
+  }
+  .recent-activity-line::after {
+    animation: none;
+    transition: none;
+  }
+  .roadmap-current-flow {
+    animation: none;
+  }
+  .roadmap-connection:is(:hover, :focus-visible) .roadmap-connection-flow {
+    animation: none;
+  }
+}
+@custom-variant roomy-header {
+  @media (min-width: 40rem) and (min-height: 30rem) {
+    @slot;
+  }
+}
+/* Keep phones compact, including landscape; expand for landscape tablets and desktops. */
+@custom-variant sidebar-expanded {
+  @media (min-width: 80rem), (min-width: 48rem) and (min-height: 30rem) and (orientation: landscape) {
+    @slot;
+  }
+}
+
+@theme inline {
+  --color-panel: var(--panel);
+  --color-icon-blue: var(--icon-blue);
+  --color-icon-green: var(--icon-green);
+  --color-icon-purple: var(--icon-purple);
+  --color-icon-pink: var(--icon-pink);
+  --color-icon-amber: var(--icon-amber);
+  --color-icon-teal: var(--icon-teal);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-pink: var(--pink);
+  --color-teal: var(--teal);
+  --color-skill-beginner: var(--skill-beginner);
+  --color-skill-beginner-border: var(--skill-beginner-border);
+  --color-skill-intermediate: var(--skill-intermediate);
+  --color-skill-intermediate-border: var(--skill-intermediate-border);
+  --color-skill-advanced: var(--skill-advanced);
+  --color-skill-advanced-border: var(--skill-advanced-border);
+  --color-skill-expert: var(--skill-expert);
+  --color-skill-expert-border: var(--skill-expert-border);
+  --color-skill-unknown: var(--skill-unknown);
+  --color-skill-unknown-border: var(--skill-unknown-border);
+  --font-heading: var(--font-sans);
+  --font-sans: 'Geist Variable', 'Noto Sans Thai', sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: #f2f9ff;
+  --foreground: #0d1246;
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: #0B5FFF;
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: #e4efff;
+  --secondary-foreground: var(--primary);
+  --muted: #eaf2fc;
+  --muted-foreground: #637fbd;
+  --accent: #e9f5ff;
+  --accent-foreground: var(--primary);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: #d7e6ff;
+  --input: #c7dbff;
+  --ring: var(--primary);
+  --panel: #f4f9ff;
+  --icon-blue: #e4efff;
+  --icon-green: #e1f7f0;
+  --icon-purple: #efe6ff;
+  --icon-pink: #fde5f0;
+  --icon-amber: #fff4d9;
+  --icon-teal: #e0f7fa;
+  --success: #00b879;
+  --warning: #e28a00;
+  --info: #7638ff;
+  --pink: #ff278b;
+  --teal: #00b3c5;
+  --skill-beginner: #e8f7ee;
+  --skill-beginner-border: #b4ddc2;
+  --skill-intermediate: #fff8db;
+  --skill-intermediate-border: #e8d99d;
+  --skill-advanced: #fff1e5;
+  --skill-advanced-border: #edc59f;
+  --skill-expert: #fff0ed;
+  --skill-expert-border: #efc1b9;
+  --skill-unknown: #f0f2f5;
+  --skill-unknown-border: #d7dce3;
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.75rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --skill-beginner: #18362a;
+  --skill-beginner-border: #31684b;
+  --skill-intermediate: #39311d;
+  --skill-intermediate-border: #786734;
+  --skill-advanced: #3d2c20;
+  --skill-advanced-border: #8a5b34;
+  --skill-expert: #3d2525;
+  --skill-expert-border: #88514c;
+  --skill-unknown: #2c3038;
+  --skill-unknown-border: #555d6a;
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: #0B5FFF;
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  html {
+    @apply font-sans;
+  }
+}
