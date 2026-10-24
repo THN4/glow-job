@@ -20,10 +20,16 @@ The product uses anonymous browser sessions for local development. A saved profi
 | `backend/` | FastAPI routes, upload/job orchestration, profile and goal persistence, market matching, roadmap generation, and assessment APIs. |
 | `ai/` | Roadmap contracts, prompt, provider adapters, validation, generation, and graph construction. |
 | `rag/` | Read-only data preparation, skill-filtered document retrieval, evidence review, and Agent Context assembly for roadmap generation. |
-| `data-pipeline/` | Git submodule with the Market and reusable Resume packages, document ingestion and embeddings, shared skill normalization, CLI tools, and pipeline migrations. |
+| [`data-pipeline/`](https://github.com/THN4/glow-job-data-pipeline) | Separate Git repository included here as a submodule; owns the Market and reusable Resume packages, document ingestion and embeddings, shared skill normalization, CLI tools, and pipeline migrations. |
 | `migrations/` | Host-application database migrations, including profile, roadmap, application, and assessment tables. |
 | `shared/contracts/` | API types, JSON schemas, and example roadmap responses shared with the frontend. |
 | `compose.yaml` | Local PostgreSQL and backend services. Compose automatically loads `compose.override.yaml` for the local Nova profile. |
+
+### Data-pipeline sub-repository
+
+[`glow-job-data-pipeline`](https://github.com/THN4/glow-job-data-pipeline) is a separate repository that owns the data-pipeline code. In this project it appears at `data-pipeline/` as a Git submodule. The submodule contains the Market ingestion and aggregation pipeline, reusable Resume extraction code, learning-document ingestion and retrieval tools, shared skill normalization, and pipeline-owned database migrations.
+
+The `glow-job` repository pins a specific commit of that repository so the app and pipeline use a compatible version together. Cloning with `--recurse-submodules` checks out that pinned version; it does not automatically select the latest commit from the data-pipeline repository. Make pipeline changes and commits in the [data-pipeline repository](https://github.com/THN4/glow-job-data-pipeline), then update the submodule pointer in `glow-job` when the change is ready for integration.
 
 ### Main data flow
 
