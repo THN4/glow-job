@@ -4,7 +4,8 @@ import test from 'node:test'
 import ts from 'typescript'
 
 const source = await readFile(new URL('../src/features/roadmap/profileUpdates.ts', import.meta.url), 'utf8')
-const { outputText } = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext } })
+const uuidUrl = new URL('../src/lib/uuid.ts', import.meta.url).href
+const { outputText } = ts.transpileModule(source.replace('../../lib/uuid.ts', uuidUrl), { compilerOptions: { module: ts.ModuleKind.ESNext } })
 const { applyProfileUpdates } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString('base64')}`)
 
 const profile = () => ({

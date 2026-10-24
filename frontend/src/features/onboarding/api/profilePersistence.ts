@@ -1,8 +1,9 @@
 import type { CvItem, CvProfile } from '../../resume/api'
 import type { Profile } from '../types'
+import { createUuid } from '../../../lib/uuid.ts'
 
 function meta(original?: CvItem) {
-  return { id: crypto.randomUUID(), confidence: 'high', ...original, source: 'user', needsReview: false }
+  return { id: createUuid(), confidence: 'high', ...original, source: 'user', needsReview: false }
 }
 
 function dates(value: string, original?: CvItem) {

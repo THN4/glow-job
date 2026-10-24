@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Plus } from 'lucide-react'
+import { createUuid } from '../../../lib/uuid.ts'
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '../../../components/ui/dialog'
 import { safeSourceUrl } from '../learningSources'
 import type { RoadmapEvidence } from '../type'
@@ -34,7 +35,7 @@ export function EvidenceForm({ topic, onSave }: EvidenceFormProps) {
     }
     setSaving(true)
     try {
-      await onSave({ id: crypto.randomUUID(), type, title, url, notes, photo: type !== 'GitHub project' ? photo : undefined })
+      await onSave({ id: createUuid(), type, title, url, notes, photo: type !== 'GitHub project' ? photo : undefined })
       setOpen(false)
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Could not save evidence.')

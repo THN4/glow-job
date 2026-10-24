@@ -1,3 +1,5 @@
+import { createUuid } from '../../lib/uuid.ts'
+
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8787/api').replace(/\/$/, '')
 const SESSION_ID_KEY = 'glowjob.anonymous.sessionId'
 const PROFILE_ID_KEY = 'glowjob.anonymous.profileId'
@@ -135,7 +137,7 @@ export function getSavedProfileId(): string | null {
 export function getSessionId(): string {
   let sessionId = localStorage.getItem(SESSION_ID_KEY)
   if (!sessionId) {
-    sessionId = crypto.randomUUID()
+    sessionId = createUuid()
     localStorage.setItem(SESSION_ID_KEY, sessionId)
   }
   return sessionId
@@ -143,7 +145,7 @@ export function getSessionId(): string {
 
 /** Start a distinct anonymous profile for a fresh onboarding run. */
 export function startNewAnonymousProfileSession(): void {
-  localStorage.setItem(SESSION_ID_KEY, crypto.randomUUID())
+  localStorage.setItem(SESSION_ID_KEY, createUuid())
   localStorage.removeItem(PROFILE_ID_KEY)
 }
 

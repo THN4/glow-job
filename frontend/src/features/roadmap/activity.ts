@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { z } from 'zod'
+import { createUuid } from '../../lib/uuid.ts'
 
 const ACTIVITY_STORAGE_KEY = 'glowjob:roadmap:activity:v1'
 const ACTIVITY_UPDATED_EVENT = 'roadmap-activity-updated'
@@ -24,7 +25,7 @@ function readActivity(raw: string | null): RoadmapActivity[] {
 export function recordRoadmapActivity(activity: Pick<RoadmapActivity, 'kind' | 'title' | 'description' | 'nodeId'>) {
   try {
     const previous = readActivity(localStorage.getItem(ACTIVITY_STORAGE_KEY))
-    const entry: RoadmapActivity = { ...activity, id: crypto.randomUUID(), occurredAt: new Date().toISOString() }
+    const entry: RoadmapActivity = { ...activity, id: createUuid(), occurredAt: new Date().toISOString() }
     localStorage.setItem(ACTIVITY_STORAGE_KEY, JSON.stringify([entry, ...previous].slice(0, 50)))
     window.dispatchEvent(new Event(ACTIVITY_UPDATED_EVENT))
   } catch {

@@ -1,5 +1,6 @@
 import type { CvProfile } from '../resume/api'
 import type { TechnicalSkill } from '../onboarding/types'
+import { createUuid } from '../../lib/uuid.ts'
 
 export function applyProfileUpdates(profile: CvProfile, fields: FormData, skills: TechnicalSkill[]): CvProfile {
   const value = (key: string) => String(fields.get(key) ?? '').trim()
@@ -18,7 +19,7 @@ export function applyProfileUpdates(profile: CvProfile, fields: FormData, skills
   let projectId: string | undefined
   if (value('projectName')) {
     const existing = updated.projects.find((project) => project.name?.trim().toLowerCase() === value('projectName').toLowerCase())
-    projectId = existing?.id ?? crypto.randomUUID()
+    projectId = existing?.id ?? createUuid()
     const project = {
       role: null, startDate: null, endDate: null,
       ...existing, id: projectId, name: value('projectName'),
@@ -40,7 +41,7 @@ export function applyProfileUpdates(profile: CvProfile, fields: FormData, skills
     }
     const skill = {
       category: 'other', catalogMatch: null, ...existing,
-      id: existing?.id ?? crypto.randomUUID(), name,
+      id: existing?.id ?? createUuid(), name,
       proficiency: level,
       proficiencyBasis: level === 'unknown' ? 'unknown' : 'explicit',
       evidence, confidence: 'high', needsReview: false, source: 'user',

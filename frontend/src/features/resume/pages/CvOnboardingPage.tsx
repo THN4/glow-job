@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createUuid } from '../../../lib/uuid.ts'
 import { ArrowLeft, ArrowRight, Check, Clock3, FileText, LoaderCircle, Sparkles, UploadCloud } from 'lucide-react'
 import { extractCv, loadCareerMatch, loadCareerProfiles, loadSavedProfile, saveProfile, type CareerMatchResult, type CareerProfileOption, type CvItem, type CvProfile, type ExtractionResult } from '../api'
 
@@ -25,7 +26,7 @@ function isWebUrl(value: string): boolean {
 }
 
 function newItem(section: string): CvItem {
-  const base = { id: crypto.randomUUID(), confidence: 'high', needsReview: false, source: 'user' as const }
+  const base = { id: createUuid(), confidence: 'high', needsReview: false, source: 'user' as const }
   switch (section) {
     case 'education': return { ...base, degree: '', fieldOfStudy: '', institution: '', startDate: null, endDate: null, isCurrent: false, gpa: null, description: null }
     case 'technicalSkills': return { ...base, name: '', category: 'other', proficiency: 'unknown', proficiencyBasis: 'unknown', evidence: [], catalogMatch: null }
