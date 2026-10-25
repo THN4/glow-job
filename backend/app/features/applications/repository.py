@@ -8,6 +8,7 @@ from typing import Any
 import psycopg
 
 from app.features.resume.config import CvSettings
+from app.features.applications.semantic_matching import skill_similarities
 
 UI_TO_DB_STATUS = {
     "wishlist": "interested",
@@ -137,6 +138,10 @@ class ApplicationsRepository:
                    LEFT JOIN core.skills AS s USING (skill_id)
                    ORDER BY j.job_id, js.skill_id"""
             ).fetchall()
+            similarities = skill_similarities(
+                connection, {row[0] for row in user_skills},
+                {row[2] for row in rows if row[2] is not None and row[4] in ("required", "preferred")},
+            )
         jobs: dict[int, dict[str, Any]] = {}
         for job_id, career_id, skill_id, name, requirement_type in rows:
             if job_id not in openings:
@@ -151,6 +156,7 @@ class ApplicationsRepository:
             "targetRole": goal[0] if goal else None,
             "goalCareerId": goal[1] if goal else None,
             "jobs": list(jobs.values()),
+            "skillSimilarities": similarities,
         }
 
     def save_job_posting(self, user_id: int, job_id: int) -> dict[str, Any] | None:

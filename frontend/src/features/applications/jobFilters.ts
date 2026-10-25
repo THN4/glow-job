@@ -8,7 +8,7 @@ export function readJobFilters(params: URLSearchParams): JobFilters {
     return value.length <= max ? value : ''
   }
   return {
-    sort: params.get('sort') === 'recent' ? 'recent' : 'coverage',
+    sort: params.get('sort') === 'recent' ? 'recent' : params.get('sort') === 'coverage' ? 'coverage' : 'semantic',
     location: text('location', 300),
     employmentType: text('employmentType', 100),
     skillId: validSkill ? String(Number(skill)) : '',
@@ -18,7 +18,7 @@ export function readJobFilters(params: URLSearchParams): JobFilters {
 export function jobFilterParams(filters: JobFilters, current = new URLSearchParams()): URLSearchParams {
   const params = new URLSearchParams(current)
   for (const key of ['sort', 'location', 'employmentType', 'skillId']) params.delete(key)
-  if (filters.sort !== 'coverage') params.set('sort', filters.sort)
+  if (filters.sort !== 'semantic') params.set('sort', filters.sort)
   if (filters.location) params.set('location', filters.location)
   if (filters.employmentType) params.set('employmentType', filters.employmentType)
   if (filters.skillId) params.set('skillId', filters.skillId)

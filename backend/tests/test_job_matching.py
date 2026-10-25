@@ -8,6 +8,7 @@ from app.features.applications.job_matching import filter_job_matches, rank_jobs
 from app.features.applications.router import get_applications_service, router
 from app.features.applications.service import ApplicationsService
 from app.features.resume.career_matching import CareerMatchRepository
+from app.features.applications.semantic_matching import skill_similarities, GEMINI_MODEL
 
 
 def job(job_id, requirements, career_id=1):
@@ -57,6 +58,55 @@ def test_rank_before_limit_goal_only_breaks_ties_and_empty_profile_has_no_matche
 def test_duplicate_skill_counts_once_with_required_precedence():
     candidate = job(1, [(1, "Python", "preferred"), (1, "Python", "required"), (2, "SQL", "preferred")])
     assert rank_jobs([candidate], {1}, None, 1)[0]["scorePct"] == 66.7
+
+
+def test_vector_similarity_can_recommend_related_skills_without_claiming_coverage():
+    candidates = [job(1, [(2, "SQL", "required")]), job(2, [(3, "Pandas", "required")])]
+    result = rank_jobs(candidates, {1}, None, 10, similarities={2: 0.7, 3: 0.9})
+    assert [item["jobId"] for item in result] == [2, 1]
+    assert result[0]["semanticScorePct"] == 90
+    assert result[0]["scorePct"] == 0
+    assert result[0]["requiredMatches"] == []
+    assert result[0]["requiredMissing"] == ["Pandas"]
+    assert rank_jobs(candidates, set(), None, 10, similarities={2: 0.9}) == []
+
+
+def test_incomplete_vectors_fall_back_without_inflating_similarity_and_weights_deduplicate():
+    candidates = [job(1, [(1, "Python", "required"), (2, "SQL", "preferred")]),
+                  job(2, [(3, "Pandas", "required")])]
+    result = rank_jobs(candidates, {1}, None, 10, similarities={1: 1.0, 3: 0.8})
+    assert [item["jobId"] for item in result] == [2, 1]
+    assert result[1]["semanticScorePct"] is None
+    assert result[1]["scorePct"] == 66.7
+    weighted = job(3, [(1, "Python", "required"), (1, "Python", "preferred"), (2, "SQL", "preferred")])
+    assert rank_jobs([weighted], {1}, None, 10, similarities={1: 1, 2: 0.4})[0]["semanticScorePct"] == 80
+    assert [item["jobId"] for item in rank_jobs(candidates, {1}, None, 10, similarities={1: 1, 3: 0.8}, sort="coverage")] == [1, 2]
+
+
+def test_existing_gemini_vectors_are_read_without_embedding_calls():
+    connection = MagicMock()
+    connection.execute.return_value.fetchall.return_value = [(2, 0.8), (3, -0.1)]
+    assert skill_similarities(connection, {1}, {2, 3}) == {2: 0.8, 3: 0.0}
+    sql, params = connection.execute.call_args.args
+    assert params == (GEMINI_MODEL, [1, 2, 3], [2, 3], [1])
+    assert "s.is_active" in sql and "avg(c.embedding)" in sql and "<=>" in sql
+    connection.reset_mock()
+    assert skill_similarities(connection, set(), {2}) == {}
+    connection.execute.assert_not_called()
+
+
+def test_semantic_filtering_happens_before_limit_and_zero_similarity_is_not_a_match():
+    jobs = [job(1, [(2, "SQL", "required")]), job(2, [(3, "Pandas", "required")]),
+            job(3, [(4, "Other", "required")])]
+    for candidate, location in zip(jobs, ["Bangkok", "Remote", "Remote"]):
+        candidate["opening"]["location"] = location
+    data = {"jobs": jobs, "userSkillIds": {1}, "goalCareerId": None,
+            "skillSimilarities": {2: 0.9, 3: 0.8, 4: 0.0}}
+    result = filter_job_matches(data, 1, location="Remote")
+    assert result["totalMatched"] == 2
+    assert result["filteredCount"] == 1
+    assert result["recommendations"][0]["jobId"] == 2
+    assert result["recommendations"][0]["semanticScorePct"] == 80
 
 
 def test_filters_run_before_limit_options_cover_all_matches_and_empty_results_keep_counts():

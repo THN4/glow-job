@@ -21,13 +21,19 @@ test('invalid shared URL values do not become invalid API requests', () => {
   const filters = readJobFilters(new URLSearchParams({
     sort: 'bad', location: 'x'.repeat(301), employmentType: 'y'.repeat(101), skillId: '0071',
   }))
-  assert.deepEqual(filters, { sort: 'coverage', location: '', employmentType: '', skillId: '71' })
+  assert.deepEqual(filters, { sort: 'semantic', location: '', employmentType: '', skillId: '71' })
 })
 
 test('clearing filters removes old query values and browser-back values remain recoverable', () => {
   const old = new URLSearchParams('tab=recommendations&view=jobs&sort=recent&location=Bangkok&skillId=71')
-  const cleared = jobFilterParams({ sort: 'coverage', location: '', employmentType: '', skillId: '' }, old)
+  const cleared = jobFilterParams({ sort: 'semantic', location: '', employmentType: '', skillId: '' }, old)
   assert.equal(cleared.toString(), 'tab=recommendations&view=jobs')
   assert.equal(readJobFilters(old).location, 'Bangkok')
   assert.equal(readJobFilters(cleared).location, '')
+})
+
+test('coverage sort remains explicit while Gemini knowledge similarity is the default', () => {
+  assert.equal(readJobFilters(new URLSearchParams()).sort, 'semantic')
+  const filters = { sort: 'coverage', location: '', employmentType: '', skillId: '' }
+  assert.deepEqual(readJobFilters(jobFilterParams(filters)), filters)
 })

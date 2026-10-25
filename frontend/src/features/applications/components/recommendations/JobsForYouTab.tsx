@@ -46,6 +46,7 @@ function SkillCoverage({ job }: { job: JobRecommendation }) {
       <div className="min-w-0">
         <p className="text-sm font-bold text-black">Skill coverage</p>
         <p className="mt-1 text-xs leading-5 text-slate-600">{matchedSkills} of {totalSkills} scored skills matched</p>
+        <p className="mt-1 text-xs leading-5 text-slate-600">{job.semanticScorePct != null ? `Knowledge similarity: ${job.semanticScorePct}%` : 'Knowledge similarity unavailable'}</p>
         {job.matchesGoal && <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-emerald-100/70 px-2 py-0.5 text-xs font-semibold text-emerald-800"><Target className="size-3" aria-hidden="true" />Target career</span>}
       </div>
     </div>
@@ -98,7 +99,7 @@ export function JobsForYouTab({ data, filters, onFiltersChange, isLoading, error
       <JobRecommendationsToolbar data={data} filters={filters} isRefreshing={isRefreshing} onRefresh={onRetry} onChange={onFiltersChange} />
       {!data.recommendations.length ? <div className="rounded-xl border border-dashed border-blue-200 bg-white p-8 text-center">
         <h3 className="font-semibold text-slate-900">{data.totalMatched > 0 ? 'No jobs match these filters' : !data.totalCandidates ? 'No job postings are available yet' : !data.hasConfirmedSkills ? 'Confirm your skills to find matching jobs' : data.unscoredPostings === data.totalCandidates ? 'Job skill requirements are not ready to score yet' : 'No scored skill matches were found'}</h3>
-        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{data.totalMatched > 0 ? 'Try another location, employment type, or skill, or clear your filters to see all matches.' : 'Matches need at least one confirmed skill in common with a posting’s required or preferred skills. Review your profile or explore other openings.'}</p>
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-600">{data.totalMatched > 0 ? 'Try another location, employment type, or skill, or clear your filters to see all matches.' : 'Matches use knowledge similarity between documented skills, with confirmed skill overlap when vectors are incomplete. Review your profile or explore other openings.'}</p>
         <p className="mt-2 text-xs text-slate-500">{data.totalCandidates} postings checked; {data.unscoredPostings} have no classified required or preferred skills.</p>
         <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm font-semibold text-blue-700"><Link to="/app/skill-profile">Review Skill Profile</Link><Link to="/app/applications?tab=companies">Browse Companies</Link></div>
       </div> : <>

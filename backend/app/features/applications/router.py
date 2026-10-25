@@ -98,7 +98,7 @@ async def list_job_postings(limit: int = Query(default=60, gt=0, le=100),
 @router.get("/profiles/{profile_id}/job-recommendations")
 async def job_recommendations(profile_id: str, session_id: str = SessionId,
                               limit: int = Query(default=30, gt=0, le=100),
-                              sort: Literal["coverage", "recent"] = Query(default="coverage"),
+                              sort: Literal["semantic", "coverage", "recent"] = Query(default="semantic"),
                               location: str | None = Query(default=None, min_length=1, max_length=300),
                               employment_type: str | None = Query(default=None, alias="employmentType", min_length=1, max_length=100),
                               skill_id: int | None = Query(default=None, alias="skillId", gt=0),

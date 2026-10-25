@@ -73,6 +73,7 @@ export type CareerPathRecommendation = {
 
 export type JobRecommendation = CompanyOpening & {
   scorePct: number
+  semanticScorePct?: number | null
   matchedWeight: number
   totalWeight: number
   matchesGoal: boolean
@@ -103,7 +104,7 @@ export type JobRecommendationsResponse = {
 }
 
 export type JobFilters = {
-  sort: 'coverage' | 'recent'
+  sort: 'semantic' | 'coverage' | 'recent'
   location: string
   employmentType: string
   skillId: string

@@ -248,6 +248,57 @@ cd /opt/glow-job
 sudo -u glowjob git pull --ff-only origin main
 ```
 
+## Gemini vectors for job recommendations
+
+Jobs for you defaults to **Highest knowledge similarity**. It reads existing
+`gemini-embedding-2` vectors (768 dimensions) from PostgreSQL; it does not call
+Gemini, send profile data to Google, or rebuild embeddings on each request.
+
+The database must already have pipeline migrations `010`, `011`, and `013`,
+active knowledge sources, skill-to-chunk mappings, and populated Gemini vectors.
+As the database owner/admin in the application's database, replace
+`YOUR_DB_USER` with the actual `DB_USER` and grant read access:
+
+```sql
+GRANT USAGE ON SCHEMA knowledge TO "YOUR_DB_USER";
+GRANT SELECT ON TABLE knowledge.knowledge_sources,
+    knowledge.knowledge_chunks, knowledge.knowledge_chunk_skills
+TO "YOUR_DB_USER";
+```
+
+Verify existing vector coverage without exposing credentials:
+
+```sql
+SELECT count(DISTINCT m.skill_id) AS skills_with_gemini_vectors
+FROM knowledge.knowledge_chunk_skills m
+JOIN knowledge.knowledge_chunks c USING (chunk_id)
+JOIN knowledge.knowledge_sources s USING (source_id)
+WHERE s.is_active AND c.embedding_model = 'gemini-embedding-2'
+  AND c.embedding IS NOT NULL AND vector_norm(c.embedding) > 0;
+```
+
+Each skill is represented by the average of its active document vectors. For
+each required/preferred posting skill, matching takes the best cosine similarity
+to a documented confirmed profile skill, then averages those similarities with
+required skills weighted twice as much as preferred skills. This ranks related
+knowledge, not proficiency or skill equivalence. See the
+[pgvector aggregate and cosine documentation](https://github.com/pgvector/pgvector#querying).
+
+All scored posting skills must have usable vectors for a knowledge similarity
+score. A posting with incomplete vectors is eligible only through confirmed
+skill overlap and follows scored vector results in the default sort. Undocumented
+profile skills still count toward exact coverage. Positive vector similarity is
+used for exploration; no relevance cutoff has been calibrated. Shared or broad
+documents can make different skills look similar. **Skill coverage** still uses
+exact confirmed skill IDs and is displayed separately. Users can select coverage
+or newest-posting sorting instead. Missing database permissions remain errors;
+they do not silently disable vector matching.
+
+Deploy with the normal update command after pushing this change, then hard-refresh
+the browser. The update script preserves the existing `.env`, including
+`AWS_BEARER_TOKEN_BEDROCK`. No new API key or IAM role is needed for these database
+vector reads.
+
 ## Limitations and recovery
 
 - Jobs/caches are in memory. Use one worker; restarting loses job state.

@@ -29,7 +29,7 @@ class ApplicationsService:
         return {"jobPostings": jobs}
 
     async def job_recommendations(self, profile_id: str, session_id: str, limit: int, *,
-                                  sort: str = "coverage", location: str | None = None,
+                                  sort: str = "semantic", location: str | None = None,
                                   employment_type: str | None = None, skill_id: int | None = None) -> dict[str, Any]:
         user_id = await self._owner(profile_id, session_id)
         data = await asyncio.to_thread(self.repository.job_matching_inputs, user_id)
@@ -43,10 +43,13 @@ class ApplicationsService:
             **filter_job_matches(data, limit, sort=sort, location=location,
                                  employment_type=employment_type, skill_id=skill_id),
             "limitations": [
+                "Knowledge similarity ranks existing Gemini Embedding 2 document centroids linked to skills. It is not a probability or confirmation that you possess a related skill.",
+                "Each posting skill uses its closest documented confirmed profile skill. Required skills weigh twice as much as preferred skills. All scored posting skills need vectors for a similarity score; incomplete postings fall back to exact skill overlap.",
+                "Only confirmed profile skills with active Gemini documents participate in vector comparison. Undocumented profile skills still count for exact coverage. Positive similarity is used for exploration without a calibrated relevance cutoff.",
                 "Scores compare confirmed skill presence, not proficiency or hiring probability.",
                 "Required skills count twice as much as preferred skills. Optional and unclassified skills are excluded.",
                 "Experience, location preferences, and work style are not scored because comparable structured requirements are unavailable.",
-                "Postings without scored skills or without any matching skills are not recommended. Check the source for availability.",
+                "Postings need scored skills and either positive knowledge similarity or confirmed skill overlap. Check the source for availability.",
             ],
         }
 
