@@ -301,6 +301,39 @@ vector reads.
 
 ## Limitations and recovery
 
+### Skill content marked not ready
+
+Vectors alone do not make a roadmap lesson available. Gemini retrieves the
+documents, then Nova reviews exact cited passages. A failed review stays
+unavailable; an outline is not promoted to teaching content.
+
+The reviewer requests a bounded `submit_skill_context` structured tool response
+and retains the 5,000-token output cap and two-attempt validation budget. If the
+first response hits `max_tokens`, the second requests fewer claims; access and
+configuration errors do not cause an extra application-level retry.
+
+Inspect safe diagnostics after one generation attempt:
+
+```bash
+sudo journalctl -u glow-job --since "10 minutes ago" --no-pager \
+  | grep -E 'skill_context\.(failed|review_invalid|review_truncated)'
+```
+
+`skill_context.failed` records the skill ID, preparation stage, exception class,
+safe provider code, stop reason, and schema field/type issues. It does not log
+provider response bodies, tokens, credentials, or source passages. For example,
+`stage=text_review provider_code=IncompleteResponse stop=max_tokens` identifies
+output truncation, while `provider_code=AccessDeniedException` identifies denied
+model access. Schema errors report paths such as `claims.0.citations:too_short`.
+
+Changes to the reviewer are in the `data-pipeline` Git submodule. Commit and push
+that repository first, then commit its updated pointer in this repository before
+deploying. Existing roadmaps retain their saved context: deploying a correction
+does not rewrite those snapshots. After deployment, generate one new roadmap and
+inspect its diagnostics; generation calls the configured AI services and incurs
+their normal charges. Do not set readiness flags manually to bypass evidence
+validation.
+
 - Jobs/caches are in memory. Use one worker; restarting loses job state.
 - `DATA_DIR` stores fallback profiles. Temporary uploads use the service's temp directory.
 - Back up the database and `/var/lib/glowjob/data` separately. This deployment does not add authentication or rate limiting.
